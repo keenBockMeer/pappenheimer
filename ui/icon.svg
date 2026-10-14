@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!-- App-Symbol wie ui/mtg.ico: drei Karten, vorn das Farbrad aus favicon.svg. PNGs für die Web-App (Phase 27) daraus gerendert -->
+<g id="karten" stroke-linejoin="round">
+<rect x="146" y="118" width="220" height="296" rx="20" fill="#2b2a27" stroke="#e7e5dc" stroke-width="12" transform="rotate(-13 256 430)"/>
+<rect x="146" y="118" width="220" height="296" rx="20" fill="#2b2a27" stroke="#e7e5dc" stroke-width="12" transform="rotate(13 256 430)"/>
+<rect x="146" y="92" width="220" height="307" rx="20" fill="#141413" stroke="#f3f1ea" stroke-width="14"/>
+<g fill="none" stroke-width="50" transform="rotate(-90 256 246)">
+<circle cx="256" cy="246" r="62" stroke="#f0e6c0" stroke-dasharray="77.91 311.64"/>
+<circle cx="256" cy="246" r="62" stroke="#3f86d6" stroke-dasharray="77.91 311.64" stroke-dashoffset="-77.91"/>
+<circle cx="256" cy="246" r="62" stroke="#6b5d6a" stroke-dasharray="77.91 311.64" stroke-dashoffset="-155.82"/>
+<circle cx="256" cy="246" r="62" stroke="#d9533b" stroke-dasharray="77.91 311.64" stroke-dashoffset="-233.73"/>
+<circle cx="256" cy="246" r="62" stroke="#2f9a55" stroke-dasharray="77.91 311.64" stroke-dashoffset="-311.64"/>
+</g></g></svg>

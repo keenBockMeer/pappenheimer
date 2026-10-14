@@ -1,0 +1,15 @@
+Binder Name,Binder Type,Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,ManaBox ID,Scryfall ID,Purchase price,Misprint,Altered,Signed,Condition,Language,Proxy,Purchase price currency,Added
+Sammlung,binder,Sol Ring,C21,Commander 2021,263,normal,uncommon,2,9001,00000000-0000-4000-8000-000000000001,1.20,false,false,false,near_mint,en,false,EUR,2025-01-18T11:25:05.967Z
+Sammlung,binder,Command Tower,CMR,Commander Legends,350,foil,common,1,9002,00000000-0000-4000-8000-000000000002,0.90,false,false,false,near_mint,en,false,EUR,2025-01-18T11:26:10.101Z
+Sammlung,binder,Llanowar Elves,M19,Core Set 2019,314,normal,common,3,9003,00000000-0000-4000-8000-000000000003,0.10,false,false,false,near_mint,en,false,EUR,2025-01-18T11:27:44.250Z
+Sammlung,binder,Llanowar Elves,M19,Core Set 2019,314,normal,common,1,9003,00000000-0000-4000-8000-000000000003,0.10,false,false,false,near_mint,en,false,EUR,2025-01-19T09:00:00.000Z
+Sammlung,binder,"Atraxa, Praetors' Voice",C16,Commander 2016,28,normal,mythic,1,9004,00000000-0000-4000-8000-000000000004,9.50,false,false,false,near_mint,de,false,EUR,2025-01-19T09:05:00.000Z
+Sammlung,binder,Delver of Secrets // Insectile Aberration,ISD,Innistrad,51,normal,common,1,9005,00000000-0000-4000-8000-000000000005,0.05,false,false,false,good,en,false,EUR,2025-01-19T09:10:00.000Z
+Sammlung,binder,"""Brims"" Barone, Midway Mobster",SNC,Streets of New Capenna,54,normal,rare,1,9006,00000000-0000-4000-8000-000000000006,0.30,false,false,false,near_mint,en,false,EUR,2025-01-19T09:15:00.000Z
+Sammlung,binder,Forest,M21,Core Set 2021,281,normal,common,30,9007,00000000-0000-4000-8000-000000000007,0.02,false,false,false,near_mint,en,false,EUR,2025-01-20T10:00:00.000Z
+Sammlung,binder,Treasure,TC21,Commander 2021 Tokens,19,foil,common,3,9008,00000000-0000-4000-8000-000000000008,,false,false,false,near_mint,en,false,EUR,2025-01-20T10:05:00.000Z
+Sammlung,binder,Black Lotus,LEB,Limited Edition Beta,232,normal,rare,1,9009,00000000-0000-4000-8000-000000000009,0.00,false,false,false,near_mint,en,true,EUR,2025-01-20T10:10:00.000Z
+Handelsordner,binder,Rhystic Study,PCY,Prophecy,45s,normal,rare,1,9010,00000000-0000-4000-8000-000000000010,12.00,false,false,false,near_mint,en,false,EUR,2025-02-01T18:00:00.000Z
+Handelsordner,binder,Arcane Signet,CMM,Commander Masters,403,etched,uncommon,1,9011,00000000-0000-4000-8000-000000000011,3.50,false,false,false,near_mint,en,false,EUR,2025-02-01T18:01:00.000Z
+Testdeck,deck,Sol Ring,C21,Commander 2021,263,normal,uncommon,1,9001,00000000-0000-4000-8000-000000000001,1.20,false,false,false,near_mint,en,false,EUR,2025-02-02T12:00:00.000Z
+Wunschliste,list,Mana Crypt,2XM,Double Masters,270,normal,mythic,1,9012,00000000-0000-4000-8000-000000000012,,false,false,false,near_mint,en,false,EUR,2025-02-03T08:00:00.000Z

@@ -1,0 +1,14 @@
+#!/bin/sh
+# Lesender Zugriff auf die MTG-Sammlung für den Hermes-Agenten (Skill gaming/mtg-sammlung): nur Befehle, die den Bestand nicht ändern.
+# Freiwilliger Zusatz, nur für Betreiber mit einem Hermes-Agenten auf dem Server.
+# Eine Leitplanke, kein Schutz: Der Agent hat ohnehin eine Shell auf diesem Server. Ändern geht in der Oberfläche.
+erlaubt="stats card sell suche movers gaps decks commanders missing build plan-decks news dossier"
+case " $erlaubt " in
+  *" ${1:-} "*) ;;
+  *) echo "mtg-lesen kennt: $erlaubt" >&2; exit 2 ;;
+esac
+for a in "$@"; do
+  case "$a" in --save|--delete) echo "mtg-lesen ändert nichts: $a geht nur in der Oberfläche" >&2; exit 2 ;; esac
+done
+if [ "$1" = dossier ] && [ $# -gt 2 ]; then echo "mtg-lesen zeigt Dossiers nur an" >&2; exit 2; fi
+cd /opt/pappenheimer && exec docker compose exec -T mtg python mtg.py "$@" </dev/null

@@ -1,0 +1,12 @@
+# Aus dem Klon bauen, statt das veröffentlichte Image zu ziehen (Entwickeln, Proben, oder solange die Registry nicht erreichbar ist):
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+# Dauerhaft für diesen Ordner: eine Datei .env mit der Zeile
+#   COMPOSE_FILE=compose.yaml:compose.dev.yaml
+# Dann baut „docker compose up -d --build“ wie vor Phase 49, und deploy/einrichten.sh baut ebenfalls. Aktualisieren: git pull, dann dieser Befehl.
+services:
+  daten:
+    image: pappenheimer-dev
+    build: .
+  mtg:
+    image: pappenheimer-dev
+    build: .

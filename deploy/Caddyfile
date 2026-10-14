@@ -1,0 +1,6 @@
+# Eigene Domain mit HTTPS vor Pappenheimer (Zertifikat holt Caddy selbst). Der DNS-Eintrag der Domain muss auf den Server zeigen.
+# Mit Docker: compose.yaml, Profil „https“. Ohne Docker: „mtg:8765“ durch „127.0.0.1:8765“ ersetzen.
+{$MTG_DOMAIN} {
+	encode gzip
+	reverse_proxy mtg:8765
+}

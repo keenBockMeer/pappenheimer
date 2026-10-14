@@ -1,0 +1,27 @@
+# Pappenheimer als Dienst ohne Docker (Linux mit systemd, Python 3.12 oder neuer).
+#   sudo useradd --system --home /opt/pappenheimer mtg
+#   sudo git clone https://github.com/keenBockMeer/pappenheimer /opt/pappenheimer && sudo chown -R mtg /opt/pappenheimer
+#   sudo -u mtg python3 /opt/pappenheimer/mtg.py konto add NAME --haupt
+#   sudo cp deploy/pappenheimer.service /etc/systemd/system/ && sudo systemctl enable --now pappenheimer
+# Er lauscht nur auf 127.0.0.1; von außen über Tailscale (tailscale serve --bg 8765) oder Caddy (deploy/Caddyfile).
+# MTG_PROXY=1 sagt der App, dass so ein Proxy davor steht: Nur dann glaubt sie X-Forwarded-For (Adresse des Absenders für die Sperre nach
+# Fehlversuchen und fürs Protokoll) und X-Forwarded-Proto (https). Ohne Proxy davor die Zeile löschen. Protokoll: journalctl -u pappenheimer
+[Unit]
+Description=Pappenheimer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mtg
+WorkingDirectory=/opt/pappenheimer
+Environment=MTG_PROXY=1
+ExecStart=/usr/bin/python3 /opt/pappenheimer/mtg.py ui --host 127.0.0.1 --no-open --log
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/pappenheimer/data
+
+[Install]
+WantedBy=multi-user.target

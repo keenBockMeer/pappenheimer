@@ -1,0 +1,16 @@
+# Windows-Starter brauchen CRLF (Sprungmarken in .cmd), egal wo ausgecheckt wird
+*.cmd text eol=crlf
+# Skripte für den Linux-Server brauchen LF, auch aus einem Windows-Checkout
+*.sh text eol=lf
+# Nicht in die ZIP für Windows (deploy/paket.py, git archive): nur fürs Entwickeln
+tests/ export-ignore
+test_mtg.py export-ignore
+design/ export-ignore
+.claude/ export-ignore
+docs/PLAN.md export-ignore
+.github/ export-ignore
+CLAUDE.md export-ignore
+# Die Beispielsammlung (Phase 47): LF, auch aus einem Windows-Checkout
+beispiel/* text eol=lf
+# ohne Endung, aber ein Shell-Skript für den Server
+deploy/hermes/mtg-lesen text eol=lf

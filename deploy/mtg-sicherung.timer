@@ -1,0 +1,11 @@
+# Jede Nacht nach der täglichen Sicherung der App (die entsteht in der ersten Stunde des Tages); verpasste Läufe holt systemd nach dem Start nach.
+[Unit]
+Description=Pappenheimer: Sicherung außer Haus jede Nacht
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

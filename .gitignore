@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+# Sammlungsdaten enthalten Kaufpreise: nie committen
+data/
+inbox/
+/*.csv
+.claude/settings.local.json
+.venv-laya/
+.claude/launch.json
+dist/
+# Einstellungen von docker compose für diesen Ordner (zum Beispiel COMPOSE_FILE, siehe compose.dev.yaml)
+.env

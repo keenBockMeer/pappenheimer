@@ -1,0 +1,69 @@
+# Pappenheimer auf dem eigenen Server. Anleitung: README, Abschnitt „Auf dem eigenen Server“.
+#   docker compose up -d                                   # zieht das Image dieser Version und startet; nur auf dem Server selbst erreichbar, von außen über Tailscale
+#   docker compose logs mtg                                # ohne Hauptkonto: Zeile „Einrichtung: Code …“. Mit dem Code legt man im Browser
+#                                                          # das Hauptkonto an oder spielt eine Sicherung ein; bis dahin antwortet die App
+#                                                          # nur auf die Einrichtungsseite. Noch einmal zeigen: docker compose run --rm mtg einrichtung
+#   docker compose run --rm mtg konto add NAME --haupt     # oder wie bisher: Hauptkonto mit Passwort per Befehl (der Code ist dann weg)
+#   MTG_DOMAIN=mtg.example.de docker compose --profile https up -d   # oder: eigene Domain mit HTTPS über Caddy (braucht deploy/Caddyfile neben dieser Datei)
+# Aktualisieren: die compose.yaml der neuen Version holen (im Klon: git pull), dann docker compose pull && docker compose up -d.
+# Die Version steht unten zweimal im Namen des Images und folgt version.py. Aus dem Klon bauen statt ziehen: compose.dev.yaml.
+services:
+  daten:   # läuft einmal vor der App: Docker legt ./data beim ersten Start als root an, die App läuft als Nutzer 1000 und könnte dort nichts speichern
+    image: ghcr.io/keenbockmeer/pappenheimer:0.9.0
+    user: root
+    restart: "no"
+    network_mode: none
+    # nur wenn der Ordner root gehört (frisch von Docker angelegt); wer ihn selbst vergeben hat, behält seine Rechte. Scheitert es, sagt die App im Protokoll, was zu tun ist
+    entrypoint: ["sh", "-c", "[ \"$$(stat -c %u /app/data)\" != 0 ] || chown 1000:1000 /app/data || true"]
+    volumes:
+      - ./data:/app/data
+
+  mtg:
+    image: ghcr.io/keenbockmeer/pappenheimer:0.9.0
+    restart: unless-stopped
+    depends_on:
+      daten:
+        condition: service_completed_successfully
+    environment:
+      # MTG_QUELLEN: "spellbook,cardmarket"   # legt fest, welche Netzquellen laufen (edhrec, spellbook, cardmarket; alle; keine) und sperrt die Schalter in der App; ohne die Zeile stellt sie das Hauptkonto ein, EDHREC ist in neuen Installationen aus
+      MTG_PROXY: "1"   # davor steht ein Proxy (tailscale serve oder Caddy): nur dann glaubt die App X-Forwarded-For und X-Forwarded-Proto
+      # MTG_AUSSEN_SCHLUESSEL: /app/aussen.schluessel   # Schlüssel für die Kopie im zweiten Ordner (siehe unten bei volumes)
+    logging:   # Protokoll der App (docker compose logs mtg): höchstens 3 Dateien zu 10 MB
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./data:/app/data
+      - ./inbox:/app/inbox:ro   # Posteingang (Phase 27): ManaBox-CSVs aus einem Sync-Ordner, die App liest sie nur
+      # Zweiter Ordner für die Sicherung (Phase 42): ein NAS, eine eingehängte Storage Box oder der Ordner einer Cloud auf diesem Server.
+      # Einkommentieren, dann in der App unter „Konten und Sicherung“ als Ordner /app/sicherung-aussen eintragen. Der Ordner muss dem
+      # Nutzer 1000 gehören (sudo chown 1000:1000 …). Verschlüsseln: eine Kopie der Schlüsseldatei nur für Nutzer 1000 lesbar machen
+      # (sudo install -m 400 -o 1000 -g 1000 /etc/pappenheimer/aussen.schluessel /etc/pappenheimer/aussen.app), einbinden und
+      # MTG_AUSSEN_SCHLUESSEL oben unter environment setzen; ohne sie geht die ZIP unverschlüsselt hinüber, die App warnt.
+      # - /pfad/zum/ordner:/app/sicherung-aussen
+      # - /etc/pappenheimer/aussen.app:/app/aussen.schluessel:ro
+    ports:
+      - "127.0.0.1:8765:8765"   # nicht öffentlich: Tailscale (tailscale serve --bg 8765) oder Caddy davor
+
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    restart: unless-stopped
+    logging:   # Protokoll von Caddy: höchstens 3 Dateien zu 10 MB
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on: [mtg]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      MTG_DOMAIN: ${MTG_DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  caddy-data:

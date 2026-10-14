@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pappenheimer – Skizze Übersicht</title>
+<style>
+/* Design-Referenz für Phase 2+: Variablen und Bausteine übernehmen. Farben der Stapel = dataviz-Kategorie-Slots 1–4 (dark), validiert. */
+:root {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --raised: #232321;
+  --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --baseline: #383835; --border: rgba(255,255,255,.10);
+  --deck: #3987e5; --keep: #d95926; --sell: #199e70; --bulk: #c98500;
+  --bar: #9085e9;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); }
+a { color: inherit; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+header { position: sticky; top: 0; z-index: 5; background: rgba(13,13,13,.88); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+header .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+.brand i { width: 20px; height: 20px; border-radius: 50%; background: conic-gradient(#f0e6c0 0 20%, #3f86d6 0 40%, #6b5d6a 0 60%, #d9533b 0 80%, #2f9a55 0); }
+nav { display: flex; gap: 2px; }
+nav a { text-decoration: none; color: var(--ink-2); padding: 7px 12px; border-radius: 8px; }
+nav a:hover, nav a[aria-current] { background: var(--raised); color: var(--ink); }
+.btn { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; border: 1px dashed rgba(255,255,255,.28); background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+.btn:hover { border-style: solid; background: var(--raised); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+main { padding: 20px 0 48px; display: grid; gap: 16px; }
+.stand { font-size: 13px; }
+.kpis { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr); gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+.kpi .label { color: var(--ink-2); font-size: 13px; }
+.kpi .value { font-size: 26px; font-weight: 650; margin-top: 4px; }
+.kpi.hero .value { font-size: 34px; }
+.kpi .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; display: flex; align-items: baseline; gap: 10px; }
+h2 small { font-weight: 400; font-size: 12px; color: var(--muted); }
+h2 a { margin-left: auto; font-weight: 400; font-size: 13px; color: var(--ink-2); text-decoration: none; }
+h2 a:hover { color: var(--ink); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* Plan: gestapelter Balken nach Wert, 2px Lücke, rechtes Ende gerundet */
+.stack { display: flex; gap: 2px; height: 28px; }
+.stack span { flex: var(--v) 1 0; }
+.stack span:last-child { border-radius: 0 4px 4px 0; }
+.legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+.legend div { display: grid; gap: 2px; }
+.legend b { font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.d-deck { background: var(--deck); } .d-keep { background: var(--keep); } .d-sell { background: var(--sell); } .d-bulk { background: var(--bulk); }
+
+/* Wert nach Farbe: eine Reihe, eine Farbe, Werte direkt beschriftet */
+.bars { display: grid; grid-template-columns: 112px 1fr 64px; align-items: center; row-gap: 9px; }
+.bars .track { border-left: 1px solid var(--baseline); height: 14px; display: flex; align-items: center; }
+.bars .track span { height: 12px; width: var(--w); background: var(--bar); border-radius: 0 4px 4px 0; }
+.bars .val { text-align: right; color: var(--ink-2); }
+.fill { display: flex; flex-direction: column; } .fill .bars { flex: 1; align-content: space-evenly; }
+.pip { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; font-weight: 700; margin-right: 7px; vertical-align: -4px; }
+.w { background: #f0e6c0; color: #1a1a19; } .u { background: #3f86d6; color: #fff; } .b { background: #4b4147; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+.r { background: #d9533b; color: #fff; } .g { background: #2f9a55; color: #fff; } .m { background: #c9a24b; color: #1a1a19; } .c { background: #a3a29b; color: #1a1a19; }
+
+/* Liste wertvollste Karten */
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border); }
+.row:first-child { border-top: 0; }
+.row img { width: 34px; aspect-ratio: 488/680; border-radius: 3px; object-fit: cover; }
+.row .name { font-weight: 550; }
+.row .price { text-align: right; min-width: 64px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--raised); border: 1px solid var(--border); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Kartengalerie */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+.card { display: grid; gap: 8px; text-decoration: none; }
+.card .img { position: relative; }
+.card img { width: 100%; aspect-ratio: 488/680; border-radius: 4.75% / 3.5%; display: block; background: var(--raised); transition: transform .15s; }
+.card:hover img { transform: translateY(-3px); }
+.badge { position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: 6px; background: rgba(0,0,0,.78); font-size: 12px; font-weight: 600; }
+
+/* Decks */
+.decks { display: grid; gap: 12px; }
+.deck { display: grid; grid-template-columns: 120px 1fr auto; gap: 14px; align-items: center; padding: 8px; border-radius: 10px; background: var(--raised); text-decoration: none; }
+.deck img { width: 120px; height: 72px; object-fit: cover; border-radius: 6px; display: block; }
+.deck .t { font-weight: 600; }
+.deck .m { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+/* Neuigkeiten */
+.news { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.news li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+.news .ic { width: 28px; height: 28px; border-radius: 8px; background: var(--raised); display: grid; place-items: center; font-size: 14px; }
+.news .s { color: var(--muted); font-size: 12px; }
+footer { color: var(--muted); font-size: 12px; padding: 0 0 32px; }
+
+@media (max-width: 900px) { .kpis { grid-template-columns: 1fr 1fr; } .cols, .legend { grid-template-columns: 1fr; } nav { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand"><i aria-hidden="true"></i>Pappenheimer</div>
+    <nav aria-label="Ansichten">
+      <a href="#" aria-current="page">Übersicht</a><a href="#">Karten</a><a href="#">Sortieren</a><a href="#">Verkaufen</a><a href="#">Decks</a>
+    </nav>
+    <button class="btn" type="button" title="ManaBox-Export hierher ziehen oder klicken">⇪ ManaBox-CSV importieren</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="stand muted">Stand heute 14:32 · letzter Import: +37 Karten, −2 Karten · Preise von heute</div>
+
+  <section class="kpis" aria-label="Kennzahlen">
+    <div class="panel kpi hero"><div class="label">Sammlungswert</div><div class="value num">4.873 €</div><div class="sub">+61 € seit letztem Import</div></div>
+    <div class="panel kpi"><div class="label">Karten</div><div class="value num">15.214</div><div class="sub">ohne Proxies</div></div>
+    <div class="panel kpi"><div class="label">Unikate</div><div class="value num">6.941</div><div class="sub">verschiedene Karten</div></div>
+    <div class="panel kpi"><div class="label">Decks</div><div class="value num">3</div><div class="sub">297 Karten verplant</div></div>
+    <div class="panel kpi"><div class="label">Zum Verkauf</div><div class="value num">1.312 €</div><div class="sub">486 Karten ab 1 €</div></div>
+  </section>
+
+  <section class="panel" aria-label="Plan für deine Sammlung">
+    <h2>Plan für deine Sammlung <small>nach Wert</small><a href="#">Sortieren →</a></h2>
+    <div class="stack" role="img" aria-label="Deck 812 €, Behalten 1.905 €, Verkaufen 1.312 €, Bulk 844 €">
+      <span class="d-deck" style="--v:812" title="Deck · 297 Karten · 812 €"></span>
+      <span class="d-keep" style="--v:1905" title="Behalten · 2.140 Karten · 1.905 €"></span>
+      <span class="d-sell" style="--v:1312" title="Verkaufen · 486 Karten · 1.312 €"></span>
+      <span class="d-bulk" style="--v:844" title="Bulk · 12.291 Karten · 844 €"></span>
+    </div>
+    <div class="legend">
+      <div><b><span class="dot d-deck"></span>Deck</b><span class="num">812 € · 297 Karten</span><span class="muted">in 3 gebauten Decks</span></div>
+      <div><b><span class="dot d-keep"></span>Behalten</b><span class="num">1.905 € · 2.140 Karten</span><span class="muted">je 1 Kopie für künftige Decks</span></div>
+      <div><b><span class="dot d-sell"></span>Verkaufen</b><span class="num">1.312 € · 486 Karten</span><span class="muted">Extras und Nicht-Commander ab 1 €</span></div>
+      <div><b><span class="dot d-bulk"></span>Bulk</b><span class="num">844 € · 12.291 Karten</span><span class="muted">unter 1 €, nicht gebraucht</span></div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="panel fill" aria-label="Wert nach Farbe">
+      <h2>Wert nach Farbe</h2>
+      <div class="bars">
+        <span><span class="pip w">W</span>Weiß</span><span class="track"><span style="--w:59.9%" title="Weiß · 612 €"></span></span><span class="val num">612 €</span>
+        <span><span class="pip u">U</span>Blau</span><span class="track"><span style="--w:100%" title="Blau · 1.021 €"></span></span><span class="val num">1.021 €</span>
+        <span><span class="pip b">B</span>Schwarz</span><span class="track"><span style="--w:87.5%" title="Schwarz · 893 €"></span></span><span class="val num">893 €</span>
+        <span><span class="pip r">R</span>Rot</span><span class="track"><span style="--w:48.8%" title="Rot · 498 €"></span></span><span class="val num">498 €</span>
+        <span><span class="pip g">G</span>Grün</span><span class="track"><span style="--w:56.2%" title="Grün · 574 €"></span></span><span class="val num">574 €</span>
+        <span><span class="pip m">M</span>Mehrfarbig</span><span class="track"><span style="--w:78.6%" title="Mehrfarbig · 803 €"></span></span><span class="val num">803 €</span>
+        <span><span class="pip c">C</span>Farblos</span><span class="track"><span style="--w:46.2%" title="Farblos und Länder · 472 €"></span></span><span class="val num">472 €</span>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Wertvollste Karten">
+      <h2>Wertvollste Karten <a href="#">alle →</a></h2>
+      <div class="rows">
+        <div class="row"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=small&exact=The%20One%20Ring"><div><div class="name">The One Ring</div><div class="muted">1×</div></div><div class="chips"><span class="chip"><span class="dot d-keep"></span>Behalten</span></div><div class="price num">54,90 €</div></div>
+        <div class="row"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=small&exact=Rhystic%20Study"><div><div class="name">Rhystic Study</div><div class="muted">1×</div></div><div class="chips"><span class="chip"><span class="dot d-deck"></span>Atraxa</span></div><div class="price num">32,50 €</div></div>
+        <div class="row"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=small&exact=Smothering%20Tithe"><div><div class="name">Smothering Tithe</div><div class="muted">2×</div></div><div class="chips"><span class="chip"><span class="dot d-deck"></span>Atraxa</span><span class="chip"><span class="dot d-sell"></span>1 verkaufen</span></div><div class="price num">24,80 €</div></div>
+        <div class="row"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=small&exact=Cyclonic%20Rift"><div><div class="name">Cyclonic Rift</div><div class="muted">1×</div></div><div class="chips"><span class="chip"><span class="dot d-deck"></span>Atraxa</span></div><div class="price num">21,40 €</div></div>
+        <div class="row"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=small&exact=Demonic%20Tutor"><div><div class="name">Demonic Tutor</div><div class="muted">1×</div></div><div class="chips"><span class="chip"><span class="dot d-deck"></span>Meren</span></div><div class="price num">18,70 €</div></div>
+        <div class="row"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=small&exact=Thoughtseize"><div><div class="name">Thoughtseize</div><div class="muted">3× · kaum in Commander gespielt</div></div><div class="chips"><span class="chip"><span class="dot d-sell"></span>3 verkaufen</span></div><div class="price num">11,80 €</div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Zuletzt hinzugefügt">
+    <h2>Zuletzt hinzugefügt <small>letzter Import, +37</small><a href="#">alle 37 →</a></h2>
+    <div class="grid">
+      <a class="card" href="#"><div class="img"><img loading="lazy" alt="Smothering Tithe" src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=Smothering%20Tithe"><span class="badge num">24,80 €</span></div><span class="chip"><span class="dot d-sell"></span>Verkaufen · 2. Kopie</span></a>
+      <a class="card" href="#"><div class="img"><img loading="lazy" alt="Thoughtseize" src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=Thoughtseize"><span class="badge num">11,80 €</span></div><span class="chip"><span class="dot d-sell"></span>Verkaufen</span></a>
+      <a class="card" href="#"><div class="img"><img loading="lazy" alt="Lightning Greaves" src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=Lightning%20Greaves"><span class="badge num">3,40 €</span></div><span class="chip"><span class="dot d-deck"></span>Deck · Krenko</span></a>
+      <a class="card" href="#"><div class="img"><img loading="lazy" alt="Prossh, Skyraider of Kher" src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=Prossh%2C%20Skyraider%20of%20Kher"><span class="badge num">2,10 €</span></div><span class="chip"><span class="dot d-keep"></span>Behalten · möglicher Commander</span></a>
+      <a class="card" href="#"><div class="img"><img loading="lazy" alt="Arcane Signet" src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=Arcane%20Signet"><span class="badge num">0,90 €</span></div><span class="chip"><span class="dot d-keep"></span>Behalten</span></a>
+      <a class="card" href="#"><div class="img"><img loading="lazy" alt="Grizzly Bears" src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=Grizzly%20Bears"><span class="badge num">0,05 €</span></div><span class="chip"><span class="dot d-bulk"></span>Bulk</span></a>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="panel" aria-label="Decks">
+      <h2>Decks <a href="#">Neues Deck →</a></h2>
+      <div class="decks">
+        <a class="deck" href="#"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=art_crop&exact=Meren%20of%20Clan%20Nel%20Toth"><div><div class="t">Meren of Clan Nel Toth</div><div class="m"><span class="pip b">B</span><span class="pip g">G</span>Bracket 3 · 100/100 aus der Sammlung</div></div><div class="num">186 €</div></a>
+        <a class="deck" href="#"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=art_crop&exact=Krenko%2C%20Mob%20Boss"><div><div class="t">Krenko, Mob Boss</div><div class="m"><span class="pip r">R</span>Bracket 2 · 100/100 aus der Sammlung</div></div><div class="num">74 €</div></a>
+        <a class="deck" href="#"><img loading="lazy" alt="" src="https://api.scryfall.com/cards/named?format=image&version=art_crop&exact=Atraxa%2C%20Praetors%27%20Voice"><div><div class="t">Atraxa, Praetors' Voice</div><div class="m"><span class="pip w">W</span><span class="pip u">U</span><span class="pip b">B</span><span class="pip g">G</span>Bracket 3 · 91/100 · 9 fehlen (63 €)</div></div><div class="num">241 €</div></a>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Neuigkeiten">
+      <h2>Neuigkeiten <small>seit dem letzten Import</small></h2>
+      <ul class="news">
+        <li><span class="ic" aria-hidden="true">↑</span><div>Upgrade für <b>Meren</b>: Spore Frog rein, Bone Splinters raus<div class="s">Spore Frog ist in 41 % der Meren-Decks</div></div></li>
+        <li><span class="ic" aria-hidden="true">★</span><div>Neuer möglicher Commander: <b>Prossh, Skyraider of Kher</b><div class="s">58 % der empfohlenen Karten hast du schon</div></div></li>
+        <li><span class="ic" aria-hidden="true">€</span><div>Zweite <b>Smothering Tithe</b> → Verkaufen, 24,80 €<div class="s">Die erste steckt im Atraxa-Deck</div></div></li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap">Skizze mit erfundenen Beispieldaten. Später: Preise = Cardmarket-Trend über Scryfall, Kartenbilder über Scryfall, © Wizards of the Coast.</footer>
+</body>
+</html>

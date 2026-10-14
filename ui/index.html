@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pappenheimer</title>
+<meta name="description" content="Deine Magic-Sammlung: sortieren, verkaufen, Commander-Decks bauen. Läuft auf deinem Rechner oder deinem eigenen Server.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="theme-color" content="#0e0e0d">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<!-- Darstellung vor dem ersten Bild setzen, sonst blitzt kurz die falsche auf -->
+<script>try { var t = localStorage.getItem('mtg-theme') || 'dark'; if (t === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="#/"><i aria-hidden="true"></i>Pappenheimer</a>
+    <nav id="nav" aria-label="Ansichten"></nav>
+    <button class="btn primary add" id="import" type="button" title="CSV einer Scanner-App (zum Beispiel ManaBox), Deckliste oder CSV einer anderen App"><svg class="i" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z"/></svg><span><span class="long">Karten </span>hinzufügen</span></button>
+    <div class="who" id="who"></div>
+    <input id="file" type="file" accept=".csv,.txt,text/csv,text/plain" multiple hidden>
+  </div>
+</header>
+<div class="wrap" id="beispiel-leiste" hidden></div>
+<main class="wrap" id="main" tabindex="-1"></main>
+<footer class="wrap">
+  <div class="fuss-text">
+  <p><a href="#/konten">Konten und Sicherung</a> · <a href="#/druck">Drucken</a> · Deine Daten bleiben auf deinem Rechner oder Server. Preise: Cardmarket-Trend über Scryfall. Bilder: Scryfall. Empfehlungen: EDHREC, wenn eingeschaltet.</p>
+  <p class="rechtlich"><span class="hinweis" lang="en">Pappenheimer is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</span> Auf Deutsch: Pappenheimer ist ein inoffizielles Fan-Projekt nach der Fan Content Policy, von Wizards of the Coast weder genehmigt noch empfohlen. Magic: The Gathering gehört Wizards of the Coast.</p>
+  <p class="rechtlich">Pappenheimer <span id="version"></span>, MIT-Lizenz.</p>
+  </div>
+  <label>Darstellung <select id="theme"><option value="dark">Dunkel</option><option value="light">Hell</option><option value="system">Wie das System</option></select></label>
+</footer>
+<dialog id="dlg" class="modal" aria-labelledby="dlg-title"></dialog>
+<div id="drop" hidden><div><svg class="i lg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M228,144v64a12,12,0,0,1-12,12H40a12,12,0,0,1-12-12V144a12,12,0,0,1,24,0v52H204V144a12,12,0,0,1,24,0ZM96.49,80.49,116,61v83a12,12,0,0,0,24,0V61l19.51,19.52a12,12,0,1,0,17-17l-40-40a12,12,0,0,0-17,0l-40,40a12,12,0,1,0,17,17Z"/></svg><b>Datei hier ablegen</b><span>CSV einer Scanner-App (zum Beispiel ManaBox), Deckliste oder CSV einer anderen App</span></div></div>
+<div id="peek" aria-hidden="true" popover="manual"></div>
+<div id="tip" role="tooltip" popover="manual"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>

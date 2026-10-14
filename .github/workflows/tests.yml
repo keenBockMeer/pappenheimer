@@ -1,0 +1,75 @@
+# Tests bei jedem Push (docs/PLAN.md, Phase 38, E24): Linux und Windows, Python 3.12 und 3.13, dazu shellcheck für die Skripte des Servers,
+# das Docker-Image und ein Lauf der Tests ohne Netz. Als Paket kommt nur pytest dazu, der Kern braucht nur die Standardbibliothek.
+# Fremde Actions sind auf einen Commit festgelegt (das Etikett dahinter sagt, welche Version das ist); die Rechte sind nur lesend.
+name: Tests
+
+on:
+  push:
+    branches: ["**"]  # nicht bei einem Tag: Dort ruft release.yml diese Tests auf, sonst liefen sie doppelt
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:  # ein neuer Push auf denselben Zweig bricht den alten Lauf ab
+  group: tests-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    # Im eigenen Repository genügt der Lauf zum Push. Der Lauf zum Pull Request ist für Forks, deren Push hier keinen auslöst.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.12", "3.13"]
+    name: ${{ matrix.os }}, Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - run: python -m pytest -q
+
+  skripte:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    name: shellcheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - run: shellcheck deploy/*.sh deploy/hermes/mtg-lesen
+
+  image:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    name: Docker-Image, Tests ohne Netz
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Image bauen, im Container die Version zeigen
+        run: |
+          docker build -t pappenheimer-ci .
+          docker run --rm pappenheimer-ci --version
+      - name: gpg im Image verschlüsselt als Nutzer der App (Aufruf wie konten.verschluesseln) und entschlüsselt wieder
+        run: |
+          docker run --rm --network none --entrypoint sh pappenheimer-ci -ec 'cd /tmp; echo schluessel > k; echo inhalt > a
+            gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-file k --compress-algo none --symmetric --cipher-algo AES256 --output a.gpg a
+            gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-file k --output b --decrypt a.gpg
+            cmp a b'
+      - name: Tests in einem Container ohne Netz
+        run: |
+          printf 'FROM python:3.13-slim\nRUN pip install --no-cache-dir pytest\n' | docker build -t pappenheimer-tests -
+          docker run --rm --network none --user "$(id -u):$(id -g)" -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$PWD":/src -w /src pappenheimer-tests python -m pytest -q -p no:cacheprovider

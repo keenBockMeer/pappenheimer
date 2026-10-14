@@ -1,0 +1,105 @@
+# Veröffentlichung bei einem Tag v* (docs/PLAN.md, Phase 49, E24): prüft den Tag gegen die Version im Code, lässt die Tests laufen, baut das
+# Image für amd64 und arm64 in die Registry von GitHub und hängt die Windows-ZIP, compose.yaml, Caddyfile und die Prüfsummen an die
+# Veröffentlichung. Schreibrechte hat nur der Job, der sie braucht: „image“ für die Registry, „veroeffentlichung“ für die Veröffentlichung.
+# Fremde Actions sind auf einen Commit festgelegt. Ein Tag v<Version>-rc<Zahl> ist eine Probe: Vorabversion, ohne das Etikett latest.
+name: Veröffentlichung
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    name: Tag passt zur Version im Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      image: ${{ steps.tag.outputs.image }}
+      vorab: ${{ steps.tag.outputs.vorab }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - id: tag
+        run: python3 deploy/release.py pruefen "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+
+  tests:
+    needs: pruefen
+    uses: ./.github/workflows/tests.yml
+
+  image:
+    name: Docker-Image für amd64 und arm64
+    needs: [pruefen, tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ${{ needs.pruefen.outputs.image }}
+      VERSION: ${{ needs.pruefen.outputs.version }}
+      VORAB: ${{ needs.pruefen.outputs.vorab }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1  # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+      - name: An der Registry von GitHub anmelden
+        env:
+          TOKEN: ${{ github.token }}
+        run: echo "$TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Bauen und hochladen (latest nur bei einer richtigen Version)
+        run: |
+          set -- --tag "$IMAGE:$VERSION"
+          if [ "$VORAB" = false ]; then set -- "$@" --tag "$IMAGE:latest"; fi
+          docker buildx build --platform linux/amd64,linux/arm64 --label "org.opencontainers.image.version=$VERSION" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" "$@" --push .
+      - name: Beide Architekturen liegen in der Registry, der Container nennt die Version aus dem Code
+        run: |
+          docker buildx imagetools inspect "$IMAGE:$VERSION" | tee architekturen.txt
+          grep -q "linux/amd64" architekturen.txt
+          grep -q "linux/arm64" architekturen.txt
+          test "$(docker run --rm "$IMAGE:$VERSION" --version)" = "$(python3 mtg.py --version)"
+          test "$(docker run --rm --platform linux/arm64 "$IMAGE:$VERSION" --version)" = "$(python3 mtg.py --version)"
+
+  veroeffentlichung:
+    name: Windows-ZIP, Prüfsummen, Veröffentlichung
+    needs: [pruefen, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      IMAGE: ${{ needs.pruefen.outputs.image }}
+      VERSION: ${{ needs.pruefen.outputs.version }}
+      VORAB: ${{ needs.pruefen.outputs.vorab }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Windows-ZIP bauen (das eingebettete Python nur mit der festen Prüfsumme)
+        run: python3 deploy/paket.py
+      - name: Dateien der Veröffentlichung, Prüfsummen, Text aus dem Changelog
+        run: |
+          mkdir veroeffentlichung
+          cp dist/pappenheimer-windows.zip deploy/Caddyfile veroeffentlichung/
+          # compose.yaml nennt die Version aus dem Code; bei einer Probe (rc) zeigt die angehängte Datei auf das Image der Probe
+          sed "s|image: $IMAGE:[^ ]*|image: $IMAGE:$VERSION|" compose.yaml > veroeffentlichung/compose.yaml
+          test "$(grep -c "image: $IMAGE:$VERSION\$" veroeffentlichung/compose.yaml)" = 2
+          cd veroeffentlichung
+          python3 ../deploy/release.py summen pappenheimer-windows.zip compose.yaml Caddyfile > SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
+          python3 ../deploy/release.py notizen > ../notizen.md
+      - name: Veröffentlichen (eine Probe als Vorabversion)
+        run: |
+          set -- "$GITHUB_REF_NAME" --verify-tag --title "Pappenheimer $VERSION" --notes-file notizen.md
+          if [ "$VORAB" = true ]; then set -- "$@" --prerelease; fi
+          gh release create "$@" veroeffentlichung/*

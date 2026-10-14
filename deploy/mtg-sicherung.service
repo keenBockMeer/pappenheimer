@@ -1,0 +1,24 @@
+# Sicherung außer Haus (PLAN Phase 27): kopiert jede Nacht die jüngste tägliche Sicherung der App auf ein zweites Ziel (deploy/sicherung-aussen.sh).
+#   1. rclone einrichten (README, „Sicherung außer Haus“), Pfad und MTG_AUSSEN unten anpassen
+#   2. sudo cp deploy/mtg-sicherung.service deploy/mtg-sicherung.timer /etc/systemd/system/
+#      sudo systemctl daemon-reload && sudo systemctl enable --now mtg-sicherung.timer
+#   3. Einmal von Hand: sudo systemctl start mtg-sicherung && journalctl -u mtg-sicherung -n 5
+# Verschlüsseln (empfohlen, die ZIP enthält Passwort-Hashes und Kaufpreise): sudo apt install gpg, eine Schlüsseldatei anlegen (nur für root
+# lesbar, der Schlüssel gehört zusätzlich auf Papier oder in einen Passwortmanager, ohne ihn ist die Kopie wertlos) und die Zeile
+# MTG_AUSSEN_SCHLUESSEL unten einschalten. deploy/einrichten.sh macht das bei einer neuen Einrichtung selbst; ein bestehender Timer läuft
+# ohne Schlüssel unverschlüsselt weiter, bis diese Zeile da ist:
+#   sudo install -d -m 700 /etc/pappenheimer
+#   tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 40 | sudo tee /etc/pappenheimer/aussen.schluessel >/dev/null
+#   sudo chmod 600 /etc/pappenheimer/aussen.schluessel && sudo cat /etc/pappenheimer/aussen.schluessel   # aufschreiben
+# Läuft als root (mit und ohne Docker gleich): Das Skript liest nur die fertige ZIP, rclone und ssh finden ihre Einstellungen unter /root.
+[Unit]
+Description=Pappenheimer: Sicherung außer Haus
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=HOME=/root
+Environment=MTG_AUSSEN=rclone:storagebox:pappenheimer
+#Environment=MTG_AUSSEN_SCHLUESSEL=/etc/pappenheimer/aussen.schluessel
+ExecStart=/bin/sh /opt/pappenheimer/deploy/sicherung-aussen.sh

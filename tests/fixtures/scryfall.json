@@ -1,0 +1,427 @@
+{
+ "00000000-0000-4000-8000-000000000001": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000001",
+  "oracle_id": "11111111-0000-4000-8000-000000000001",
+  "name": "Sol Ring",
+  "lang": "en",
+  "set": "c21",
+  "set_name": "Commander 2021",
+  "released_at": "2021-04-23",
+  "collector_number": "263",
+  "layout": "normal",
+  "cmc": 1.0,
+  "type_line": "Artifact",
+  "color_identity": [],
+  "rarity": "uncommon",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 1,
+  "prices": {
+   "eur": "1.50",
+   "eur_foil": "4.00"
+  },
+  "mana_cost": "{1}",
+  "oracle_text": "{T}: Add {C}{C}.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000001.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000002": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000002",
+  "oracle_id": "11111111-0000-4000-8000-000000000002",
+  "name": "Command Tower",
+  "lang": "en",
+  "set": "cmr",
+  "set_name": "Commander Legends",
+  "released_at": "2020-11-20",
+  "collector_number": "350",
+  "layout": "normal",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "color_identity": [],
+  "rarity": "common",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 2,
+  "prices": {
+   "eur": "0.40",
+   "eur_foil": "0.90"
+  },
+  "mana_cost": "",
+  "oracle_text": "{T}: Add one mana of any color in your commander's color identity.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000002.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000003": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000003",
+  "oracle_id": "11111111-0000-4000-8000-000000000003",
+  "name": "Llanowar Elves",
+  "lang": "en",
+  "set": "m19",
+  "set_name": "Core Set 2019",
+  "released_at": "2018-07-13",
+  "collector_number": "314",
+  "layout": "normal",
+  "cmc": 1.0,
+  "type_line": "Creature — Elf Druid",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "common",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 1500,
+  "prices": {
+   "eur": "0.10",
+   "eur_foil": "0.30"
+  },
+  "mana_cost": "{G}",
+  "oracle_text": "{T}: Add {G}.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000003.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000004": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000004",
+  "oracle_id": "11111111-0000-4000-8000-000000000004",
+  "name": "Atraxa, Praetors' Voice",
+  "lang": "en",
+  "set": "c16",
+  "set_name": "Commander 2016",
+  "released_at": "2016-11-11",
+  "collector_number": "28",
+  "layout": "normal",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Phyrexian Angel Horror",
+  "color_identity": [
+   "W",
+   "U",
+   "B",
+   "G"
+  ],
+  "rarity": "mythic",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 90,
+  "prices": {
+   "eur": "9.50",
+   "eur_foil": "20.00"
+  },
+  "mana_cost": "{G}{W}{U}{B}",
+  "oracle_text": "Flying, vigilance, deathtouch, lifelink\nAt the beginning of your end step, proliferate.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000004.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000005": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000005",
+  "oracle_id": "11111111-0000-4000-8000-000000000005",
+  "name": "Delver of Secrets // Insectile Aberration",
+  "lang": "en",
+  "set": "isd",
+  "set_name": "Innistrad",
+  "released_at": "2011-09-30",
+  "collector_number": "51",
+  "layout": "transform",
+  "cmc": 1.0,
+  "type_line": "Creature — Human Wizard // Creature — Human Insect",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "common",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 9000,
+  "prices": {
+   "eur": "0.05",
+   "eur_foil": "0.20"
+  },
+  "card_faces": [
+   {
+    "name": "Delver of Secrets",
+    "mana_cost": "{U}",
+    "type_line": "Creature — Human Wizard",
+    "oracle_text": "At the beginning of your upkeep, look at the top card of your library.",
+    "image_uris": {
+     "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000005.jpg"
+    }
+   },
+   {
+    "name": "Insectile Aberration",
+    "mana_cost": "",
+    "type_line": "Creature — Human Insect",
+    "oracle_text": "Flying",
+    "image_uris": {
+     "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000005b.jpg"
+    }
+   }
+  ]
+ },
+ "00000000-0000-4000-8000-000000000006": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000006",
+  "oracle_id": "11111111-0000-4000-8000-000000000006",
+  "name": "\"Brims\" Barone, Midway Mobster",
+  "lang": "en",
+  "set": "snc",
+  "set_name": "Streets of New Capenna",
+  "released_at": "2022-04-29",
+  "collector_number": "54",
+  "layout": "normal",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Mercenary",
+  "color_identity": [
+   "R",
+   "W"
+  ],
+  "rarity": "rare",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 12000,
+  "prices": {
+   "eur": "0.30",
+   "eur_foil": "0.80"
+  },
+  "mana_cost": "{2}{R}{W}",
+  "oracle_text": "Double strike",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000006.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000007": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000007",
+  "oracle_id": "11111111-0000-4000-8000-000000000007",
+  "name": "Forest",
+  "lang": "en",
+  "set": "m21",
+  "set_name": "Core Set 2021",
+  "released_at": "2020-07-03",
+  "collector_number": "281",
+  "layout": "normal",
+  "cmc": 0.0,
+  "type_line": "Basic Land — Forest",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "common",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": null,
+  "prices": {
+   "eur": "0.02",
+   "eur_foil": "0.10"
+  },
+  "mana_cost": "",
+  "oracle_text": "({T}: Add {G}.)",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000007.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000008": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000008",
+  "oracle_id": "11111111-0000-4000-8000-000000000008",
+  "name": "Treasure",
+  "lang": "en",
+  "set": "tc21",
+  "set_name": "Commander 2021 Tokens",
+  "released_at": "2021-04-23",
+  "collector_number": "19",
+  "layout": "token",
+  "cmc": 0.0,
+  "type_line": "Token Artifact — Treasure",
+  "color_identity": [],
+  "rarity": "common",
+  "legalities": {
+   "commander": "not_legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": null,
+  "prices": {
+   "eur": null,
+   "eur_foil": null
+  },
+  "mana_cost": "",
+  "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000008.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000010": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000010",
+  "oracle_id": "11111111-0000-4000-8000-000000000010",
+  "name": "Rhystic Study",
+  "lang": "en",
+  "set": "pcy",
+  "set_name": "Prophecy",
+  "released_at": "2001-06-04",
+  "collector_number": "45s",
+  "layout": "normal",
+  "cmc": 3.0,
+  "type_line": "Enchantment",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "rare",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": true,
+  "edhrec_rank": 8,
+  "prices": {
+   "eur": "12.00",
+   "eur_foil": "30.00"
+  },
+  "mana_cost": "{2}{U}",
+  "oracle_text": "Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000010.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000011": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000011",
+  "oracle_id": "11111111-0000-4000-8000-000000000011",
+  "name": "Arcane Signet",
+  "lang": "en",
+  "set": "cmm",
+  "set_name": "Commander Masters",
+  "released_at": "2023-08-04",
+  "collector_number": "403",
+  "layout": "normal",
+  "cmc": 2.0,
+  "type_line": "Artifact",
+  "color_identity": [],
+  "rarity": "uncommon",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 3,
+  "prices": {
+   "eur": "1.00",
+   "eur_foil": "2.00"
+  },
+  "mana_cost": "{2}",
+  "oracle_text": "{T}: Add one mana of any color in your commander's color identity.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000011.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000012": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000012",
+  "oracle_id": "11111111-0000-4000-8000-000000000012",
+  "name": "Mana Crypt",
+  "lang": "en",
+  "set": "2xm",
+  "set_name": "Double Masters",
+  "released_at": "2020-08-07",
+  "collector_number": "270",
+  "layout": "normal",
+  "cmc": 0.0,
+  "type_line": "Artifact",
+  "color_identity": [],
+  "rarity": "mythic",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": true,
+  "edhrec_rank": 40,
+  "prices": {
+   "eur": "140.00",
+   "eur_foil": "300.00"
+  },
+  "mana_cost": "{0}",
+  "oracle_text": "At the beginning of your upkeep, Mana Crypt deals damage to you. {T}: Add {C}{C}.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000012.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000013": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000013",
+  "oracle_id": "11111111-0000-4000-8000-000000000013",
+  "name": "Counterspell",
+  "lang": "en",
+  "set": "mh2",
+  "set_name": "Modern Horizons 2",
+  "released_at": "2021-06-18",
+  "collector_number": "267",
+  "layout": "normal",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "uncommon",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 700,
+  "prices": {
+   "eur": "1.00",
+   "eur_foil": "3.00"
+  },
+  "mana_cost": "{U}{U}",
+  "oracle_text": "Counter target spell.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000013.jpg"
+  }
+ },
+ "00000000-0000-4000-8000-000000000014": {
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000014",
+  "oracle_id": "11111111-0000-4000-8000-000000000014",
+  "name": "Swords to Plowshares",
+  "lang": "en",
+  "set": "sta",
+  "set_name": "Strixhaven Mystical Archive",
+  "released_at": "2021-04-23",
+  "collector_number": "7",
+  "layout": "normal",
+  "cmc": 1.0,
+  "type_line": "Instant",
+  "color_identity": [
+   "W"
+  ],
+  "rarity": "uncommon",
+  "legalities": {
+   "commander": "legal"
+  },
+  "game_changer": false,
+  "edhrec_rank": 20,
+  "prices": {
+   "eur": "2.50",
+   "eur_foil": "6.00"
+  },
+  "mana_cost": "{W}",
+  "oracle_text": "Exile target creature. Its controller gains life equal to its power.",
+  "image_uris": {
+   "normal": "https://cards.scryfall.io/normal/front/test/00000000-0000-4000-8000-000000000014.jpg"
+  }
+ }
+}
