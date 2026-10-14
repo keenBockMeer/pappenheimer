@@ -2,7 +2,7 @@
 
 Format: je Version die Abschnitte Neu, Geändert, Behoben, Sicherheit. Versionen nach SemVer, die neueste steht oben.
 
-## 0.9.0 (noch nicht veröffentlicht)
+## 0.9.0 (2026-10-14)
 
 ### Neu
 - Der Name des Projekts ist Pappenheimer. Die Version steht in der Datei `version.py`, im Fuß der Oberfläche, beim Start des Servers und in `mtg --version`.
