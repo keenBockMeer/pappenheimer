@@ -704,32 +704,32 @@ function sortSpiel(rows, naechste) {
   const gelegt = Object.fromEntries(STACKS.map(k => [k, 0])), von = document.activeElement;
   let i = 0, busy = false;
   const box = document.createElement('div');
-  box.className = 'spiel noprint';
+  box.className = 'kk noprint';
   box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Karte für Karte sortieren');
-  box.innerHTML = `<div class="spiel-kopf"><button class="btn ghost" type="button" data-s="zu">${icon('x')}Beenden</button><span class="progress" aria-hidden="true"><span id="sp-p" style="--p:0"></span></span><span class="muted" id="sp-n"></span></div>
-    <div class="spiel-buehne" id="sp-b" aria-live="polite"></div>
-    <div class="piles">${STACKS.map(k => `<div class="pile s-${k}" data-pile="${k}"><span>${LABEL[k]}</span><b>0</b></div>`).join('')}</div>
-    <div class="spiel-tasten"><button class="btn" type="button" data-s="zurueck">${icon('left')}Zurück</button><button class="btn primary" type="button" data-s="weiter">Weiter${icon('right')}</button><span class="muted">Leertaste oder Pfeiltasten</span></div>`;
+  box.innerHTML = `<div class="kk-kopf"><button class="btn ghost" type="button" data-s="zu">${icon('x')}Beenden</button><span class="progress" aria-hidden="true"><span id="sp-p" style="--p:0"></span></span><span class="muted" id="sp-n"></span></div>
+    <div class="kk-buehne" id="sp-b" aria-live="polite"></div>
+    <div class="kk-stapel">${STACKS.map(k => `<div class="kk-haufen s-${k}" data-pile="${k}"><span>${LABEL[k]}</span><b>0</b></div>`).join('')}</div>
+    <div class="kk-tasten"><button class="btn" type="button" data-s="zurueck">${icon('left')}Zurück</button><button class="btn primary" type="button" data-s="weiter">Weiter${icon('right')}</button><span class="muted">Leertaste oder Pfeiltasten</span></div>`;
   const zeigen = () => {
     const z = rows[i];
     $('#sp-n', box).textContent = z ? `${i + 1} von ${rows.length}` : '';
     $('#sp-p', box).style.setProperty('--p', (i / rows.length).toFixed(3));
-    $$('.pile', box).forEach(p => p.classList.toggle('ziel', !!z && z.stacks.some(s => s.stack === p.dataset.pile)));
+    $$('.kk-haufen', box).forEach(p => p.classList.toggle('ziel', !!z && z.stacks.some(s => s.stack === p.dataset.pile)));
     $('[data-s=weiter]', box).disabled = !z; $('[data-s=zurueck]', box).disabled = !i;
     $('#sp-b', box).innerHTML = z
-      ? `${pic(z.image, z.name, 'spiel-karte')}<div class="spiel-text"><h2>${esc(z.name)}</h2><p class="muted">${esc(z.set)} #${esc(z.number)}, ${esc(LANG[z.language] || z.language)}${z.foil !== 'normal' ? ', ' + esc(z.foil) : ''}</p>
-        <div class="chips big">${z.stacks.map(s => chip(s.stack, stapelText(z, s))).join('')}</div><p class="spiel-preis">${eur(z.price)}</p></div>`
-      : `<div class="spiel-ende"><h2>Alles sortiert</h2><p class="muted">${karten(STACKS.reduce((n, k) => n + gelegt[k], 0))} liegen auf ihren Stapeln.</p>
+      ? `${pic(z.image, z.name, 'kk-karte')}<div class="kk-text"><h2>${esc(z.name)}</h2><p class="muted">${esc(z.set)} #${esc(z.number)}, ${esc(LANG[z.language] || z.language)}${z.foil !== 'normal' ? ', ' + esc(z.foil) : ''}</p>
+        <div class="chips big">${z.stacks.map(s => chip(s.stack, stapelText(z, s))).join('')}</div><p class="kk-preis">${eur(z.price)}</p></div>`
+      : `<div class="kk-ende"><h2>Alles sortiert</h2><p class="muted">${karten(STACKS.reduce((n, k) => n + gelegt[k], 0))} liegen auf ihren Stapeln.</p>
         <div class="seg">${naechste ? `<a class="btn primary" href="${naechste}">Nächste Seite</a>` : ''}<button class="btn${naechste ? '' : ' primary'}" type="button" data-s="zu">Zur Liste</button></div></div>`;
     if (rows[i + 1]?.image) new Image().src = rows[i + 1].image;
-    if (!z) $('.spiel-ende .btn', box).focus();
+    if (!z) $('.kk-ende .btn', box).focus();
   };
   const zaehler = (k, d) => { gelegt[k] += d; const p = $(`[data-pile="${k}"]`, box); $('b', p).textContent = gelegt[k]; p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); };
   const vor = async () => {
     const z = rows[i];
     if (busy || !z) return;
     busy = true;
-    const img = $('.spiel-karte', box), ziel = $(`[data-pile="${z.stacks[0].stack}"]`, box);
+    const img = $('.kk-karte', box), ziel = $(`[data-pile="${z.stacks[0].stack}"]`, box);
     if (img && !calm.matches) {  // die Karte fliegt auf ihren Stapel
       const a = img.getBoundingClientRect(), b = ziel.getBoundingClientRect();
       await img.animate([{transform: 'none', opacity: 1}, {transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(.12) rotate(14deg)`, opacity: .3}],
@@ -750,7 +750,7 @@ function sortSpiel(rows, naechste) {
     else if (e.key === 'ArrowRight' || (/^( |Enter)$/.test(e.key) && !e.target.closest('button, a'))) { e.preventDefault(); vor(); }
   };
   box.onclick = e => {
-    const b = e.target.closest('[data-s], .spiel-karte');
+    const b = e.target.closest('[data-s], .kk-karte');
     if (b) ({zu, zurueck, weiter: vor})[b.dataset.s || 'weiter']();
   };
   document.body.append(box);

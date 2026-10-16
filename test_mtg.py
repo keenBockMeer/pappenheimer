@@ -2076,6 +2076,13 @@ def test_bewegung_steht_bei_weniger_bewegung_still():
     assert "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important;" in css
 
 
+def test_klassen_des_sortier_modus_kollidieren_nicht():
+    """„Karte für Karte“ nutzt nur Klassen mit `kk-`: `.spiel` (Zeilen unter Spiele) und `.pile`/`.piles` (Stapel-Ansicht der Decks) gehören anderen Ansichten und haben je genau eine Regel."""
+    css = (WURZEL / "ui" / "style.css").read_text(encoding="utf-8")
+    assert css.count("\n.piles {") == 1 and "repeat(auto-fill, minmax(9.5rem, 1fr))" in css[css.index("\n.piles {"):][:120]
+    assert "\n.spiel {" not in css and "\n.pile {" not in css and "\n.kk {" in css
+
+
 def test_cardmarket_preisliste_nur_eigene_karten(conn):
     karte(conn, 1, "Mit Cardmarket-ID", eur=2.0, cm=555)
     karte(conn, 2, "Foil-Kopie", eur=2.0, cm=555, oracle=1, foil="foil")
