@@ -2,8 +2,8 @@
    DESIGN SYSTEM: Pappenheimer (Taste-Durchgang nach leonxlnx/taste-skill: redesign-skill + taste-skill v2)
    Design Read: Redesign einer lokalen Sammlungs-App (Produkt-UI, kein Landing-Page) für zwei MTG-Spieler ohne
    Technikwissen, ruhige dunkle Sammler-Sprache, native CSS + Geist + Phosphor, einzige Bilder: die eigenen Karten.
-   Dials: DESIGN_VARIANCE 5 (asymmetrische Übersicht und Decks, Listen bleiben ruhig), MOTION_INTENSITY 4 (CSS:
-   Einblenden, Hover, Druck, Sheet), VISUAL_DENSITY 5 (Alltags-App: Luft zwischen Abschnitten, Listen kompakt).
+   Dials: DESIGN_VARIANCE 5 (asymmetrische Übersicht und Decks, Listen bleiben ruhig), MOTION_INTENSITY 6 seit E34 (CSS, wenig
+   Skript: Einblenden, Kacheln, Neigung, Flug, Zähler, Hover, Druck, Sheet), VISUAL_DENSITY 5 (Alltags-App: Luft zwischen Abschnitten, Listen kompakt).
    Regeln
    - Farbe: Bedienung monochrom (gebrochenes Weiß bzw. Fast-Schwarz), Farbe nur für Daten: vier Stapel und Mana.
      Eine Grau-Familie (warm). Kein reines Schwarz/Weiß. Stapel-Flächen ≤ 80 % Sättigung, Stapel-Text ≥ 4,5:1.
@@ -13,7 +13,8 @@
    - Text auf Kartenbildern: nie. Preis und Anzahl stehen unter dem Bild (Scryfall: Künstler und Copyright frei).
    - Typo: Geist 400/500/600, Ziffern tabellarisch. Große Zahlen und Titel mit enger Laufweite. Keine Gedankenstriche.
    - Icons: Phosphor Bold (MIT, ui/icons-LICENSE.txt) über icon() in app.js, Manasymbole Phosphor Fill.
-   - Bewegung nur als Rückmeldung oder Zustandswechsel, nur transform/opacity, aus bei prefers-reduced-motion.
+   - Bewegung: spielerisch, aber kurz (unter 0,6 s) und nur transform/opacity: Auftritt der Kacheln, Neigung der Karte zur Maus,
+     Zähler, Flug auf den Stapel (E34); aus bei prefers-reduced-motion.
    - Darstellung: Dunkel (Standard, PLAN E2), Hell, oder wie das System; Tokens unten, Umschalter im Fuß.
    - Ebenen: Körnung -1, Kopf 10, Scanner im Vollbild 20 bis 25, Toast 30, Ablegen 35, Vorschau 40, Tooltip 45, Sprunglink 50.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
@@ -93,6 +94,7 @@
 
   /* Bewegung */
   --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);  /* schießt leicht über und federt zurück */
   --dur-fast: 150ms; --dur: 260ms; --dur-slow: 480ms;
   --transition-fast: var(--dur-fast) var(--ease-out);
   --transition-normal: var(--dur) var(--ease-out);
@@ -318,7 +320,9 @@ h3 { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin: var
 .legend:has(.anteil) .dot { display: none; }  /* der Balken darüber trägt die Farbe schon */
 .legend > div { display: grid; gap: var(--space-1); align-content: start; }
 .anteil { height: .75rem; border-radius: 2px; background: var(--color-surface-alt); margin-bottom: var(--space-2); }
-.anteil span { display: block; height: 100%; width: var(--w); border-radius: 2px; }
+.anteil span { display: block; height: 100%; width: var(--w); border-radius: 2px; transform-origin: left; }
+#main.enter .anteil span { animation: grow .9s var(--ease-out) .3s both; }
+@keyframes grow { from { transform: scaleX(0); } }
 /* Die Hilfe-Symbole in Kennzahlen und Legende erscheinen erst, wenn die Maus darüber steht oder der Fokus darauf liegt (am Handy bleiben sie sichtbar) */
 @media (hover: hover) {
   .hstats .info, .legend .info { opacity: 0; transition: opacity var(--transition-fast), color var(--transition-fast); }
@@ -386,9 +390,14 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .card { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); text-decoration: none; color: inherit; align-content: start; cursor: pointer; min-width: 0; }
 .card .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }  /* lange Decknamen kürzen statt die Kachel zu verbreitern */
 .card img, .card .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--color-surface-alt); box-shadow: var(--shadow-card);
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal); }
-.card:hover img, .card:hover .noimg { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  transition: transform .5s var(--ease-spring), box-shadow var(--transition-normal); }  /* zurück in die Ruhe mit Feder */
+/* Hover: Karte hebt sich und neigt sich zur Maus (--rx und --ry setzt app.js), schnell beim Folgen */
+.card:hover img, .card:hover .noimg { transform: translateY(-6px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); box-shadow: var(--shadow-lg);
+  transition: transform .16s var(--ease-out), box-shadow var(--transition-normal); }
 .card:active img { transform: translateY(-1px) scale(.99); }
+/* Auftritt: die Kacheln einer Seite fliegen gestaffelt ein, die ersten 16 nacheinander */
+@keyframes tile-in { from { opacity: 0; transform: translateY(18px) scale(.94) rotate(-1.5deg); } }
+.grid > .card { perspective: 700px; animation: tile-in .5s var(--ease-out) both; animation-delay: calc(min(sibling-index(), 16) * 28ms); }
 .card .cap { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); font-size: var(--text-sm); margin-top: var(--space-1); }
 .card .cap .p { font-weight: var(--weight-semibold); }
 .card .cap .q { color: var(--color-text-muted); }
@@ -402,9 +411,13 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .filters.bar2 { padding-bottom: var(--space-5); border-bottom: var(--border-width) solid var(--color-border); }
 .picks { display: flex; gap: var(--space-1); }
 .pick { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md); border: var(--border-width) solid var(--color-border-strong); background: transparent; cursor: pointer; padding: 0;
-  opacity: .55; transition: opacity var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast); }
+  opacity: .55; transition: opacity var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), transform .3s var(--ease-spring); }
 .pick:hover { opacity: .9; background: var(--color-surface-alt); }
 .pick[aria-pressed=true] { opacity: 1; border-color: var(--color-text-secondary); background: var(--color-secondary); }
+.pick:active { transform: scale(.88); }
+.pick .pip { transition: rotate .4s var(--ease-spring), scale .4s var(--ease-spring); }
+.pick:hover .pip { rotate: 25deg; scale: 1.12; }
+.pick[aria-pressed=true] .pip { scale: 1.2; }
 .pager { display: flex; justify-content: center; align-items: center; gap: var(--space-4); margin-top: var(--space-6); }
 .count-line { color: var(--color-text-muted); margin: var(--space-4) 0 var(--space-6); min-height: 1.3em; }
 .tabs { display: flex; gap: var(--space-1); border-bottom: var(--border-width) solid var(--color-border); margin: 0 0 var(--space-5); overflow-x: auto; }
@@ -555,6 +568,11 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .row.pick { grid-template-columns: auto minmax(0, 1fr) auto; cursor: pointer; }
 /* Suche (Phase 18): breites Suchfeld, Suchhilfe, aktive Filter als Marken */
 .search.wide { flex: 1 1 22rem; }
+/* Weitere Filter: hinter dem Knopf „Filter“, mit Zahl der gesetzten */
+.filter-mehr { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; animation: enter var(--dur) var(--ease-out); }
+#mehr-filter .i { transition: rotate var(--transition-fast); }
+#mehr-filter[aria-expanded=true] .i { rotate: 90deg; }
+.zahl { min-width: 1.25rem; padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--text-xs); font-weight: var(--weight-semibold); line-height: 1.25rem; text-align: center; }
 .search.wide input { width: 100%; }
 .suchhilfe { margin-top: var(--space-3); font-size: var(--text-sm); }
 .suchhilfe summary { cursor: pointer; color: var(--color-text-secondary); width: max-content; }
@@ -703,6 +721,45 @@ footer select { min-height: 2rem; padding-block: var(--space-1); font-size: var(
 #main.enter .fan a { animation: deal .7s var(--ease-out) both; animation-delay: calc(180ms + var(--k, 0) * 90ms); }
 @keyframes deal { from { opacity: 0; translate: -50% calc(-50% + 40px); rotate: 0deg; } }
 .fan a:nth-child(2) { --k: 1; } .fan a:nth-child(3) { --k: 2; }
+@keyframes pop { 40% { transform: scale(1.35); } }
+@keyframes deal-in { from { opacity: 0; transform: translateY(40px) rotate(-4deg) scale(.92); } }
+
+/* --- Karte für Karte (Sortieren, E34): eine große Karte, vier Stapel darunter; die Karte fliegt auf ihren Stapel, der Zähler springt ------ */
+.spiel { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: var(--space-5); padding: var(--space-5) var(--space-6) var(--space-6);
+  background: var(--color-background); overflow: auto; overscroll-behavior: contain; animation: modal-in var(--dur) var(--ease-out); }
+.spiel-kopf { display: flex; align-items: center; gap: var(--space-5); width: 100%; max-width: 60rem; margin: 0 auto; }
+.spiel-kopf .progress { flex: 1; margin: 0; height: 6px; }
+.spiel-buehne { display: grid; grid-template-columns: auto minmax(0, 20rem); gap: var(--space-10); align-items: center; justify-content: center; min-height: 0; }
+.spiel-karte { height: clamp(14rem, 50dvh, 30rem); width: auto; aspect-ratio: 488/680; border-radius: var(--radius-card); box-shadow: var(--shadow-xl); cursor: pointer; animation: deal-in .45s var(--ease-spring) both; }
+.spiel-text { animation: enter var(--dur-slow) var(--ease-out) .1s both; }
+.spiel-text h2 { display: block; margin: 0 0 var(--space-2); font-size: var(--text-3xl); letter-spacing: -.035em; line-height: 1.05; }
+.spiel-text .muted { margin: 0 0 var(--space-5); }
+.spiel-preis { margin: var(--space-5) 0 0; font: var(--weight-semibold) var(--text-2xl)/1 var(--font-display); letter-spacing: -.03em; }
+.spiel-ende { grid-column: 1 / -1; text-align: center; animation: deal-in .45s var(--ease-spring) both; }
+.spiel-ende h2 { display: block; margin: 0 0 var(--space-2); font-size: var(--text-4xl); letter-spacing: -.045em; }
+.spiel-ende .seg { justify-content: center; margin-top: var(--space-6); }
+.piles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); width: 100%; max-width: 46rem; margin: 0 auto; }
+.pile { --c: var(--data-deck); --ink: var(--ink-deck); display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: var(--border-width) solid var(--color-border-strong);
+  color: var(--color-text-secondary); font-size: var(--text-sm); transition: transform .35s var(--ease-spring), background-color var(--transition-normal), border-color var(--transition-normal), color var(--transition-normal); }
+.pile.s-keep { --c: var(--data-keep); --ink: var(--ink-keep); } .pile.s-sell { --c: var(--data-sell); --ink: var(--ink-sell); } .pile.s-bulk { --c: var(--data-bulk); --ink: var(--ink-bulk); }
+.pile b { font: var(--weight-semibold) var(--text-3xl)/1 var(--font-display); letter-spacing: -.04em; color: var(--color-text); }
+.pile.ziel { transform: translateY(-6px); border-color: var(--c); background: color-mix(in srgb, var(--c) var(--tint), transparent); color: var(--ink); }
+.pile.pop b { animation: pop .4s var(--ease-spring); }
+.spiel-tasten { display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
+.spiel-tasten .btn.primary { min-width: 9rem; min-height: 2.75rem; }
+@media (max-width: 40rem) {
+  .spiel { padding: var(--space-4); gap: var(--space-4); }
+  .spiel-buehne { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--space-4); text-align: center; }
+  .spiel-karte { height: clamp(12rem, 38dvh, 22rem); }
+  .spiel-text h2 { font-size: var(--text-2xl); }
+  .spiel-text .muted { margin-bottom: var(--space-3); }
+  .spiel-preis { margin-top: var(--space-3); }
+  .spiel-text .chips { justify-content: center; }
+  .piles { gap: var(--space-2); }
+  .pile { padding: var(--space-2) var(--space-3); }
+  .pile b { font-size: var(--text-xl); }
+  .spiel-tasten .muted { display: none; }
+}
 
 /* --- Anmeldung und Konten (Phase 13) ------------------------------------------------------------------------- */
 .login { max-width: 24rem; margin: var(--space-12) auto 0; width: 100%; }

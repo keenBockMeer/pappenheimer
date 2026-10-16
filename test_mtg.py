@@ -2067,6 +2067,15 @@ def test_wertverlauf_kurve_punkte_und_luecken():
     assert ".vplot .luecke {" in css and ".vplot .pkt {" in css and "Gestrichelt heißt" in js
 
 
+def test_bewegung_steht_bei_weniger_bewegung_still():
+    """E34: Flug der Karte, Neigung der Kacheln und hochlaufende Zahl fragen „weniger Bewegung“ im Skript ab, alles andere stoppt die eine Regel im CSS."""
+    js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
+    spiel = js[js.index("function sortSpiel("):js.index("// --- Verkaufen:")]
+    assert "img && !calm.matches" in spiel
+    assert "!calm.matches ? e.target.closest('.grid > .card')" in js and "if (!el || calm.matches) return;" in js
+    assert "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important;" in css
+
+
 def test_cardmarket_preisliste_nur_eigene_karten(conn):
     karte(conn, 1, "Mit Cardmarket-ID", eur=2.0, cm=555)
     karte(conn, 2, "Foil-Kopie", eur=2.0, cm=555, oracle=1, foil="foil")
