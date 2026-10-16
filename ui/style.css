@@ -725,40 +725,40 @@ footer select { min-height: 2rem; padding-block: var(--space-1); font-size: var(
 @keyframes deal-in { from { opacity: 0; transform: translateY(40px) rotate(-4deg) scale(.92); } }
 
 /* --- Karte für Karte (Sortieren, E34): eine große Karte, vier Stapel darunter; die Karte fliegt auf ihren Stapel, der Zähler springt ------ */
-.spiel { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: var(--space-5); padding: var(--space-5) var(--space-6) var(--space-6);
+.kk { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: var(--space-5); padding: var(--space-5) var(--space-6) var(--space-6);
   background: var(--color-background); overflow: auto; overscroll-behavior: contain; animation: modal-in var(--dur) var(--ease-out); }
-.spiel-kopf { display: flex; align-items: center; gap: var(--space-5); width: 100%; max-width: 60rem; margin: 0 auto; }
-.spiel-kopf .progress { flex: 1; margin: 0; height: 6px; }
-.spiel-buehne { display: grid; grid-template-columns: auto minmax(0, 20rem); gap: var(--space-10); align-items: center; justify-content: center; min-height: 0; }
-.spiel-karte { height: clamp(14rem, 50dvh, 30rem); width: auto; aspect-ratio: 488/680; border-radius: var(--radius-card); box-shadow: var(--shadow-xl); cursor: pointer; animation: deal-in .45s var(--ease-spring) both; }
-.spiel-text { animation: enter var(--dur-slow) var(--ease-out) .1s both; }
-.spiel-text h2 { display: block; margin: 0 0 var(--space-2); font-size: var(--text-3xl); letter-spacing: -.035em; line-height: 1.05; }
-.spiel-text .muted { margin: 0 0 var(--space-5); }
-.spiel-preis { margin: var(--space-5) 0 0; font: var(--weight-semibold) var(--text-2xl)/1 var(--font-display); letter-spacing: -.03em; }
-.spiel-ende { grid-column: 1 / -1; text-align: center; animation: deal-in .45s var(--ease-spring) both; }
-.spiel-ende h2 { display: block; margin: 0 0 var(--space-2); font-size: var(--text-4xl); letter-spacing: -.045em; }
-.spiel-ende .seg { justify-content: center; margin-top: var(--space-6); }
-.piles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); width: 100%; max-width: 46rem; margin: 0 auto; }
-.pile { --c: var(--data-deck); --ink: var(--ink-deck); display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: var(--border-width) solid var(--color-border-strong);
+.kk-kopf { display: flex; align-items: center; gap: var(--space-5); width: 100%; max-width: 60rem; margin: 0 auto; }
+.kk-kopf .progress { flex: 1; margin: 0; height: 6px; }
+.kk-buehne { display: grid; grid-template-columns: auto minmax(0, 20rem); gap: var(--space-10); align-items: center; justify-content: center; min-height: 0; }
+.kk-karte { height: clamp(14rem, 50dvh, 30rem); width: auto; aspect-ratio: 488/680; border-radius: var(--radius-card); box-shadow: var(--shadow-xl); cursor: pointer; animation: deal-in .45s var(--ease-spring) both; }
+.kk-text { animation: enter var(--dur-slow) var(--ease-out) .1s both; }
+.kk-text h2 { display: block; margin: 0 0 var(--space-2); font-size: var(--text-3xl); letter-spacing: -.035em; line-height: 1.05; }
+.kk-text .muted { margin: 0 0 var(--space-5); }
+.kk-preis { margin: var(--space-5) 0 0; font: var(--weight-semibold) var(--text-2xl)/1 var(--font-display); letter-spacing: -.03em; }
+.kk-ende { grid-column: 1 / -1; text-align: center; animation: deal-in .45s var(--ease-spring) both; }
+.kk-ende h2 { display: block; margin: 0 0 var(--space-2); font-size: var(--text-4xl); letter-spacing: -.045em; }
+.kk-ende .seg { justify-content: center; margin-top: var(--space-6); }
+.kk-stapel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); width: 100%; max-width: 46rem; margin: 0 auto; }
+.kk-haufen { --c: var(--data-deck); --ink: var(--ink-deck); display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: var(--border-width) solid var(--color-border-strong);
   color: var(--color-text-secondary); font-size: var(--text-sm); transition: transform .35s var(--ease-spring), background-color var(--transition-normal), border-color var(--transition-normal), color var(--transition-normal); }
-.pile.s-keep { --c: var(--data-keep); --ink: var(--ink-keep); } .pile.s-sell { --c: var(--data-sell); --ink: var(--ink-sell); } .pile.s-bulk { --c: var(--data-bulk); --ink: var(--ink-bulk); }
-.pile b { font: var(--weight-semibold) var(--text-3xl)/1 var(--font-display); letter-spacing: -.04em; color: var(--color-text); }
-.pile.ziel { transform: translateY(-6px); border-color: var(--c); background: color-mix(in srgb, var(--c) var(--tint), transparent); color: var(--ink); }
-.pile.pop b { animation: pop .4s var(--ease-spring); }
-.spiel-tasten { display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
-.spiel-tasten .btn.primary { min-width: 9rem; min-height: 2.75rem; }
+.kk-haufen.s-keep { --c: var(--data-keep); --ink: var(--ink-keep); } .kk-haufen.s-sell { --c: var(--data-sell); --ink: var(--ink-sell); } .kk-haufen.s-bulk { --c: var(--data-bulk); --ink: var(--ink-bulk); }
+.kk-haufen b { font: var(--weight-semibold) var(--text-3xl)/1 var(--font-display); letter-spacing: -.04em; color: var(--color-text); }
+.kk-haufen.ziel { transform: translateY(-6px); border-color: var(--c); background: color-mix(in srgb, var(--c) var(--tint), transparent); color: var(--ink); }
+.kk-haufen.pop b { animation: pop .4s var(--ease-spring); }
+.kk-tasten { display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
+.kk-tasten .btn.primary { min-width: 9rem; min-height: 2.75rem; }
 @media (max-width: 40rem) {
-  .spiel { padding: var(--space-4); gap: var(--space-4); }
-  .spiel-buehne { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--space-4); text-align: center; }
-  .spiel-karte { height: clamp(12rem, 38dvh, 22rem); }
-  .spiel-text h2 { font-size: var(--text-2xl); }
-  .spiel-text .muted { margin-bottom: var(--space-3); }
-  .spiel-preis { margin-top: var(--space-3); }
-  .spiel-text .chips { justify-content: center; }
-  .piles { gap: var(--space-2); }
-  .pile { padding: var(--space-2) var(--space-3); }
-  .pile b { font-size: var(--text-xl); }
-  .spiel-tasten .muted { display: none; }
+  .kk { padding: var(--space-4); gap: var(--space-4); }
+  .kk-buehne { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--space-4); text-align: center; }
+  .kk-karte { height: clamp(12rem, 38dvh, 22rem); }
+  .kk-text h2 { font-size: var(--text-2xl); }
+  .kk-text .muted { margin-bottom: var(--space-3); }
+  .kk-preis { margin-top: var(--space-3); }
+  .kk-text .chips { justify-content: center; }
+  .kk-stapel { gap: var(--space-2); }
+  .kk-haufen { padding: var(--space-2) var(--space-3); }
+  .kk-haufen b { font-size: var(--text-xl); }
+  .kk-tasten .muted { display: none; }
 }
 
 /* --- Anmeldung und Konten (Phase 13) ------------------------------------------------------------------------- */
