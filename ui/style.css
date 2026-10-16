@@ -8,6 +8,7 @@
    - Farbe: Bedienung monochrom (gebrochenes Weiß bzw. Fast-Schwarz), Farbe nur für Daten: vier Stapel und Mana.
      Eine Grau-Familie (warm). Kein reines Schwarz/Weiß. Stapel-Flächen ≤ 80 % Sättigung, Stapel-Text ≥ 4,5:1.
      Ausnahme Hintergrund (E35): Schimmer und Funken tragen die fünf Mana-Farben, nie stärker als 16 %, nie hinter Text ohne Fläche.
+     Karten im Hintergrund: nur transform und opacity, nie ein Filter (Scryfall: kein Weichzeichnen, Schärfen, Entsättigen, Umfärben, Verzerren).
    - Form (Shape Lock): Flächen 12px, Bedienelemente 8px, Marken 4px, Kartenbilder in Kartenform, Kreise nur für
      Manasymbole. Keine Pillen.
    - Flächen nur, wo sie etwas bedeuten (Hinweise, Regeln, Decks, Dialoge); sonst gliedern Abstand und Überschrift.
@@ -17,7 +18,7 @@
    - Bewegung: spielerisch, aber kurz (unter 0,6 s) und nur transform/opacity: Auftritt der Kacheln, Neigung der Karte zur Maus,
      Zähler, Flug auf den Stapel (E34); aus bei prefers-reduced-motion.
    - Darstellung: Dunkel (Standard, PLAN E2), Hell, oder wie das System; Tokens unten, Umschalter im Fuß.
-   - Ebenen: Schimmer -2, Körnung und Funken -1, Kopf 10, Scanner im Vollbild 20 bis 25, Toast 30, Ablegen 35, Vorschau 40, Tooltip 45, Sprunglink 50.
+   - Ebenen: Schimmer -2, Körnung, Funken und Karten -1, Kopf 10, Scanner im Vollbild 20 bis 25, Toast 30, Ablegen 35, Vorschau 40, Tooltip 45, Sprunglink 50.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 @font-face { font-family: "Geist"; src: url("/fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 
@@ -167,6 +168,18 @@ body::after { content: ""; position: fixed; inset: -25%; z-index: -2; pointer-ev
 @keyframes aura-in { from { opacity: 0; } }
 @keyframes aura-drift { from { transform: rotate(-4deg) scale(1); } to { transform: rotate(5deg) scale(1.12) translate3d(2%, -2%, 0); } }
 :root[data-hg=aus] body::after, :root[data-hg=aus] #funken, :root[data-hg=schimmer] #funken, body.vollbild::after, body.vollbild #funken { display: none; }
+:root[data-hg=karten] #funken, :root[data-hg=an] #karten-hg, :root[data-hg=schimmer] #karten-hg, :root[data-hg=aus] #karten-hg, body.vollbild #karten-hg { display: none; }
+/* Meine Karten (E35): zufällige Karten der Sammlung schweben und drehen sich sehr langsam hinter der Seite (app.js, kartenHg). Nur transform und opacity, kein Filter:
+   Scryfall verbietet, Kartenbilder weichzuzeichnen, zu schärfen, zu entsättigen, umzufärben oder zu verzerren. */
+#karten-hg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; perspective: 1000px; animation: aura-in 2.4s var(--ease-out) backwards; }
+.bk { position: absolute; left: calc(var(--px) - var(--w) / 2); top: calc(var(--py) - var(--w) * .7); width: var(--w); opacity: var(--o);
+  translate: calc(var(--mx, 0) * var(--d) * 1px) calc(var(--my, 0) * var(--d) * 1px); transition: translate .8s var(--ease-out);
+  animation: schweben var(--t) ease-in-out var(--s) infinite alternate; }
+.bk img { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+@keyframes schweben {
+  from { transform: translate3d(0, 0, 0) rotateZ(var(--z0)) rotateY(var(--y0)) rotateX(var(--x0)); }
+  to { transform: translate3d(var(--dx), var(--dy), 0) rotateZ(var(--z1)) rotateY(var(--y1)) rotateX(var(--x1)); }
+}
 a { color: inherit; }
 img { display: block; }
 b, strong { font-weight: var(--weight-semibold); }
@@ -869,7 +882,7 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 @media print {
-  header, footer, .noprint, #toast, #drop, #peek, #tip, #funken, body::after { display: none !important; }
+  header, footer, .noprint, #toast, #drop, #peek, #tip, #funken, #karten-hg, body::after { display: none !important; }
   :root { color-scheme: light; --color-background: #fff; --color-surface: #fff; --color-surface-alt: #f2f2f2; --color-text: #000; --color-text-secondary: #222; --color-text-muted: #555; --color-border: #bbb;
     --ink-deck: #1b569e; --ink-keep: #9c3c14; --ink-sell: #0c6446; --ink-bulk: #725000; }
   body { background: #fff; color: #000; }

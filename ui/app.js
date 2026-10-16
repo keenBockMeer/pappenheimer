@@ -3451,10 +3451,10 @@ document.addEventListener('pointermove', e => {
 }, {passive: true});
 document.documentElement.addEventListener('pointerleave', aufrichten);
 
-// --- Hintergrund (E35): Funken in den fünf Mana-Farben treiben hinter der Seite, verbinden sich zu Sternbildern und weichen der Maus aus; beim Öffnen stieben sie aus der Mitte.
+// --- Hintergrund (E35): „Meine Karten“ (kartenHg, Standard), Funken oder nur der Schimmer aus CSS. Funken in den fünf Mana-Farben treiben hinter der Seite, verbinden sich zu Sternbildern und weichen der Maus aus; beim Öffnen stieben sie aus der Mitte.
 // Der Schimmer dahinter ist reines CSS. Bei „weniger Bewegung“ steht ein ruhiges Bild, im Scanner (Vollbild) und im Druck ruht alles; im Fuß lässt sich der Hintergrund wählen.
 const hgSel = $('#hintergrund'), cv = $('#funken'), cx = cv.getContext('2d');
-const hgPref = () => { try { return localStorage.getItem('mtg-hg') || 'an'; } catch { return 'an'; } };
+const hgPref = () => { try { return localStorage.getItem('mtg-hg') || 'karten'; } catch { return 'karten'; } };
 let fPts = [], fFarben = [], fA = .85, fLaeuft = false, fN = 0;
 const fMaus = {x: -1e4, y: -1e4};
 const fLesen = () => { const s = getComputedStyle(document.documentElement); fFarben = ['w', 'u', 'b', 'r', 'g'].map(k => s.getPropertyValue('--aura-' + k).trim()); fA = +s.getPropertyValue('--funken-a') || .85; };
@@ -3492,6 +3492,29 @@ const fLauf = t => {
   }
   requestAnimationFrame(fLauf);
 };
+// „Meine Karten“: zufällige der zuletzt gescannten Karten schweben und drehen sich sehr langsam hinter der Seite. Kleine Bilder (146 px), nur transform und opacity, nie ein Filter
+// (Scryfall verbietet Weichzeichnen, Schärfen, Entsättigen, Umfärben und Verzerren). Geladen wird erst nach der ersten Ansicht, höchstens einmal je Start.
+let kFertig = false, kBusy = false;
+const kBox = $('#karten-hg');
+const kartenHg = async () => {
+  if (kFertig || kBusy || hgPref() !== 'karten') return;
+  kBusy = true;
+  try {
+    let r = await api(`cards?sort=added&per_page=120&page=${1 + Math.floor(Math.random() * 3)}`);
+    if (!r.items.length) r = await api('cards?sort=added&per_page=120');
+    const schmal = innerWidth < 700, n = schmal ? 9 : 18, spalten = schmal ? 3 : 6, rnd = (a, b) => a + Math.random() * (b - a);
+    const wahl = r.items.filter(c => c.image).sort(() => Math.random() - .5).slice(0, n), zeilen = Math.ceil(wahl.length / spalten);
+    kBox.innerHTML = wahl.map((c, i) => {
+      const f = schmal ? .7 : 1, w = rnd(90, 160) * f, nah = (w / f - 90) / 70, t = rnd(70, 130);  // größer heißt näher: deckender, bewegt sich mehr mit der Maus
+      const v = {px: ((i % spalten + .5) / spalten * 100 + rnd(-5, 5)).toFixed(1) + '%', py: ((Math.floor(i / spalten) + .5) / zeilen * 100 + rnd(-7, 7)).toFixed(1) + '%', w: w.toFixed(0) + 'px',
+        o: (.24 + nah * .2).toFixed(2), d: Math.round(8 + nah * 26), t: t.toFixed(0) + 's', s: '-' + rnd(0, t).toFixed(0) + 's', dx: rnd(-60, 60).toFixed(0) + 'px', dy: rnd(-50, 50).toFixed(0) + 'px',
+        z0: rnd(-18, 18).toFixed(0) + 'deg', z1: rnd(-18, 18).toFixed(0) + 'deg', y0: rnd(-50, 50).toFixed(0) + 'deg', y1: rnd(-50, 50).toFixed(0) + 'deg', x0: rnd(-14, 14).toFixed(0) + 'deg', x1: rnd(-14, 14).toFixed(0) + 'deg'};
+      return `<span class="bk" style="${Object.entries(v).map(([k, x]) => `--${k}:${x}`).join(';')}"><img alt="" src="${esc(small(c.image))}"></span>`;
+    }).join('');
+    kFertig = true;
+  } catch { /* ohne Karten oder ohne Anmeldung bleibt der Schimmer allein; render() versucht es nach der Anmeldung noch einmal */ }
+  kBusy = false;
+};
 const hgAnwenden = burst => {
   const m = hgPref();
   document.documentElement.dataset.hg = m;
@@ -3501,8 +3524,11 @@ const hgAnwenden = burst => {
   else if (!fLaeuft) { fLaeuft = true; requestAnimationFrame(fLauf); }
 };
 hgSel.value = hgPref();
-hgSel.onchange = () => { try { localStorage.setItem('mtg-hg', hgSel.value); } catch { /* privates Fenster: gilt bis zum Neuladen */ } hgAnwenden(true); };
-addEventListener('pointermove', e => { fMaus.x = e.clientX; fMaus.y = e.clientY; }, {passive: true});
+hgSel.onchange = () => { try { localStorage.setItem('mtg-hg', hgSel.value); } catch { /* privates Fenster: gilt bis zum Neuladen */ } hgAnwenden(true); kartenHg(); };
+addEventListener('pointermove', e => {
+  fMaus.x = e.clientX; fMaus.y = e.clientY;
+  if (kBox.firstChild) { kBox.style.setProperty('--mx', (.5 - e.clientX / innerWidth) * 2); kBox.style.setProperty('--my', (.5 - e.clientY / innerHeight) * 2); }  // die Karten wandern gegen die Maus, die nahen mehr
+}, {passive: true});
 document.documentElement.addEventListener('pointerleave', () => { fMaus.x = -1e4; });
 addEventListener('resize', () => { if (hgPref() === 'an') { fGroesse(); fNeu(false); if (calm.matches) fZeichnen(0); } });
 hgAnwenden(true);
@@ -3526,7 +3552,7 @@ async function render(force) {
   hidePeek(); hideTip(); scanStop(); main.onclick = main.onchange = main.onkeydown = null;
   const vorher = main.firstElementChild;  // Skelett nur, solange die neue Ansicht noch nichts geschrieben hat (viewCards schreibt vor dem Laden)
   const slow = setTimeout(() => { if (rendered === hash && main.firstElementChild === vorher) main.innerHTML = skeleton(); }, 160);
-  try { await view(new URLSearchParams(qs || '')); if (neu) { scrollTo(0, 0); animateIn(); } beispielLeiste(); }
+  try { await view(new URLSearchParams(qs || '')); if (neu) { scrollTo(0, 0); animateIn(); } beispielLeiste(); kartenHg(); }
   catch (e) { if (e instanceof LoginNoetig) return; main.innerHTML = `<section class="panel error"><h2>${icon('alert')}Das hat nicht geklappt</h2><p class="muted">${esc(e.message)}</p><button class="btn" type="button" data-retry>${icon('refresh')}Nochmal versuchen</button></section>`; }
   finally { clearTimeout(slow); }
 }
