@@ -299,7 +299,11 @@ async function viewHome() {
     ${s.news.length ? `<section class="sec" aria-label="Neuigkeiten"><h2>Neuigkeiten <small>seit dem letzten Import</small></h2>
       <ul class="news">${s.news.map(n => `<li><span class="ic${NEWS_WARN.has(n.kind) ? ' warn' : ''}">${icon(NEWS_ICON[n.kind] || 'info')}</span><div${n.oracle_id ? ` data-oid="${esc(n.oracle_id)}"` : ''}>${esc(n.text)}<div class="s">${esc(n.sub)}</div></div></li>`).join('')}</ul></section>` : ''}</div>`;
   jobsUi(); verlaufHover();
-  if (neueAnsicht) zaehlen($('.display'), s.value, eur0);
+  if (neueAnsicht) {
+    zaehlen($('.display'), s.value, eur0);
+    [s.cards, s.unique, s.available].forEach((n, i) => zaehlen($$('.hstats dd')[i], n, x => num(Math.round(x))));
+    STACKS.forEach((k, i) => zaehlen($$('.legend .v')[i], P[k].value, eur0));
+  }
 }
 
 // Wertverlauf: eine Linie (Wert je Tag), Fläche als Hauch, Wert am Ende, Fadenkreuz mit Tooltip, Tabelle zum Aufklappen (dataviz-Regeln)
@@ -816,7 +820,7 @@ async function viewSell() {
     for (const k of ['single', 'bulk']) $('#c-' + k).textContent = `${karten(r[k].cards)}, ${eur(r[k].value)}`;
     $('#minv').textContent = eur(r.min);
     const summe = mine.reduce((n, z) => n + z.qty * z.price, 0);
-    $('#sum-v').textContent = eur(summe);
+    zaehlen($('#sum-v'), summe, eur);
     $('#rows-info').textContent = `${karten(mine.reduce((n, z) => n + z.qty, 0))} ausgewählt${sellTab === 'single' && summe ? `, bei Cardmarket nach Provision etwa ${eur(summe * (1 - r.provision))}` : ''}${g.total_rows > g.rows.length ? `. Angezeigt die ersten ${num(g.rows.length)} Zeilen, die Exporte enthalten alle.` : ''}`;
     $('#rows-info').insertAdjacentHTML('beforeend', sellTab === 'single' && summe ? ' ' + info('provision', 'Cardmarket-Provision') : '');
     const scanSel = mine.filter(z => z.scan), bu = $('#buchen');  // Scan-Binder in der Auswahl: hier buchen (Phase 26)
@@ -3150,6 +3154,7 @@ function erfListe(fehler) {  // die Scan-Liste zum Prüfen; erst „übernehmen�
   const box = $('#erf-liste'), l = erf.liste, n = l?.karten || 0, z = erf.zuletzt, pruefen = (l?.zeilen || []).filter(x => x.pruefen).length;
   if (!box) return;
   $('#voll-summe').textContent = n ? `${karten(n)} · ${eur(l.wert)}` : 'Scan-Liste leer';
+  const vorher = +box.dataset.n || 0; box.dataset.n = n;
   const frisch = z && Date.now() - Date.parse(z.at) < ERF_ZULETZT_H * 36e5;
   box.innerHTML = `<h2>Scan-Liste ${info('scanliste', 'Scan-Liste')} <small>${n ? `${karten(n)}, ${eur(l.wert)}${pruefen ? `, ${num(pruefen)}× Druck prüfen` : ''}` : 'leer'}</small>
       ${n ? `<span class="seg h2r"><button class="btn small" type="button" data-erfzurueck>${icon('left', 'sm')}Letzte zurück</button></span>` : ''}</h2>
@@ -3162,6 +3167,7 @@ function erfListe(fehler) {  // die Scan-Liste zum Prüfen; erst „übernehmen�
     : `<p class="muted">${esc(TIP.scanliste)}</p>`}
     ${frisch ? `<p class="note-line">${icon('check', 'sm')} Zuletzt übernommen: ${karten(z.karten)} in „${esc(z.binder)}“, ${day(z.at)} um ${uhr(z.at)}.
       ${z.zuruecknehmbar ? `<button class="link" type="button" id="erf-zurueckholen">${icon('left', 'sm')}zurück auf die Liste</button>` : ''}</p>` : ''}`;
+  if (n > vorher) bump($('h2 small', box));
 }
 
 const erfRow = (z, i) => `<div class="row erf"><a href="#" data-oid="${esc(z.oracle_id)}"${peekAt(z.image, z.name, eur(z.price))} aria-label="${esc(z.name)} ansehen">${pic(small(z.image), '', 'thumb')}</a>
@@ -3422,17 +3428,20 @@ const calm = matchMedia('(prefers-reduced-motion: reduce)');
 let rendered = null, enterTimer, neueAnsicht = false;
 // Zahl läuft beim ersten Aufruf der Ansicht hoch (nicht beim Neuzeichnen, nicht bei reduzierter Bewegung)
 const zaehlen = (el, ziel, fmt) => {
-  if (!el || calm.matches) return;
-  const t0 = performance.now();
-  el.textContent = fmt(0);
-  const schritt = t => { const k = Math.min((t - t0) / 800, 1); el.textContent = fmt(ziel * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(schritt); };
+  if (!el) return;
+  const von = +el.dataset.z || 0, t0 = performance.now(), dauer = 800 * Math.min(1, Math.abs(ziel - von) / Math.max(Math.abs(ziel), 1) + .2);
+  el.dataset.z = ziel;
+  if (calm.matches) { el.textContent = fmt(ziel); return; }
+  el.textContent = fmt(von);
+  const schritt = t => { const k = Math.min((t - t0) / dauer, 1); el.textContent = fmt(von + (ziel - von) * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(schritt); };
   requestAnimationFrame(schritt);
 };
-// Kacheln neigen sich zur Maus (nur mit Maus, nicht bei reduzierter Bewegung, höchstens 7 Grad)
+const bump = el => { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); };  // kurzes Springen, wenn sich eine Zahl erhöht
+// Kacheln und die Karte im Detail neigen sich zur Maus (nur mit Maus, nicht bei reduzierter Bewegung, höchstens 7 Grad)
 let geneigt = null;
 const aufrichten = () => { geneigt?.style.removeProperty('--rx'); geneigt?.style.removeProperty('--ry'); geneigt = null; };
 document.addEventListener('pointermove', e => {
-  const c = e.pointerType === 'mouse' && !calm.matches ? e.target.closest('.grid > .card') : null;
+  const c = e.pointerType === 'mouse' && !calm.matches ? e.target.closest('.grid > .card, .dtop .img') : null;
   if (c !== geneigt) aufrichten();
   if (!c) return;
   geneigt = c;
@@ -3441,6 +3450,62 @@ document.addEventListener('pointermove', e => {
   c.style.setProperty('--rx', `${(.5 - (e.clientY - b.top) / b.height) * 14}deg`);
 }, {passive: true});
 document.documentElement.addEventListener('pointerleave', aufrichten);
+
+// --- Hintergrund (E35): Funken in den fünf Mana-Farben treiben hinter der Seite, verbinden sich zu Sternbildern und weichen der Maus aus; beim Öffnen stieben sie aus der Mitte.
+// Der Schimmer dahinter ist reines CSS. Bei „weniger Bewegung“ steht ein ruhiges Bild, im Scanner (Vollbild) und im Druck ruht alles; im Fuß lässt sich der Hintergrund wählen.
+const hgSel = $('#hintergrund'), cv = $('#funken'), cx = cv.getContext('2d');
+const hgPref = () => { try { return localStorage.getItem('mtg-hg') || 'an'; } catch { return 'an'; } };
+let fPts = [], fFarben = [], fA = .85, fLaeuft = false, fN = 0;
+const fMaus = {x: -1e4, y: -1e4};
+const fLesen = () => { const s = getComputedStyle(document.documentElement); fFarben = ['w', 'u', 'b', 'r', 'g'].map(k => s.getPropertyValue('--aura-' + k).trim()); fA = +s.getPropertyValue('--funken-a') || .85; };
+const fGroesse = () => { const d = Math.min(devicePixelRatio || 1, 1.5); cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); };
+const fNeu = burst => {
+  const n = Math.max(28, Math.min(90, Math.round(innerWidth * innerHeight / 17000)));
+  fPts = Array.from({length: n}, (_, i) => {
+    const w = Math.random() * 6.283, v = burst ? 4 + Math.random() * 12 : 0;
+    return {x: burst ? innerWidth / 2 : Math.random() * innerWidth, y: burst ? innerHeight * .4 : Math.random() * innerHeight, vx: Math.cos(w) * v, vy: Math.sin(w) * v,
+      bx: (Math.random() - .5) * .35, by: (Math.random() - .5) * .35, r: .9 + Math.random() * 1.6, c: i % 5, ph: Math.random() * 6.283};
+  });
+};
+const fZeichnen = t => {
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  for (const p of fPts) { cx.globalAlpha = (.45 + .4 * Math.sin(t / 900 + p.ph)) * fA; cx.fillStyle = fFarben[p.c]; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 6.283); cx.fill(); }
+  cx.lineWidth = .6;
+  for (let i = 0; i < fPts.length; i++) for (let k = i + 1; k < fPts.length; k++) {
+    const a = fPts[i], b = fPts[k], d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d < 130) { cx.globalAlpha = (1 - d / 130) * .32 * fA; cx.strokeStyle = fFarben[a.c]; cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y); cx.stroke(); }
+  }
+};
+const fLauf = t => {
+  if (calm.matches || hgPref() !== 'an') { fLaeuft = false; return; }
+  if (cv.getClientRects().length) {  // nicht im Scanner (Vollbild): dort ist das Canvas ausgeblendet
+    if (++fN % 120 === 0) fLesen();  // Darstellung (dunkel oder hell) kann sich geändert haben
+    for (const p of fPts) {
+      p.vx += (p.bx - p.vx) * .03; p.vy += (p.by - p.vy) * .03;
+      const dx = p.x - fMaus.x, dy = p.y - fMaus.y, d = Math.hypot(dx, dy);
+      if (d < 140 && d > 0) { p.vx += dx / d * (1 - d / 140) * .06; p.vy += dy / d * (1 - d / 140) * .06; }
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < -10) p.x = innerWidth + 10; else if (p.x > innerWidth + 10) p.x = -10;
+      if (p.y < -10) p.y = innerHeight + 10; else if (p.y > innerHeight + 10) p.y = -10;
+    }
+    fZeichnen(t);
+  }
+  requestAnimationFrame(fLauf);
+};
+const hgAnwenden = burst => {
+  const m = hgPref();
+  document.documentElement.dataset.hg = m;
+  if (m !== 'an') return;
+  fLesen(); fGroesse(); fNeu(burst && !calm.matches);
+  if (calm.matches) fZeichnen(0);  // ein ruhiges Bild statt Bewegung
+  else if (!fLaeuft) { fLaeuft = true; requestAnimationFrame(fLauf); }
+};
+hgSel.value = hgPref();
+hgSel.onchange = () => { try { localStorage.setItem('mtg-hg', hgSel.value); } catch { /* privates Fenster: gilt bis zum Neuladen */ } hgAnwenden(true); };
+addEventListener('pointermove', e => { fMaus.x = e.clientX; fMaus.y = e.clientY; }, {passive: true});
+document.documentElement.addEventListener('pointerleave', () => { fMaus.x = -1e4; });
+addEventListener('resize', () => { if (hgPref() === 'an') { fGroesse(); fNeu(false); if (calm.matches) fZeichnen(0); } });
+hgAnwenden(true);
 // neue Ansicht: Abschnitte blenden gestaffelt ein (nicht bei Neuzeichnen derselben Ansicht, das soll ruhig bleiben)
 const animateIn = () => {
   if (calm.matches) return;
