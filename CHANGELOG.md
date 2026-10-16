@@ -5,6 +5,7 @@ Format: je Version die Abschnitte Neu, Geändert, Behoben, Sicherheit. Versionen
 ## Unveröffentlicht
 
 ### Neu
+- Update-Hinweis auf Knopfdruck: Unter „Konten und Sicherung“ (nur Hauptkonto) steht die eigene Version und der Knopf „Nach Updates suchen“. Die App fragt dann einmal bei GitHub nach der neuesten Veröffentlichung und sagt „Du hast die neueste Version“ oder „Version X ist da“, mit Link zu den Änderungen und den zwei Wegen (Docker, Windows-ZIP); steht „Sicherheit“ im Titel der Veröffentlichung, ist die Zeile hervorgehoben. Das letzte Ergebnis bleibt mit Datum stehen. Von selbst fragt die App nie, auch nicht im täglichen Lauf; GitHub erfährt nur die Adresse des Rechners und den Programmnamen mit Version, nichts aus der Sammlung. Vorabversionen zählen nicht. Ist GitHub nicht erreichbar oder bremst es, steht ein lesbarer Satz da statt eines Fehlers. Die Seite „Quellen“ nennt GitHub als Quelle „nur auf Knopfdruck“, ohne Schalter.
 - Unter Windows öffnet sich Pappenheimer in einem eigenen Fenster statt in einem Tab des Browsers: ohne Adressleiste, mit eigenem Platz in der Taskleiste, und das schwarze Fenster schließt sich gleich nach dem Start. Das Fenster schließen beendet Pappenheimer, `Pappenheimer beenden` schließt auch das Fenster. Das Fenster stellt Microsoft Edge (sonst Google Chrome) mit einem eigenen Profil in `data/fenster`; fehlen beide, öffnet sich wie bisher der Browser. Von Hand: `mtg ui --fenster`. Geht kein Fenster auf, steht der Grund in `data/fenster.log`.
 
 ### Behoben

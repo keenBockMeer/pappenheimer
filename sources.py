@@ -3,6 +3,7 @@ Tests ersetzen diese Funktionen, nie echtes Netz."""
 import gzip
 import json
 import os
+import re
 import sqlite3
 import time
 import urllib.error
@@ -17,7 +18,7 @@ import version
 HEADERS = {"User-Agent": version.USER_AGENT, "Accept": "application/json"}
 # Sekunden Abstand je Host. Scryfall erlaubt für /cards/search und /cards/collection (alles, was wir nutzen) 2 Anfragen pro Sekunde
 # und sperrt nach einem 429 für 30 Sekunden (scryfall.com/docs/api/rate-limits); das Bild-CDN *.scryfall.io hat kein Limit.
-GAP = {"api.scryfall.com": 0.5, "json.edhrec.com": 1.0, "backend.commanderspellbook.com": 0.5, "downloads.s3.cardmarket.com": 1.0, "data.scryfall.io": 1.0}
+GAP = {"api.scryfall.com": 0.5, "json.edhrec.com": 1.0, "backend.commanderspellbook.com": 0.5, "downloads.s3.cardmarket.com": 1.0, "data.scryfall.io": 1.0, "api.github.com": 1.0}
 SPERRE = 31  # Sekunden Pause nach HTTP 429
 _last = {}
 
@@ -139,9 +140,14 @@ def beschreibung():
                 "schickt": "Kartennamen und Kennungen der Karten, die du importierst oder erfasst, dazu Adresse und Programmname mit Version.",
                 "wie_oft": "Beim Import, beim Erfassen und einmal am Tag für Preise und neue Sets (höchstens zwei Anfragen pro Sekunde); Gesamtdaten nur, wenn jemand scannt: der Katalog aller Karten (rund 75 MB) beim ersten Öffnen von „Erfassen“ und danach höchstens einmal am Tag, solange er gebraucht wird (in den letzten 30 Tagen geöffnet oder etwas auf einer Scan-Liste); die deutschen Kartennamen (rund 378 MB) nur mit dem Schalter in den Einstellungen des Scanners.",
                 "hinweis": ""}
+    github = {"key": "github", "name": "GitHub", "an": True, "schaltbar": False, "link": f"{version.REPO}/releases",
+              "zweck": "Nachsehen, ob es eine neue Version von Pappenheimer gibt.",
+              "schickt": "Nichts aus deiner Sammlung. GitHub sieht die Adresse des Rechners und den Programmnamen mit Version; gefragt wird nur nach der neuesten Veröffentlichung dieses Projekts.",
+              "wie_oft": "Nur auf Knopfdruck („Nach Updates suchen“ unter Konten und Sicherung, nur für das Hauptkonto), eine Anfrage. Nie von selbst, auch nicht im täglichen Lauf. Dafür gibt es keinen Schalter.",
+              "hinweis": ""}
     return {"gesperrt": z["gesperrt"], "env": ENV_QUELLEN,
             "items": [scryfall] + [{"key": k, "name": q["name"], "an": z["quellen"][k], "schaltbar": True, "link": q["link"], "zweck": q["zweck"],
-                                    "schickt": q["schickt"], "wie_oft": q["wie_oft"], "hinweis": q["hinweis"]} for k, q in QUELLEN.items()]}
+                                    "schickt": q["schickt"], "wie_oft": q["wie_oft"], "hinweis": q["hinweis"]} for k, q in QUELLEN.items()] + [github]}
 
 
 def _call(url, body=None, missing=(404,)):
@@ -167,6 +173,27 @@ def _call(url, body=None, missing=(404,)):
             time.sleep(SPERRE if e.code == 429 else 2 * (versuch + 1))
         finally:
             _last[host] = time.monotonic()
+
+
+# --- GitHub: neueste Veröffentlichung (Phase 50, PLAN E31) --------------------------------------------------------------------
+# Kein Eintrag in QUELLEN und kein Schalter: Der Abruf geht nur durch den Knopf „Nach Updates suchen“ (server.api_update), nie von selbst.
+RELEASE_URL = f"https://api.github.com/repos/{version.REPO.removeprefix('https://github.com/')}/releases/latest"
+
+
+def nummern(v):
+    """„0.9.1“ oder „v0.9.1“ -> (0, 9, 1); alles andere (Vorabversion „0.9.1-rc1“, Unsinn) -> None."""
+    m = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", v) if isinstance(v, str) else None
+    return tuple(map(int, m.groups())) if m else None
+
+
+def neueste_version():
+    """Die neueste Veröffentlichung dieses Projekts bei GitHub -> {"version", "titel", "url"}, oder None, wenn es noch keine gibt. Vorabversionen,
+    Entwürfe und Tags ohne Versionsnummer zählen nicht. Die Adresse baut die App selbst aus Repository und Version, aus der Antwort kommt nur der Titel."""
+    r = _call(RELEASE_URL)
+    if not isinstance(r, dict) or r.get("prerelease") or r.get("draft") or not nummern(r.get("tag_name")):
+        return None
+    v = r["tag_name"].lstrip("v")
+    return {"version": v, "titel": str(r.get("name") or "")[:200], "url": f"{version.REPO}/releases/tag/v{v}"}
 
 
 def scryfall_cards(ids, progress=None):

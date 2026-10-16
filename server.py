@@ -1206,7 +1206,7 @@ def dispatch(conn, method, path, q, body=b"", filename="", fetch=None, edhrec=No
 
 # --- Konten, Anmeldung, Sammlungen (Phase 13, PLAN E14) ------------------------------------------------------------
 
-KONTO_PFADE = ("/api/session", "/api/login", "/api/logout", "/api/konten", "/api/backup.zip", "/api/sicherung", "/api/quellen", "/api/katalog", "/api/proxy-blatt")
+KONTO_PFADE = ("/api/session", "/api/login", "/api/logout", "/api/konten", "/api/backup.zip", "/api/sicherung", "/api/quellen", "/api/katalog", "/api/proxy-blatt", "/api/update")
 
 
 def _cookie(token, sicher):
@@ -1277,6 +1277,42 @@ def _quellen(method, d, haupt):
         with closing(mtg.connect()) as conn:
             sources.setzen(conn, d)
     return sources.beschreibung() | {"haupt": haupt}
+
+
+UPDATE_KEY = "update:letzte"  # meta der Hauptsammlung: das letzte Ergebnis von „Nach Updates suchen“ (Phase 50)
+
+
+def api_update(method, haupt):
+    """Phase 50 (PLAN E31): Nach Updates suchen, nur auf Knopfdruck und nur das Hauptkonto; nichts davon läuft im täglichen Lauf. GET: das letzte
+    Ergebnis. POST: fragt GitHub nach der neuesten Veröffentlichung und merkt sie mit Zeit in meta der Hauptsammlung. Erreicht die Anfrage GitHub nicht
+    oder bremst es, steht das als „fehler“ in der Antwort (kein Fehlercode), und das letzte Ergebnis bleibt stehen. „neu“ rechnet jedes Lesen neu: Nach
+    einem Update zeigt ein altes Ergebnis nicht mehr „ist da“."""
+    if not haupt:
+        raise PermissionError("Nach Updates sucht nur das Hauptkonto")
+    fehler = None
+    with closing(mtg.connect()) as conn:
+        if method == "POST":
+            try:
+                neu = sources.neueste_version()
+                with conn:
+                    conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (UPDATE_KEY, json.dumps({"at": mtg.now_iso(), **(neu or {})}, ensure_ascii=False)))
+            except urllib.error.HTTPError as e:
+                fehler = ("GitHub bremst gerade (zu viele Anfragen von dieser Adresse). Versuch es später noch einmal." if e.code in (403, 429)
+                          else f"GitHub antwortet mit einem Fehler (HTTP {e.code}).")
+            except (OSError, ValueError):  # kein Netz, Zeitüberschreitung oder keine lesbare Antwort
+                fehler = "Keine Verbindung zu GitHub oder keine lesbare Antwort. Ist der Rechner online?"
+        zeile = conn.execute("SELECT value FROM meta WHERE key = ?", (UPDATE_KEY,)).fetchone()
+    try:
+        letzte = json.loads(zeile[0]) if zeile else None
+    except ValueError:
+        letzte = None
+    if isinstance(letzte, dict):
+        neuer = sources.nummern(letzte.get("version"))
+        letzte["neu"] = bool(neuer and neuer > sources.nummern(version.VERSION))
+        letzte["sicherheit"] = letzte["neu"] and "sicherheit" in str(letzte.get("titel") or "").lower()
+    else:
+        letzte = None
+    return {"eigene": version.VERSION, "letzte": letzte, "fehler": fehler}
 
 
 def _katalog_job(was, bulk=None):
@@ -1378,6 +1414,8 @@ def api_konto(method, path, body, token, sicher=False, adresse=""):
                 return (*_json(_quellen(method, d, True)), {})
             if path == "/api/proxy-blatt":
                 return (*_json(_proxy_blatt(method, d, True)), {})
+            if path == "/api/update":
+                return (*_json(api_update(method, True)), {})
             if path == "/api/katalog":
                 return (*_json(api_katalog(method, d, True)), {})
             if path == "/api/konten" and method == "POST" and d.get("aktion") == "add":  # erstes Konto = Hauptkonto, die bisherige Sammlung gehört ihm
@@ -1414,6 +1452,8 @@ def api_konto(method, path, body, token, sicher=False, adresse=""):
                 return (*_json(_quellen(method, d, haupt)), {})
             if path == "/api/proxy-blatt":  # lesen darf jedes Konto (die Ansicht erklärt, warum es aus ist), einschalten nur das Hauptkonto
                 return (*_json(_proxy_blatt(method, d, haupt)), {})
+            if path == "/api/update":  # Phase 50: nur das Hauptkonto, nur auf Knopfdruck
+                return (*_json(api_update(method, haupt)), {})
             if path == "/api/katalog":  # jedes Konto öffnet „Erfassen“, den Schalter der Namen stellt nur das Hauptkonto
                 return (*_json(api_katalog(method, d, haupt)), {})
             if path == "/api/backup.zip" and method == "GET" or path == "/api/sicherung":

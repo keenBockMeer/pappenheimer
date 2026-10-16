@@ -60,7 +60,7 @@ Ausbau v6 (Veröffentlichung: jeder betreibt es auf eigener Hardware, kein zentr
 - [x] Phase 47 – Beispielsammlung zum Ausprobieren (zwei Kartenlisten, Laden und restloses Entfernen, der erste echte Import entfernt sie)
 - [x] Phase 48 – Schnell laden: ETag und gzip (Seite 512 KB auf 207 KB, zweiter Aufruf 512 KB auf 9 KB samt API-Abfragen; der Server sagt 304, wenn nichts neu ist)
 - [ ] Phase 49 – Ausliefern: Docker-Image und Windows-ZIP aus CI, compose zieht das Image · gebaut, Abnahme grün (Probe-Tag `v0.9.0-rc1` am 2026-10-13: Lauf grün, Image mit amd64 und arm64 in der Registry, ZIP und Prüfsummen an der Vorabversion, falscher Tag rot); offen (real): die ZIP auf einem Windows ohne Python, den eigenen Server auf das Image umstellen (er baut bis zur Veröffentlichung weiter aus dem Klon), ein Gerät mit arm64
-- [ ] Phase 50 – Update-Hinweis auf Knopfdruck
+- [x] Phase 50 – Update-Hinweis auf Knopfdruck (Knopf „Nach Updates suchen“ unter Konten und Sicherung, nur Hauptkonto, nie von selbst; an einer Probe-Instanz gegen die echte Veröffentlichung gesehen)
 - [ ] Phase 51 – Handy ohne Server (Anleitung: Tailscale am eigenen Rechner, Heimnetz mit Caddy)
 - [ ] Phase 52 – README neu (Bilder, Scannen in Schritten, englischer Abschnitt)
 - [ ] Phase 53 – Generalprobe und Veröffentlichung
@@ -1377,6 +1377,14 @@ Vorziehen geht bei 38, 47, 48 und 51 (hängen an nichts außer 36). Pflicht vor 
 
 **Abnahme (Tests mit Fixture):** ohne Knopfdruck kein einziger Aufruf an GitHub, auch nicht im täglichen Lauf (Zähler am ersetzten `urlopen`) · neuere Version: Hinweis · gleiche, ältere oder Vorabversion: „aktuell“ · GitHub nicht erreichbar oder gedrosselt: lesbare Meldung statt Fehler · nur das Hauptkonto sieht den Knopf · das letzte Ergebnis steht nach dem Neuladen noch da. **Real:** nach der ersten Veröffentlichung eine ältere Fassung starten, drücken, den Hinweis sehen.
 **Offen bleibt:** ein täglicher Hinweis (bewusst nicht, E31), Benachrichtigung außerhalb der App, automatisches Aktualisieren.
+
+**Ergebnis (2026-10-16):** Gebaut, `python -m pytest -q`: 263 bestanden (fünf neue Tests mit 15 Fällen, drei angepasst: die Quellen-Seite hat nun fünf Einträge).
+- **`sources.neueste_version`** fragt `https://api.github.com/repos/<Repository aus version.REPO>/releases/latest` über `_call` (Host `api.github.com` in `GAP`, eine Sekunde Abstand) und liefert `{version, titel, url}` oder `None`. Ohne Eintrag in `QUELLEN` und ohne Schalter: Die Frage geht nur durch `server.api_update` (POST), im Code steht kein anderer Aufrufer (Test). `nummern` vergleicht Zahlen („0.10.0“ ist neuer als „0.9.1“); Vorabversionen, Entwürfe und Tags ohne Versionsnummer zählen nicht. Die Adresse der Veröffentlichung baut die App selbst aus Repository und Version, aus der Antwort kommt nur der Titel (höchstens 200 Zeichen, die Oberfläche escapt ihn).
+- **`GET`/`POST /api/update`** (`server.api_update`, in `KONTO_PFADE`): nur das Hauptkonto, ein Unterkonto bekommt 403 und löst keinen Aufruf aus. Das letzte Ergebnis (Zeit und Veröffentlichung) steht in `meta` „update:letzte“ der Hauptsammlung. „neu“ und „sicherheit“ (Wort „Sicherheit“ im Titel, nur bei einer neueren Version) rechnet jedes Lesen neu, damit ein altes Ergebnis nach dem Update nicht mehr „ist da“ sagt. GitHub nicht erreichbar, bremst es (HTTP 403 oder 429) oder kommt keine lesbare Antwort: Die Antwort trägt einen festen Satz als `fehler` (kein Fehlercode, kein Text der Ausnahme), das letzte Ergebnis bleibt stehen.
+- **Oberfläche:** Abschnitt „Updates“ unter „Konten und Sicherung“ (nur Hauptkonto, mit und ohne Hauptkonto angelegt): eigene Version, Knopf, ein Satz zu dem, was GitHub erfährt (Adresse des Rechners, Programmname mit Version, nichts aus der Sammlung), das Ergebnis mit Datum, bei einer neuen Version die zwei Wege (Docker, Windows-ZIP) und der Link zu den Änderungen, bei „Sicherheit“ im Titel die Warnfarbe. Die Seite „Quellen“ nennt GitHub „nur auf Knopfdruck“, ohne Schalter (`sources.beschreibung`).
+- **`tests/live_check.py`** prüft `releases/latest` mit (Felder `tag_name`, `name`, `prerelease`, `draft`). Am 2026-10-16 live: `v0.9.0`, die App liest 0.9.0.
+- **Probe im Browser (2026-10-16):** Probe-Instanz auf 127.0.0.1 mit einer vorgetäuschten eigenen Version 0.8.0 gegen die echte Veröffentlichung: „Version 0.9.0 ist da“ mit den zwei Wegen und dem Link, die Seite „Quellen“ zeigt den GitHub-Eintrag.
+- **Offen (real, Autor):** mit einer echten älteren Fassung (nach der nächsten Veröffentlichung) drücken und den Hinweis sehen; die Fehlerfälle (kein Netz, gedrosselt) sind nur mit ersetztem `urlopen` getestet.
 
 ### Phase 51 – Handy ohne Server (Anleitung)
 **Ziel:** Wer nur einen Rechner zu Hause hat, bekommt den Scanner trotzdem aufs Handy.
