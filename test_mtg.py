@@ -5045,6 +5045,29 @@ def test_migration_mehrere_prozesse_zugleich(daten, fetch):
     assert all(alt.values()), alt
 
 
+def test_frische_sammlung_viele_verbindungen_zugleich(tmp_path):
+    """Beim ersten Aufruf fragt die Oberfläche mehrmals zugleich an (Sitzung, Übersicht, Jobs, Beispiel): Öffnen viele Verbindungen eine neue
+    Sammlung gleichzeitig, endet jede ohne Fehler, die Datei steht auf dem Stand der App und im WAL-Modus. Vorher scheiterte das Umstellen auf
+    WAL dabei gelegentlich mit „database is locked“, ohne die Wartezeit von SQLite (mit 16 Verbindungen etwa jeder fünfte Durchlauf)."""
+    for runde in range(25):
+        db, fehler, start = tmp_path / f"{runde}.db", [], threading.Barrier(16, timeout=30)
+
+        def oeffnen():
+            start.wait()
+            try:
+                mtg.connect(db).close()
+            except Exception as e:
+                fehler.append(e)
+        faeden = [threading.Thread(target=oeffnen) for _ in range(16)]
+        for f in faeden:
+            f.start()
+        for f in faeden:
+            f.join()
+        assert not fehler, (runde, fehler)
+        with closing(sqlite3.connect(db)) as c:
+            assert (c.execute("PRAGMA journal_mode").fetchone()[0], c.execute("PRAGMA user_version").fetchone()[0]) == ("wal", mtg.STAND)
+
+
 def test_sicherung_vor_ueberschreibt_nichts(daten, fetch, monkeypatch):
     """Phase 39: Sicherungen derselben Sekunde bekommen eigene Namen, auch wenn ein anderer Prozess den nächsten Namen schon belegt hat
     (leere Datei) und daneben noch schreibt. Fremde Dateien bleiben, wie sie sind, und eine belegte, noch leere Datei zählt nicht als

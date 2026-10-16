@@ -13,6 +13,7 @@ Format: je Version die Abschnitte Neu, Geändert, Behoben, Sicherheit. Versionen
 
 ### Behoben
 - Nach dem Umbenennen des Ordners zeigte die Verknüpfung „Pappenheimer“ ein leeres Symbol: Windows zieht nur ihr Ziel nach, das Symbol zeigte weiter in den alten Ordner. Der Starter schreibt eine Verknüpfung, die in seinen Ordner zeigt, jetzt auch dann neu, wenn ihr Symbol nicht stimmt. Eine Verknüpfung einer anderen Installation bleibt, wie sie ist.
+- Beim allerersten Öffnen einer neuen, leeren Sammlung zeigte die Oberfläche gelegentlich kurz einen Fehler, und im Protokoll stand „database is locked“. Die Seite fragt beim Laden mehrmals zugleich an, und die Anfragen stellten die neue Datenbank gleichzeitig auf den schnelleren Schreibmodus (WAL) um; dabei wartete SQLite nicht, sondern brach eine davon ab. Jetzt wartet die App selbst und versucht es erneut (höchstens 30 Sekunden, wie sonst auch).
 
 ## 0.9.0 (2026-10-14)
 

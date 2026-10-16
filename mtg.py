@@ -236,6 +236,21 @@ def migrieren(conn, path, schritte):
             print(f"Datenbank {path} auf Stand {STAND} gebracht. Sicherung davor: {sicherung}", file=sys.stderr, flush=True)
 
 
+def _wal(conn, warten):
+    """Auf WAL umstellen. Stellen mehrere Verbindungen eine neue Datei zugleich um, wartet SQLite dabei nicht: Das Umstellen liest erst und
+    will dann schreiben, und aus einer Lesesperre heraus meldet SQLite „database is locked“ sofort statt nach der Wartezeit (sonst könnten
+    sich zwei gegenseitig blockieren). Deshalb hier selbst noch einmal versuchen, höchstens so lange wie die Wartezeit der Verbindung."""
+    ende = time.monotonic() + warten
+    while True:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            return
+        except sqlite3.OperationalError as e:
+            if e.sqlite_errorcode & 0xFF != sqlite3.SQLITE_BUSY or time.monotonic() > ende:
+                raise
+            time.sleep(0.01)
+
+
 def connect(path=None):
     """Verbindung zu einer Sammlung auf dem Stand der App: Eine neue oder ältere Datenbank bringt migrieren dorthin, eine neuere
     öffnet die App nicht (NichtMigriert)."""
@@ -247,7 +262,7 @@ def connect(path=None):
     try:
         _stand(conn)  # vor dem ersten Schreiben: An einer neueren Datenbank ändert die App nichts, auch nicht den Journal-Modus
         if str(path) != ":memory:":
-            conn.execute("PRAGMA journal_mode=WAL")
+            _wal(conn, 30)
         migrieren(conn, path, MIGRATIONEN)
     except BaseException:
         conn.close()
