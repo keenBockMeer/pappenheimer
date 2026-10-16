@@ -312,12 +312,18 @@ h3 { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin: var
 .note b { font-size: var(--text-md); }
 .note .muted { margin-top: 2px; }
 
-/* --- Plan: gestapelter Balken, Legende (Farbschlüssel = Daten, keine Deko) --------------------------------------- */
-.stack { display: flex; gap: 3px; height: .875rem; }
-.stack span { flex: var(--v) 1 0; min-width: 3px; border-radius: 2px; }
-.stack span:first-child { border-radius: var(--radius-sm) 2px 2px var(--radius-sm); } .stack span:last-child { border-radius: 2px var(--radius-sm) var(--radius-sm) 2px; }
+/* --- Plan: Legende mit Balken je Spalte (Farbschlüssel = Daten, keine Deko) ------------------------------------- */
 .legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-5) var(--space-6); margin-top: var(--space-5); }
+.legend:has(.anteil) { margin-top: 0; }
+.legend:has(.anteil) .dot { display: none; }  /* der Balken darüber trägt die Farbe schon */
 .legend > div { display: grid; gap: var(--space-1); align-content: start; }
+.anteil { height: .75rem; border-radius: 2px; background: var(--color-surface-alt); margin-bottom: var(--space-2); }
+.anteil span { display: block; height: 100%; width: var(--w); border-radius: 2px; }
+/* Die Hilfe-Symbole in Kennzahlen und Legende erscheinen erst, wenn die Maus darüber steht oder der Fokus darauf liegt (am Handy bleiben sie sichtbar) */
+@media (hover: hover) {
+  .hstats .info, .legend .info { opacity: 0; transition: opacity var(--transition-fast), color var(--transition-fast); }
+  .hstats > div:hover .info, .legend > div:hover .info, .hstats .info:focus-visible, .legend .info:focus-visible { opacity: 1; }
+}
 .legend b { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-md); }
 .legend .v { font: var(--weight-semibold) var(--text-xl)/1.2 var(--font-display); letter-spacing: -.025em; }
 .legend .muted { font-size: var(--text-sm); line-height: 1.4; }
