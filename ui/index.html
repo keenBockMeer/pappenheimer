@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+<canvas id="funken" aria-hidden="true"></canvas>
 <a class="skip" href="#main">Zum Inhalt springen</a>
 <header class="top">
   <div class="wrap bar">
@@ -33,7 +34,10 @@
   <p class="rechtlich"><span class="hinweis" lang="en">Pappenheimer is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</span> Auf Deutsch: Pappenheimer ist ein inoffizielles Fan-Projekt nach der Fan Content Policy, von Wizards of the Coast weder genehmigt noch empfohlen. Magic: The Gathering gehört Wizards of the Coast.</p>
   <p class="rechtlich">Pappenheimer <span id="version"></span>, MIT-Lizenz.</p>
   </div>
-  <label>Darstellung <select id="theme"><option value="dark">Dunkel</option><option value="light">Hell</option><option value="system">Wie das System</option></select></label>
+  <div class="fuss-wahl">
+    <label>Darstellung <select id="theme"><option value="dark">Dunkel</option><option value="light">Hell</option><option value="system">Wie das System</option></select></label>
+    <label>Hintergrund <select id="hintergrund"><option value="an">Mit Funken</option><option value="schimmer">Nur Schimmer</option><option value="aus">Schlicht</option></select></label>
+  </div>
 </footer>
 <dialog id="dlg" class="modal" aria-labelledby="dlg-title"></dialog>
 <div id="drop" hidden><div><svg class="i lg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M228,144v64a12,12,0,0,1-12,12H40a12,12,0,0,1-12-12V144a12,12,0,0,1,24,0v52H204V144a12,12,0,0,1,24,0ZM96.49,80.49,116,61v83a12,12,0,0,0,24,0V61l19.51,19.52a12,12,0,1,0,17-17l-40-40a12,12,0,0,0-17,0l-40,40a12,12,0,1,0,17,17Z"/></svg><b>Datei hier ablegen</b><span>CSV einer Scanner-App (zum Beispiel ManaBox), Deckliste oder CSV einer anderen App</span></div></div>

@@ -2072,8 +2072,17 @@ def test_bewegung_steht_bei_weniger_bewegung_still():
     js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
     spiel = js[js.index("function sortSpiel("):js.index("// --- Verkaufen:")]
     assert "img && !calm.matches" in spiel
-    assert "!calm.matches ? e.target.closest('.grid > .card')" in js and "if (!el || calm.matches) return;" in js
+    assert "!calm.matches ? e.target.closest('.grid > .card, .dtop .img')" in js and "if (calm.matches) { el.textContent = fmt(ziel); return; }" in js  # Zahl steht gleich auf dem Endwert
     assert "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important;" in css
+
+
+def test_hintergrund_ruht_bei_weniger_bewegung_im_scanner_und_im_druck():
+    """E35: Schimmer und Funken lassen sich im Fuß wählen und ruhen bei „weniger Bewegung“, im Scanner (Vollbild) und im Druck; die Farbe bleibt schwach."""
+    html, js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("index.html", "app.js", "style.css"))
+    assert '<canvas id="funken" aria-hidden="true">' in html and 'id="hintergrund"' in html
+    assert "if (calm.matches) fZeichnen(0);" in js and "if (calm.matches || hgPref() !== 'an')" in js
+    assert "body.vollbild::after, body.vollbild #funken { display: none; }" in css and "#funken, body::after { display: none !important; }" in css
+    assert css.count("--aura-stark:") == 2 and "--aura-stark: 15%" in css  # nie stärker als 16 % (Regel im Kopf von style.css)
 
 
 def test_klassen_des_sortier_modus_kollidieren_nicht():
