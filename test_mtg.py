@@ -4465,13 +4465,27 @@ def test_fuss_hinweis_lizenz_und_name(daten):
             ordner.mkdir()
         fremd = daten / "fremd.cmd"
         fremd.write_text("@echo off\r\n")
+        andere = daten / "Andere"
+        andere.mkdir()
+        # Ordner umbenannt: Windows zieht nur das Ziel nach, das Symbol zeigt weiter in den alten Ordner (neu schreiben); andere: gehört einer
+        # anderen Installation (bleibt, auch mit falschem Symbol)
         skript = ("$w = New-Object -ComObject WScript.Shell; $s = $w.CreateShortcut($env:LNK_LEER); $s.TargetPath = 'C:\\gibt-es-nicht\\alt.cmd'; $s.Save(); "
-                  "$s = $w.CreateShortcut($env:LNK_FREMD); $s.TargetPath = $env:ZIEL_FREMD; $s.Save()")
-        env = os.environ | {"LNK_LEER": str(desktop / mtg.VERKNUEPFUNG_ALT), "LNK_FREMD": str(menue / mtg.VERKNUEPFUNG_ALT), "ZIEL_FREMD": str(fremd)}
+                  "$s = $w.CreateShortcut($env:LNK_FREMD); $s.TargetPath = $env:ZIEL_FREMD; $s.Save(); "
+                  "$s = $w.CreateShortcut($env:LNK_UMBENANNT); $s.TargetPath = $env:ZIEL_HIER; $s.IconLocation = 'C:\\gibt-es-nicht\\ui\\mtg.ico,0'; $s.Save(); "
+                  "$s = $w.CreateShortcut($env:LNK_ANDERE); $s.TargetPath = $env:ZIEL_FREMD; $s.IconLocation = 'C:\\gibt-es-nicht\\ui\\mtg.ico,0'; $s.Save()")
+        env = os.environ | {"LNK_LEER": str(desktop / mtg.VERKNUEPFUNG_ALT), "LNK_FREMD": str(menue / mtg.VERKNUEPFUNG_ALT), "ZIEL_FREMD": str(fremd),
+                            "LNK_UMBENANNT": str(desktop / f"{version.NAME}.lnk"), "ZIEL_HIER": str(WURZEL / mtg.STARTER),
+                            "LNK_ANDERE": str(andere / f"{version.NAME}.lnk")}
         subprocess.run(["powershell", "-NoProfile", "-Command", skript], env=env, check=True, capture_output=True)
-        mtg.cmd_verknuepfung(None, ordner=[desktop, menue])
+
+        def symbol(lnk):
+            return subprocess.run(["powershell", "-NoProfile", "-Command", "(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK).IconLocation"],
+                                  env=os.environ | {"LNK": str(lnk)}, check=True, capture_output=True, text=True).stdout.strip()
+        mtg.cmd_verknuepfung(None, ordner=[desktop, menue, andere])
         assert sorted(p.name for p in desktop.iterdir()) == [f"{version.NAME}.lnk"]
         assert sorted(p.name for p in menue.iterdir()) == sorted([mtg.VERKNUEPFUNG_ALT, f"{version.NAME}.lnk"])
+        assert symbol(desktop / f"{version.NAME}.lnk").lower() == f"{WURZEL / 'ui' / 'mtg.ico'},0".lower()
+        assert symbol(andere / f"{version.NAME}.lnk") == "C:\\gibt-es-nicht\\ui\\mtg.ico,0"
         mtg.cmd_verknuepfung(None, ordner=[desktop, menue])  # zweiter Lauf ändert nichts
         assert sorted(p.name for p in desktop.iterdir()) == [f"{version.NAME}.lnk"]
     # der alte Name steht in keiner Datei unter ui/

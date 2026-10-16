@@ -2838,7 +2838,8 @@ def cmd_stop(a):
 
 STARTER = f"{version.NAME} starten.cmd"
 VERKNUEPFUNG_ALT = "MTG Commander.lnk"  # so hieß die Verknüpfung vor Phase 37 (PLAN E22); steht hier nur, um sie zu entfernen
-# Je Ordner (Desktop, Startmenü): eine alte Verknüpfung entfernen, wenn sie ins Leere oder in diesen Ordner zeigt; die neue anlegen, wenn sie fehlt oder ins Leere zeigt
+# Je Ordner (Desktop, Startmenü): eine alte Verknüpfung entfernen, wenn sie ins Leere oder in diesen Ordner zeigt; die neue anlegen, wenn sie fehlt oder
+# ins Leere zeigt, und neu schreiben, wenn sie in diesen Ordner zeigt, ihr Symbol aber nicht (Ordner umbenannt: Windows zieht nur das Ziel nach)
 VERKNUEPFUNG = ("$w = New-Object -ComObject WScript.Shell; "
                 "$ordner = if ($env:MTG_ORDNER) { $env:MTG_ORDNER -split ';' } else { 'Desktop', 'Programs' | ForEach-Object { [Environment]::GetFolderPath($_) } }; "
                 "foreach ($d in $ordner) { "
@@ -2846,7 +2847,8 @@ VERKNUEPFUNG = ("$w = New-Object -ComObject WScript.Shell; "
                 "if (Test-Path -LiteralPath $alt) { $t = $w.CreateShortcut($alt).TargetPath; "
                 "if (-not $t -or -not (Test-Path -LiteralPath $t) -or (Split-Path -Parent $t) -eq $env:MTG_DIR) { Remove-Item -LiteralPath $alt; \"- $alt\" } }; "
                 "$p = Join-Path $d $env:MTG_LNK; "
-                "if (Test-Path -LiteralPath $p) { $t = $w.CreateShortcut($p).TargetPath; if ($t -and (Test-Path -LiteralPath $t)) { continue } }; "
+                "if (Test-Path -LiteralPath $p) { $s = $w.CreateShortcut($p); $t = $s.TargetPath; if ($t -and (Test-Path -LiteralPath $t) -and "
+                "((Split-Path -Parent $t) -ne $env:MTG_DIR -or $s.IconLocation.StartsWith($env:MTG_ICON, [StringComparison]::OrdinalIgnoreCase))) { continue } }; "
                 "$s = $w.CreateShortcut($p); $s.TargetPath = $env:MTG_ZIEL; $s.WorkingDirectory = $env:MTG_DIR; $s.IconLocation = $env:MTG_ICON; "
                 "$s.WindowStyle = 7; $s.Description = $env:MTG_NAME; $s.Save(); \"+ $p\" }")
 
