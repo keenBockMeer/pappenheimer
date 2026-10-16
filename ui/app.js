@@ -1376,12 +1376,12 @@ async function viewQuellen() {
     <p class="note-line">${esc(TIP.quellen)}</p>
     ${r.gesperrt ? `<div class="todo">${note(['info', 'Festgelegt in der Umgebung', `Die Variable ${r.env} legt fest, welche Quellen laufen. Die Schalter hier sind gesperrt; ändern lässt es sich nur dort (Liste der eingeschalteten Quellen, zum Beispiel spellbook,cardmarket; alle; keine).`])}</div>`
       : !r.haupt ? `<div class="todo">${note(['info', 'Das Hauptkonto stellt das ein', 'Du siehst hier, was die App abruft. Die Schalter stellt nur das Hauptkonto.'])}</div>` : ''}
-    ${r.items.map(q => `<section class="sec" aria-label="${esc(q.name)}" id="q-${esc(q.key)}"><h2>${esc(q.name)} <small>${q.schaltbar ? (q.an ? 'an' : 'aus') : 'immer an'}</small></h2>
+    ${r.items.map(q => `<section class="sec" aria-label="${esc(q.name)}" id="q-${esc(q.key)}"><h2>${esc(q.name)} <small>${q.schaltbar ? (q.an ? 'an' : 'aus') : q.key === 'github' ? 'nur auf Knopfdruck' : 'immer an'}</small></h2>
       <p class="lead">${esc(q.zweck)}</p>
       <p class="note-line"><b>Was hingeschickt wird:</b> ${esc(q.schickt)}</p>
       <p class="note-line"><b>Wie oft:</b> ${esc(q.wie_oft)}</p>
       ${q.hinweis ? `<p class="note-line">${esc(q.hinweis)}</p>` : ''}
-      <p class="note-line"><a href="${esc(q.link)}" target="_blank" rel="noopener noreferrer">${q.key === 'edhrec' ? 'Nutzungsbedingungen von EDHREC' : q.key === 'scryfall' ? 'Regeln von Scryfall' : `Website von ${esc(q.name)}`}<span class="sr-only"> (neues Fenster)</span></a></p>
+      <p class="note-line"><a href="${esc(q.link)}" target="_blank" rel="noopener noreferrer">${q.key === 'edhrec' ? 'Nutzungsbedingungen von EDHREC' : q.key === 'scryfall' ? 'Regeln von Scryfall' : q.key === 'github' ? 'Veröffentlichungen auf GitHub' : `Website von ${esc(q.name)}`}<span class="sr-only"> (neues Fenster)</span></a></p>
       ${q.schaltbar ? `<label class="inl quelle-an"><input type="checkbox" data-quelle="${esc(q.key)}"${q.an ? ' checked' : ''}${kann ? '' : ' disabled'}> ${esc(q.name)} verwenden</label>` : ''}
     </section>`).join('')}`;
 }
@@ -1406,6 +1406,30 @@ async function proxySetzen(t) {
   render(true);
 }
 
+// Updates (Phase 50, PLAN E31): nur auf Knopfdruck und nur fürs Hauptkonto; die App fragt nie von selbst bei GitHub nach
+const UPDATE_WEGE = 'Docker: die neue compose.yaml holen (Anleitung in der README), dann „docker compose pull“ und „docker compose up -d“. Windows: pappenheimer-windows.zip der Veröffentlichung an dieselbe Stelle entpacken und Dateien ersetzen. Deine Sammlung in data bleibt in beiden Fällen.';
+function updateHtml(u) {
+  const l = u.letzte;
+  const link = l?.url ? `<a class="btn" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${icon('cloud')}Änderungen ansehen<span class="sr-only"> (neues Fenster)</span></a>` : '';
+  const stand = !l ? ['info', 'Noch nicht nachgesehen', 'Drück „Nach Updates suchen“, dann fragt die App einmal bei GitHub nach.']
+    : !l.version ? ['info', `Zuletzt ${day(l.at)} nachgesehen`, 'GitHub kennt noch keine Veröffentlichung.']
+    : l.neu ? [l.sicherheit ? 'alert' : 'up', `Version ${l.version} ist da${l.sicherheit ? ' (Sicherheit)' : ''}`, `${l.titel ? l.titel + '. ' : ''}${UPDATE_WEGE}`, link]
+    : ['check', 'Du hast die neueste Version', `Zuletzt ${day(l.at)} nachgesehen: ${l.version} ist die neueste Veröffentlichung.`];
+  return `<section class="sec" aria-label="Updates"><h2>Updates</h2>
+    <p class="lead">Du hast Version ${esc(u.eigene)}. Die App fragt nie von selbst nach Updates, nur wenn du den Knopf drückst. GitHub erfährt dabei die Adresse deines Rechners und den Programmnamen mit Version, nichts aus deiner Sammlung (mehr unter <a href="#/quellen">Quellen</a>).</p>
+    <div class="toolbar"><button class="btn" type="button" id="up-suchen">${icon('refresh')}Nach Updates suchen</button></div>
+    ${u.fehler ? `<p class="say bad" role="alert">${esc(u.fehler)}</p>` : ''}
+    <div class="todo">${note(stand)}</div></section>`;
+}
+async function updateSuchen() {
+  const b = $('#up-suchen'); b.disabled = true;
+  try {
+    const u = await post('update', {});
+    $('[aria-label="Updates"]').outerHTML = updateHtml(u);
+    flash(u.fehler ? 'Nachsehen nicht gelungen' : u.letzte?.neu ? `Version ${u.letzte.version} ist da` : 'Du hast die neueste Version');
+  } catch (e) { b.disabled = false; flash('Fehler: ' + e.message); }
+}
+
 async function viewKonten() {
   sess = await api('session'); whoUi();
   const haupt = sess.rolle === 'haupt';
@@ -1413,7 +1437,8 @@ async function viewKonten() {
     <a class="btn" href="#/quellen">${icon('cloud')}Zu den Quellen</a></section>`;
   const proxySec = !haupt ? '' : `<section class="sec" aria-label="Proxy-Blatt"><h2>Proxy-Blatt ${info('proxyblatt', 'Proxy-Blatt')}</h2><p class="lead">Karten zum Ausprobieren drucken, bevor du kaufst. Ausgeschaltet gibt es keinen Link dazu und keine Schnittstelle. Der Schalter gilt für die ganze Installation.</p>
     <label class="inl quelle-an"><input type="checkbox" data-proxyblatt="1"${proxyAn() ? ' checked' : ''}> Proxy-Blatt einschalten</label></section>`;
-  const [sich, pe] = haupt ? await Promise.all([api('sicherung'), api('posteingang')]) : [null, null];
+  const [sich, pe, up] = haupt ? await Promise.all([api('sicherung'), api('posteingang'), api('update')]) : [null, null, null];
+  const updateSec = haupt ? updateHtml(up) : '';
   const aussen = aussenStand(sich);
   const backup = !haupt ? '' : `<section class="sec" aria-label="Sicherung"><h2>Sicherung</h2>
     <p class="lead">Eine ZIP-Datei mit allen Sammlungen, Konten und den hochgeladenen Dateien. Solange die App läuft, legt sie außerdem jeden Tag selbst eine im Ordner <code>data/sicherungen</code> an, die letzten 14 bleiben. Zurückspielen: App beenden, dann <code>mtg wiederherstellen DATEI.zip</code> (eine verschlüsselte Datei vorher mit <code>gpg -d</code> entschlüsseln, README).</p>
@@ -1431,7 +1456,7 @@ async function viewKonten() {
         <form class="kform" data-konto="haupt">
           <div class="field"><label for="k-name">Dein Name</label><input id="k-name" name="name" required maxlength="40" autocomplete="username"></div>
           <div class="field"><label for="k-pw">Passwort (leer lassen: keine Anmeldung, nur auf diesem Rechner)</label><input id="k-pw" name="passwort" type="password" minlength="8" autocomplete="new-password"></div>
-          <div class="actions"><button class="btn primary" type="submit">Hauptkonto anlegen</button></div></form></section>${backup}${quellenSec}${proxySec}${csvSec}${peHtml(pe)}`;
+          <div class="actions"><button class="btn primary" type="submit">Hauptkonto anlegen</button></div></form></section>${backup}${quellenSec}${updateSec}${proxySec}${csvSec}${peHtml(pe)}`;
     return;
   }
   if (!haupt) {
@@ -1459,7 +1484,7 @@ async function viewKonten() {
       <p class="lead">${sess.modus === 'lokal' ? 'Noch braucht die App kein Passwort, deshalb läuft sie nur auf diesem Rechner. Mit einem Passwort für dein Hauptkonto kannst du sie auch auf deinem eigenen Server betreiben (Anleitung in der README).' : 'Mit dem Passwort meldest du dich an, auf dem Server und von jedem Gerät.'}</p>
       <form class="kform" data-konto="pw">${pwFelder(ich?.pw, sess.modus === 'lokal' ? 'Passwort' : 'Neues Passwort')}
         <div class="actions"><button class="btn primary" type="submit">${sess.modus === 'lokal' ? 'Anmeldung einschalten' : 'Passwort ändern'}</button></div></form></section>
-    ${backup}${quellenSec}${proxySec}${csvSec}${peHtml(pe)}`;
+    ${backup}${quellenSec}${updateSec}${proxySec}${csvSec}${peHtml(pe)}`;
 }
 
 function openPw(name, label, has) {
@@ -1984,6 +2009,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('#logout')) return logout();
   if (e.target.closest('#undo')) return undo();
   if (e.target.closest('#pe-jetzt')) return peSetzen({jetzt: 1});
+  if (e.target.closest('#up-suchen')) return updateSuchen();
   const pw = e.target.closest('[data-pw]');
   if (pw) return openPw(pw.dataset.pw, pw.dataset.label, pw.dataset.has === '1');
   const sw = e.target.closest('[data-open]');

@@ -6416,7 +6416,8 @@ def test_quellen_standard_neue_installation_edhrec_aus(daten, monkeypatch):
         assert sources.setzen(c, {"edhrec": True})["quellen"] == {"edhrec": True, "spellbook": True, "cardmarket": True}
         assert sources.setzen(c, {"spellbook": False})["quellen"] == {"edhrec": True, "spellbook": False, "cardmarket": True}  # was fehlt, bleibt
     items = sources.beschreibung()["items"]
-    assert [q["key"] for q in items] == ["scryfall", "edhrec", "spellbook", "cardmarket"] and not items[0]["schaltbar"] and all(q["schaltbar"] for q in items[1:])
+    assert [q["key"] for q in items] == ["scryfall", "edhrec", "spellbook", "cardmarket", "github"] and not items[0]["schaltbar"] and all(q["schaltbar"] for q in items[1:4])
+    assert not items[4]["schaltbar"] and "Knopfdruck" in items[4]["wie_oft"]  # Phase 50: GitHub steht da, nur auf Knopfdruck, ohne Schalter
     assert all(q[k] for q in items for k in ("name", "zweck", "schickt", "wie_oft", "link")) and "scryfall.com" in items[0]["link"]
     texte = " ".join(str(v) for q in items for v in q.values()) + " ".join(str(q) for q in sources.QUELLEN.values())
     assert "–" not in texte and "—" not in texte  # keine Gedankenstriche im Text der Oberfläche
@@ -6473,7 +6474,7 @@ def test_quellen_umgebung_uebersteuert_und_sperrt_den_schalter(daten, monkeypatc
     monkeypatch.setenv("MTG_QUELLEN", "cardmarket")
     code, _, body, _ = server.api_konto("GET", "/api/quellen", b"", None)
     d = json.loads(body)
-    assert code == 200 and d["gesperrt"] is True and d["env"] == "MTG_QUELLEN" and {q["key"]: q["an"] for q in d["items"][1:]} == {"edhrec": False, "spellbook": False, "cardmarket": True}
+    assert code == 200 and d["gesperrt"] is True and d["env"] == "MTG_QUELLEN" and {q["key"]: q["an"] for q in d["items"][1:4]} == {"edhrec": False, "spellbook": False, "cardmarket": True}
     code, _, body, _ = server.api_konto("POST", "/api/quellen", json.dumps({"edhrec": True}).encode(), None)
     assert code == 400 and "MTG_QUELLEN" in json.loads(body)["error"]
     assert json.loads(server.api_konto("GET", "/api/session", b"", None)[2])["quellen"] == {"edhrec": False, "spellbook": False, "cardmarket": True}
@@ -6483,7 +6484,7 @@ def test_quellen_api_nur_das_hauptkonto_stellt(daten, monkeypatch):
     """Abnahme Phase 44: Die Seite „Quellen“ liest jedes Konto, die Schalter stellt nur das Hauptkonto (ohne Konten: der Betreiber am Rechner);
     die Einstellung steht in der Hauptsammlung und gilt für alle; die Sitzung nennt den Stand."""
     code, _, body, _ = server.api_konto("POST", "/api/quellen", json.dumps({"edhrec": True}).encode(), None)  # ohne Konten: der Betreiber
-    assert code == 200 and json.loads(body)["haupt"] is True and [q["an"] for q in json.loads(body)["items"]] == [True, True, True, True]
+    assert code == 200 and json.loads(body)["haupt"] is True and [q["an"] for q in json.loads(body)["items"]] == [True, True, True, True, True]
     kc = konten.connect()
     konten.anlegen(kc, "Betreiber", "geheim123", ist_haupt=True)
     konten.anlegen(kc, "Lena", "lena-geheim")
@@ -6607,6 +6608,147 @@ def test_quellen_oberflaeche_hinweise_und_seite():
     tip = dict(re.findall(r"^  (\w+): '(.*)',$", js, re.M))
     assert "Hauptkonto" in tip["quellen"] and "–" not in tip["quellen"] and "—" not in tip["quellen"]
     assert "EDHREC, wenn eingeschaltet" in (WURZEL / "ui" / "index.html").read_text(encoding="utf-8")
+
+
+# --- Phase 50: Update-Hinweis auf Knopfdruck (PLAN E31) --------------------------------------------------------------------------------------
+
+class GitHubAntwort(io.BytesIO):
+    """Antwort von urlopen: lesbar und als Kontext zu öffnen."""
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        self.close()
+
+
+def github_netz(monkeypatch, antwort=None, fehler=None, roh=None):
+    """Ersetzt urlopen: antwortet mit der Veröffentlichung als JSON (oder roh) oder wirft fehler; zählt die Adressen. -> Liste der Adressen"""
+    gesehen = []
+
+    def urlopen(req, timeout=None):
+        gesehen.append(req.full_url)
+        if fehler:
+            raise fehler
+        return GitHubAntwort(roh if roh is not None else json.dumps(antwort).encode())
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(sources.time, "sleep", lambda s: None)
+    return gesehen
+
+
+def github_release(tag, name="", **mehr):
+    return {"tag_name": tag, "name": name or f"Pappenheimer {tag.lstrip('v')}", "prerelease": False, "draft": False, "html_url": "https://evil.example/x"} | mehr
+
+
+def test_update_ohne_knopfdruck_kein_einziger_aufruf_an_github(daten, fetch, monkeypatch):
+    """Abnahme Phase 50: Kein Aufruf an GitHub, solange niemand den Knopf drückt: nicht im täglichen Lauf, nicht beim Lesen der Sitzung, der Quellen
+    und des letzten Ergebnisses. Im Code ruft nur api_update (POST) die Abfrage auf."""
+    monkeypatch.setattr(konten, "taegliche_sicherung", lambda heute: None)
+    mtg.connect().close()  # die Sammlung gibt es, sonst hat der tägliche Lauf nichts zu tun
+    gezaehlt = aufrufe(monkeypatch)
+    monkeypatch.setenv("MTG_QUELLEN", "alle")
+    server.taeglich(fetch, "2026-10-08", sets=lambda: [], set_suche=lambda q: [])
+    for methode, pfad in (("GET", "/api/session"), ("GET", "/api/quellen"), ("GET", "/api/update"), ("GET", "/api/sicherung")):
+        assert server.api_konto(methode, pfad, b"", None)[0] == 200, pfad
+    assert "api.github.com" not in gezaehlt and "json.edhrec.com" in gezaehlt  # die Gegenprobe: der Zähler sieht Aufrufe
+    kein_knopf = [p.name for p in WURZEL.glob("*.py") if "neueste_version(" in p.read_text(encoding="utf-8") and p.name not in ("sources.py", "server.py", "test_mtg.py")]
+    quelle = (WURZEL / "server.py").read_text(encoding="utf-8")
+    assert kein_knopf == [] and quelle.count("neueste_version(") == 1 and quelle.index("neueste_version(") > quelle.index("def api_update(")
+    assert "/api/update" in server.KONTO_PFADE and not any("github" in h for q in sources.QUELLEN.values() for h in q["hosts"])  # kein Schalter
+
+
+@pytest.mark.parametrize("tag, neu", [("v0.9.1", True), ("v0.10.0", True), ("v1.0.0", True), ("v0.9.0", False), ("v0.8.9", False)])
+def test_update_vergleich_mit_der_eigenen_version(daten, monkeypatch, tag, neu):
+    """Abnahme Phase 50: Eine neuere Version meldet der Knopf, die gleiche oder eine ältere ist „aktuell“. Verglichen werden die Zahlen (0.10.0 ist
+    neuer als 0.9.1), die Adresse baut die App selbst (die html_url der Antwort wird nie benutzt)."""
+    assert version.VERSION == "0.9.0"
+    gesehen = github_netz(monkeypatch, github_release(tag))
+    r = server.api_update("POST", True)
+    assert gesehen == [f"https://api.github.com/repos/keenBockMeer/pappenheimer/releases/latest"] and r["eigene"] == "0.9.0" and r["fehler"] is None
+    assert r["letzte"]["version"] == tag[1:] and r["letzte"]["neu"] is neu and r["letzte"]["url"] == f"{version.REPO}/releases/tag/{tag}"
+    assert "evil" not in json.dumps(r)
+
+
+@pytest.mark.parametrize("antwort", [github_release("v0.9.1-rc1"), github_release("v1.0.0", prerelease=True), github_release("v1.0.0", draft=True), github_release("nightly"), {"tag_name": None}, []])
+def test_update_vorabversion_und_unbrauchbares_zaehlt_nicht(daten, monkeypatch, antwort):
+    """Abnahme Phase 50: Vorabversionen, Entwürfe und Tags ohne Versionsnummer sind „aktuell“; die Antwort sagt, dass es keine passende gibt."""
+    github_netz(monkeypatch, antwort)
+    r = server.api_update("POST", True)
+    assert r["fehler"] is None and r["letzte"]["neu"] is False and "version" not in r["letzte"] and r["letzte"]["at"]
+    github_netz(monkeypatch, fehler=urllib.error.HTTPError(sources.RELEASE_URL, 404, "Not Found", {}, None))  # noch gar keine Veröffentlichung
+    r = server.api_update("POST", True)
+    assert r["fehler"] is None and r["letzte"]["neu"] is False and "version" not in r["letzte"]
+
+
+def test_update_sicherheit_hervorgehoben_und_letztes_ergebnis_bleibt(daten, monkeypatch):
+    """Abnahme Phase 50: „Sicherheit“ im Titel hebt die Zeile hervor (nur bei einer neueren Version); das letzte Ergebnis steht mit Zeit nach dem
+    Neuladen noch da; nach dem Update auf diese Version zeigt es nicht mehr „ist da“; ein fehlgeschlagener Versuch lässt es stehen."""
+    github_netz(monkeypatch, github_release("v0.9.1", "Sicherheit: Sitzungen laufen ab"))
+    r = server.api_update("POST", True)
+    assert r["letzte"]["neu"] and r["letzte"]["sicherheit"] and r["letzte"]["titel"].startswith("Sicherheit")
+    gesehen = github_netz(monkeypatch, github_release("v0.9.1", "Sicherheit"))
+    spaeter = server.api_update("GET", True)  # Neuladen: kein Aufruf, dasselbe Ergebnis mit derselben Zeit
+    assert gesehen == [] and spaeter["letzte"] == r["letzte"]
+    for fehler in (urllib.error.HTTPError(sources.RELEASE_URL, 403, "rate limit exceeded", {}, None), urllib.error.HTTPError(sources.RELEASE_URL, 429, "Too Many", {}, None)):
+        github_netz(monkeypatch, fehler=fehler)
+        r = server.api_update("POST", True)
+        assert "bremst" in r["fehler"] and r["letzte"] == spaeter["letzte"]  # gedrosselt: lesbare Meldung, altes Ergebnis bleibt
+    for fehler, text in ((urllib.error.URLError("offline"), "Keine Verbindung"), (TimeoutError("zu langsam"), "Keine Verbindung"), (urllib.error.HTTPError(sources.RELEASE_URL, 500, "kaputt", {}, None), "HTTP 500")):
+        github_netz(monkeypatch, fehler=fehler)
+        r = server.api_update("POST", True)
+        assert text in r["fehler"] and "offline" not in r["fehler"] and r["letzte"] == spaeter["letzte"]
+    github_netz(monkeypatch, roh=b"<html>Wartung</html>")
+    r = server.api_update("POST", True)
+    assert "lesbare Antwort" in r["fehler"] and r["letzte"] == spaeter["letzte"]
+    monkeypatch.setattr(version, "VERSION", "0.9.1")  # inzwischen aktualisiert
+    nach = server.api_update("GET", True)
+    assert nach["eigene"] == "0.9.1" and nach["letzte"]["neu"] is False and nach["letzte"]["sicherheit"] is False
+    monkeypatch.setattr(version, "VERSION", "0.9.0")
+    github_netz(monkeypatch, github_release("v0.9.0", "Sicherheit"))
+    assert server.api_update("POST", True)["letzte"]["sicherheit"] is False  # keine neuere Version: nichts hervorheben
+
+
+def test_update_nur_das_hauptkonto(daten, monkeypatch):
+    """Abnahme Phase 50: Lesen und Suchen nur für das Hauptkonto (ohne Konten ist das der Betreiber am Rechner); ein Unterkonto bekommt 403 und löst
+    keinen Aufruf aus, ohne Anmeldung 401. Das Ergebnis steht in der Hauptsammlung, auch wenn das Hauptkonto die eines Unterkontos offen hat."""
+    gesehen = github_netz(monkeypatch, github_release("v0.9.1"))
+    code, _, body, _ = server.api_konto("POST", "/api/update", b"{}", None)  # ohne Konten
+    assert code == 200 and json.loads(body)["letzte"]["neu"] is True and len(gesehen) == 1
+    kc = konten.connect()
+    konten.anlegen(kc, "Betreiber", "geheim123", ist_haupt=True)
+    konten.anlegen(kc, "Lena", "lena-geheim")
+    haupt_token = konten.anmelden(kc, "Betreiber", "geheim123")
+    unter_token = konten.anmelden(kc, "Lena", "lena-geheim")
+    kc.close()
+    gesehen.clear()
+    for methode in ("GET", "POST"):
+        assert server.api_konto(methode, "/api/update", b"{}", unter_token)[0] == 403
+        assert server.api_konto(methode, "/api/update", b"{}", None)[0] == 401
+    assert gesehen == []
+    kc = konten.connect()
+    konten.wechseln(kc, haupt_token, "lena", konten.sitzung(kc, haupt_token))  # das Hauptkonto hat Lenas Sammlung offen
+    kc.close()
+    code, _, body, _ = server.api_konto("POST", "/api/update", b"{}", haupt_token)[:4]
+    assert code == 200 and len(gesehen) == 1 and json.loads(body)["letzte"]["version"] == "0.9.1"
+    with closing(mtg.connect()) as c:
+        assert c.execute("SELECT 1 FROM meta WHERE key = ?", (server.UPDATE_KEY,)).fetchone()
+    assert json.loads(server.api_konto("GET", "/api/update", b"", haupt_token)[2])["letzte"]["version"] == "0.9.1"
+
+
+def test_update_oberflaeche_knopf_nur_fuers_hauptkonto():
+    """Abnahme Phase 50 (Quelltext der Oberfläche): „Konten und Sicherung“ zeigt dem Hauptkonto die eigene Version, den Knopf, den Satz zu GitHub
+    und beide Wege (Docker, Windows-ZIP); das Unterkonto sieht nichts davon. Der Knopf läuft über den Klick-Listener, die Texte ohne
+    Gedankenstriche, keine Inline-Skripte; die Seite „Quellen“ nennt GitHub „nur auf Knopfdruck“."""
+    js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
+    teil = js[js.index("// Updates (Phase 50"):js.index("async function viewKonten()")]
+    assert 'id="up-suchen"' in teil and "post('update'" in teil and "Nach Updates suchen" in teil and "nie von selbst" in teil and "Adresse deines Rechners" in teil
+    assert "docker compose pull" in teil and "pappenheimer-windows.zip" in teil and "Sicherheit" in teil and "l.sicherheit ? 'alert'" in teil and "Änderungen ansehen" in teil
+    assert "–" not in teil and "—" not in teil and "<script" not in teil and not re.search(r"\bon[a-z]+=", teil)
+    assert "if (e.target.closest('#up-suchen')) return updateSuchen();" in js and "api('update')" in js
+    konto = js[js.index("async function viewKonten()"):js.index("function openPw(")]
+    assert "const updateSec = haupt ?" in konto and konto.count("${updateSec}") == 2
+    unter = konto[konto.index("if (!haupt) {"):]
+    assert "updateSec" not in unter[:unter.index("return;")]  # Seite „Dein Konto“ eines Unterkontos
+    assert "q.key === 'github' ? 'nur auf Knopfdruck'" in js
 
 
 # --- Phase 45: Scryfall schonen, Katalog und Namen nur bei Bedarf (PLAN E26) -------------------------------------------------------------------

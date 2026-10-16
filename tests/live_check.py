@@ -1,4 +1,4 @@
-"""Phase 9: Live-Abgleich mit Bild-CDN (ab Phase 45 auch die Bildformate small und normal samt Größe), Scryfall (ab Phase 31 auch die Gesamtdaten, ab Phase 45 deren Größen), EDHREC (ab Phase 21 auch Salt), Commander Spellbook und (Phase 14) Cardmarket-Preisliste: stimmen Formate und Annahmen noch?
+"""Phase 9: Live-Abgleich mit Bild-CDN (ab Phase 45 auch die Bildformate small und normal samt Größe), Scryfall (ab Phase 31 auch die Gesamtdaten, ab Phase 45 deren Größen), EDHREC (ab Phase 21 auch Salt), Commander Spellbook, (Phase 14) Cardmarket-Preisliste und (Phase 50) GitHub-Veröffentlichungen: stimmen Formate und Annahmen noch?
 Liest die Datenbank nur lesend (MTG_DB oder data/mtg.db) und braucht Netz. ca. 30 s, wenige Anfragen, Rate-Limits über sources._call.
 Aufruf: .venv/Scripts/python tests/live_check.py   (nicht Teil von pytest; Ende mit Code 1, wenn etwas nicht mehr passt)"""
 import json
@@ -130,6 +130,16 @@ def bildformate():
            f"small und normal da und HTTP 200; small im Schnitt {schnitt:.1f} KB (die Oberfläche rechnet mit {kb} KB: bei starker Abweichung KAT_BILD_KB anpassen)")
 
 
+def github():
+    """Phase 50: GitHub /releases/latest für dieses Repository nennt noch tag_name, name, prerelease und draft, und sources.neueste_version liest
+    daraus dieselbe Version (der Update-Knopf fragt genau das, nur auf Knopfdruck)."""
+    r = sources._call(sources.RELEASE_URL)
+    neu = sources.neueste_version()
+    pruefe("GitHub Veröffentlichung", isinstance(r, dict) and all(k in r for k in ("tag_name", "name", "prerelease", "draft")) and bool(neu)
+           and neu["version"] == r["tag_name"].lstrip("v") and neu["url"].startswith("https://github.com/"),
+           f"neueste Veröffentlichung {r['tag_name'] if isinstance(r, dict) else '-'}, die App liest {neu['version'] if neu else '-'}")
+
+
 def gesamtdaten_groessen():
     """Phase 45: /bulk-data nennt für default_cards und all_cards noch compressed_size (der Fortschritt des Hintergrund-Jobs rechnet damit), und die
     Größen liegen in der Nähe dessen, was die Oberfläche anzeigt (katalog.KATALOG_MB und DEUTSCH_MB, Stand 2026-10-12)."""
@@ -170,7 +180,7 @@ if __name__ == "__main__":
     conn = sqlite3.connect(f"file:{mtg.DB.as_posix()}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     for name, pruef in (("Bilder", lambda: bilder(conn)), ("Scryfall", lambda: scryfall(conn)), ("EDHREC", lambda: edhrec(conn)), ("Spellbook", spellbook),
-                        ("Cardmarket", lambda: cardmarket(conn)), ("Salt", salt), ("Bildformate", bildformate), ("Größen der Gesamtdaten", gesamtdaten_groessen), ("Scryfall-Gesamtdaten", gesamtdaten),
+                        ("Cardmarket", lambda: cardmarket(conn)), ("Salt", salt), ("GitHub", github), ("Bildformate", bildformate), ("Größen der Gesamtdaten", gesamtdaten_groessen), ("Scryfall-Gesamtdaten", gesamtdaten),
                         ("Gedruckte Namen", gedruckte_namen)):
         try:
             pruef()
