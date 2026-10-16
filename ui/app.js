@@ -1430,6 +1430,18 @@ async function updateSuchen() {
   } catch (e) { b.disabled = false; flash('Fehler: ' + e.message); }
 }
 
+// Handy verbinden: QR-Code mit der Adresse dieser Seite (der Server zeichnet ihn, qr.py). Er hilft nur, wenn die Seite über eine Adresse läuft, die das
+// Handy erreicht, also nicht über 127.0.0.1; sonst steht dort, was zu tun ist.
+const LOKAL = /^(localhost|127(\.\d+){3}|\[?::1\]?)$/;
+function handyHtml(adresse, qr) {
+  const inhalt = !adresse ? `<p class="note-line">Du hast diese Seite über die Adresse dieses Rechners geöffnet (${esc(location.host)}). Die erreicht das Handy nicht. Öffne die App einmal über die Adresse deines Servers, zum Beispiel https://dein-server.dein-netz.ts.net, dann steht hier der QR-Code.</p>`
+    : qr?.svg ? `<div class="handy-qr"><div class="qr">${qr.svg}</div><div class="min0"><p>Adresse: <code>${esc(adresse)}</code></p>
+        <p class="muted">So geht es: Kamera-App am Handy öffnen und auf den Code halten, die Seite öffnen und anmelden. Danach im Browsermenü „App installieren“ oder „Zum Startbildschirm“ wählen. Die Kamera gibt der Browser nur über https frei.</p></div></div>`
+    : `<p class="note-line">Der QR-Code ließ sich nicht zeichnen${qr?.fehler ? ` (${esc(qr.fehler)})` : ''}. Tipp die Adresse am Handy ab: <code>${esc(adresse)}</code></p>`;
+  return `<section class="sec" aria-label="Handy verbinden"><h2>Handy verbinden</h2>
+    <p class="lead">Scanne den Code mit dem Handy, öffne die Seite dort und installiere sie als App. Das Handy zeigt dann deine Sammlung auf diesem Server.</p>${inhalt}</section>`;
+}
+
 async function viewKonten() {
   sess = await api('session'); whoUi();
   const haupt = sess.rolle === 'haupt';
@@ -1437,8 +1449,11 @@ async function viewKonten() {
     <a class="btn" href="#/quellen">${icon('cloud')}Zu den Quellen</a></section>`;
   const proxySec = !haupt ? '' : `<section class="sec" aria-label="Proxy-Blatt"><h2>Proxy-Blatt ${info('proxyblatt', 'Proxy-Blatt')}</h2><p class="lead">Karten zum Ausprobieren drucken, bevor du kaufst. Ausgeschaltet gibt es keinen Link dazu und keine Schnittstelle. Der Schalter gilt für die ganze Installation.</p>
     <label class="inl quelle-an"><input type="checkbox" data-proxyblatt="1"${proxyAn() ? ' checked' : ''}> Proxy-Blatt einschalten</label></section>`;
-  const [sich, pe, up] = haupt ? await Promise.all([api('sicherung'), api('posteingang'), api('update')]) : [null, null, null];
+  const adresse = haupt && !LOKAL.test(location.hostname) ? location.origin + '/' : '';
+  const [sich, pe, up, qr] = haupt ? await Promise.all([api('sicherung'), api('posteingang'), api('update'),
+    adresse ? post('qr', {text: adresse}).catch(e => ({fehler: e.message})) : null]) : [null, null, null, null];
   const updateSec = haupt ? updateHtml(up) : '';
+  const handySec = haupt ? handyHtml(adresse, qr) : '';
   const aussen = aussenStand(sich);
   const backup = !haupt ? '' : `<section class="sec" aria-label="Sicherung"><h2>Sicherung</h2>
     <p class="lead">Eine ZIP-Datei mit allen Sammlungen, Konten und den hochgeladenen Dateien. Solange die App läuft, legt sie außerdem jeden Tag selbst eine im Ordner <code>data/sicherungen</code> an, die letzten 14 bleiben. Zurückspielen: App beenden, dann <code>mtg wiederherstellen DATEI.zip</code> (eine verschlüsselte Datei vorher mit <code>gpg -d</code> entschlüsseln, README).</p>
@@ -1456,7 +1471,7 @@ async function viewKonten() {
         <form class="kform" data-konto="haupt">
           <div class="field"><label for="k-name">Dein Name</label><input id="k-name" name="name" required maxlength="40" autocomplete="username"></div>
           <div class="field"><label for="k-pw">Passwort (leer lassen: keine Anmeldung, nur auf diesem Rechner)</label><input id="k-pw" name="passwort" type="password" minlength="8" autocomplete="new-password"></div>
-          <div class="actions"><button class="btn primary" type="submit">Hauptkonto anlegen</button></div></form></section>${backup}${quellenSec}${updateSec}${proxySec}${csvSec}${peHtml(pe)}`;
+          <div class="actions"><button class="btn primary" type="submit">Hauptkonto anlegen</button></div></form></section>${handySec}${backup}${quellenSec}${updateSec}${proxySec}${csvSec}${peHtml(pe)}`;
     return;
   }
   if (!haupt) {
@@ -1484,7 +1499,7 @@ async function viewKonten() {
       <p class="lead">${sess.modus === 'lokal' ? 'Noch braucht die App kein Passwort, deshalb läuft sie nur auf diesem Rechner. Mit einem Passwort für dein Hauptkonto kannst du sie auch auf deinem eigenen Server betreiben (Anleitung in der README).' : 'Mit dem Passwort meldest du dich an, auf dem Server und von jedem Gerät.'}</p>
       <form class="kform" data-konto="pw">${pwFelder(ich?.pw, sess.modus === 'lokal' ? 'Passwort' : 'Neues Passwort')}
         <div class="actions"><button class="btn primary" type="submit">${sess.modus === 'lokal' ? 'Anmeldung einschalten' : 'Passwort ändern'}</button></div></form></section>
-    ${backup}${quellenSec}${updateSec}${proxySec}${csvSec}${peHtml(pe)}`;
+    ${handySec}${backup}${quellenSec}${updateSec}${proxySec}${csvSec}${peHtml(pe)}`;
 }
 
 function openPw(name, label, has) {
