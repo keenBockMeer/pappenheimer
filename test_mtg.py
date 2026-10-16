@@ -2081,8 +2081,12 @@ def test_hintergrund_ruht_bei_weniger_bewegung_im_scanner_und_im_druck():
     html, js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("index.html", "app.js", "style.css"))
     assert '<canvas id="funken" aria-hidden="true">' in html and 'id="hintergrund"' in html
     assert "if (calm.matches) fZeichnen(0);" in js and "if (calm.matches || hgPref() !== 'an')" in js
-    assert "body.vollbild::after, body.vollbild #funken { display: none; }" in css and "#funken, body::after { display: none !important; }" in css
+    assert "body.vollbild::after, body.vollbild #funken { display: none; }" in css and "#funken, #karten-hg, body::after { display: none !important; }" in css and "body.vollbild #karten-hg { display: none; }" in css
     assert css.count("--aura-stark:") == 2 and "--aura-stark: 15%" in css  # nie stärker als 16 % (Regel im Kopf von style.css)
+    # Karten im Hintergrund: eigener Behälter, Standardwahl, und die Regeln für die Bilder kennen nur transform und opacity (Scryfall: kein Filter auf Kartenbildern)
+    assert 'id="karten-hg"' in html and '<option value="karten">' in html and "hgPref() !== 'karten'" in js and "|| 'karten'" in js and "beispielLeiste(); kartenHg(); }" in js
+    karten_css = css[css.index("\n#karten-hg {"):css.index("@keyframes schweben")] + css[css.index("@keyframes schweben"):][:400]
+    assert "filter" not in karten_css and "blur(" not in karten_css and "opacity: var(--o)" in karten_css
 
 
 def test_klassen_des_sortier_modus_kollidieren_nicht():
