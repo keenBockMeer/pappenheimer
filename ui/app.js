@@ -205,11 +205,15 @@ const tile = (c, withQty, withNo) => `<a class="card" href="#" data-oid="${esc(c
 const row = c => `<a class="row" href="#" data-oid="${esc(c.oracle_id)}"${peekAt(c.image, c.name, eur(c.price))}>${pic(small(c.image), '', 'thumb')}
   <div class="min0"><div class="name">${esc(c.name)}</div><div class="sub2">${c.qty}×${c.foil ? ' · Foil' : ''}</div></div>
   <div class="chips">${stackChips(c.stacks)}</div><div class="price">${eur(c.price)}</div></a>`;
-const legend = (counts, sub = {}) => `<div class="legend">${STACKS.map(k => {
-  const c = counts[k], n = c.cards ?? c, v = c.value;
-  return `<div><b><span class="dot d-${k}"></span>${LABEL[k]} ${info(k === 'bulk' ? 'bulkstack' : k, LABEL[k])}</b>
-  <span class="v">${v != null ? eur0(v) : num(n)}</span><span class="muted">${v != null ? karten(n) : n === 1 ? 'Karte' : 'Karten'}</span>${sub[k] ? `<span class="muted">${esc(sub[k])}</span>` : ''}</div>`;
-}).join('')}</div>`;
+// anteil: über jeder Spalte ein Balken mit dem Anteil am Gesamtwert (gleiche Skala in allen vier), so steht jeder Text unter seinem eigenen Balken
+const legend = (counts, sub = {}, anteil = false) => {
+  const gesamt = STACKS.reduce((n, k) => n + (counts[k].value || 0), 0);
+  return `<div class="legend">${STACKS.map(k => {
+    const c = counts[k], n = c.cards ?? c, v = c.value;
+    return `<div>${anteil ? `<span class="anteil" aria-hidden="true"><span class="d-${k}" style="--w:${v > 0 ? Math.max(v / gesamt * 100, 1.2).toFixed(1) : 0}%"></span></span>` : ''}<b><span class="dot d-${k}"></span>${LABEL[k]} ${info(k === 'bulk' ? 'bulkstack' : k, LABEL[k])}</b>
+    <span class="v">${v != null ? eur0(v) : num(n)}</span><span class="muted">${v != null ? karten(n) : n === 1 ? 'Karte' : 'Karten'}${sub[k] ? ` ${esc(sub[k])}` : ''}</span></div>`;
+  }).join('')}</div>`;
+};
 const skeleton = () => `<div class="skel" aria-busy="true" aria-label="Lädt"><div class="s-head"></div><div class="s-hero"></div><div class="s-rows"></div></div>`;
 const note = ([ic, t, sub, act, job]) => `<div class="note"><span class="ic">${icon(ic)}</span>
   <div class="min0"><b>${esc(t)}</b><div class="muted">${esc(sub)}</div>${job ? `<div data-jobbox="${job}"></div>` : ''}</div>${act || '<span></span>'}</div>`;
@@ -277,9 +281,7 @@ async function viewHome() {
     </section>
     ${todo.length ? `<section class="sec" aria-label="Als Nächstes"><h2>Als Nächstes</h2><div class="todo">${todo.map(note).join('')}</div></section>` : ''}
     <section class="sec" aria-label="Plan für deine Sammlung"><h2>Plan für deine Sammlung <small>nach Wert</small><a class="more" href="#/sort">Sortieren ${icon('arrow')}</a></h2>
-      <div class="stack" role="img" aria-label="${STACKS.map(k => `${LABEL[k]} ${eur0(P[k].value)}`).join(', ')}">
-        ${STACKS.map(k => `<span class="d-${k}" style="--v:${Math.max(Math.round(P[k].value), P[k].cards ? 1 : 0)}" title="${LABEL[k]}: ${karten(P[k].cards)}, ${eur0(P[k].value)}"></span>`).join('')}</div>
-      ${legend(P, {deck: s.decks ? `in ${s.decks} Deck${s.decks > 1 ? 's' : ''}` : 'noch keine Decks', keep: `je Karte ${R.keep}, Staples ${Math.max(R.keep, R.staples)}, Standardländer alle`, sell: `weitere Kopien ab ${minTxt}`, bulk: `weitere Kopien unter ${minTxt}`})}
+      ${legend(P, {deck: s.decks ? `in ${s.decks} Deck${s.decks > 1 ? 's' : ''}` : ''}, true)}
     </section>
     ${verlaufHtml(s.history)}
     <p class="note-line"><a href="#/rueckblick">Rückblick auf dein Sammeljahr</a> · <a href="#/bericht">Wert-Bericht zum Drucken</a></p>
