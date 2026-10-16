@@ -10,7 +10,7 @@ LABEL org.opencontainers.image.source="https://github.com/keenBockMeer/pappenhei
 RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr gpg gpg-agent && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 RUN useradd --uid 1000 --create-home mtg && mkdir -p /app/data && chown mtg /app/data
-COPY --chown=mtg mtg.py server.py sources.py deckbuild.py konten.py suche.py llm.py katalog.py version.py ./
+COPY --chown=mtg mtg.py server.py sources.py deckbuild.py konten.py suche.py llm.py katalog.py qr.py version.py ./
 COPY --chown=mtg LICENSE LIZENZEN.md ./
 COPY --chown=mtg ui ./ui
 # Die Beispielsammlung (Phase 47, PLAN E33): zwei Kartenlisten mit Kennungen und Namen, keine Kartendaten; die holt der Import bei Scryfall.

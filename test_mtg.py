@@ -6751,6 +6751,69 @@ def test_update_oberflaeche_knopf_nur_fuers_hauptkonto():
     assert "q.key === 'github' ? 'nur auf Knopfdruck'" in js
 
 
+# --- QR-Code der Adresse fürs Handy (qr.py aus dem Zweig zu Phase 51 übernommen) -------------------------------------------------------------
+
+import qr  # noqa: E402
+
+
+def test_qr_matrix_gleicht_der_referenz():
+    """qr.matrix gleicht Modul für Modul der Matrix eines fremden Kodierers (tests/fixtures/qr_referenz.json, mit dessen Maske): Version 1, 4 (zwei
+    Blöcke, ein Ausrichtungsmuster) und 6 (vier Blöcke). Ohne Vorgabe die Maske mit den wenigsten Strafpunkten; das SVG hat weder Skript noch
+    fremde Verweise; was nicht in Version 6 passt, lehnt qr ab."""
+    for f in json.loads((FIX / "qr_referenz.json").read_text(encoding="utf-8"))["faelle"]:
+        soll = [[z == "1" for z in s] for s in f["zeilen"]]
+        assert qr.matrix(f["text"], f["maske"]) == soll and len(soll) == 17 + 4 * f["version"]
+        assert qr.matrix(f["text"]) == min((qr.matrix(f["text"], m) for m in range(8)), key=qr._strafe)
+    s = qr.svg("https://beispiel.tail1234.ts.net/")
+    assert s.startswith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ') and s.endswith("</svg>")
+    assert not re.search(r"<script|href|url\(|on\w+=", s, re.I) and s.count("<") == 4
+    qr.matrix("x" * 106)
+    with pytest.raises(ValueError, match="Zu lang"):
+        qr.matrix("x" * 107)
+
+
+def test_qr_api_nur_das_hauptkonto(daten):
+    """POST /api/qr liefert den QR-Code einer Adresse als SVG, nur für das Hauptkonto (ohne Konten ist das der Betreiber am Rechner); ein Unterkonto
+    bekommt 403, ohne Anmeldung 401; nur Adressen (http oder https) und nicht länger als der Code fasst."""
+    adresse = "https://beispiel.tail1234.ts.net/"
+    code, _, body, _ = server.api_konto("POST", "/api/qr", json.dumps({"text": adresse}).encode(), None)  # ohne Konten
+    assert code == 200 and json.loads(body)["svg"] == qr.svg(adresse)
+    kc = konten.connect()
+    konten.anlegen(kc, "Betreiber", "geheim123", ist_haupt=True)
+    konten.anlegen(kc, "Lena", "lena-geheim")
+    haupt_token = konten.anmelden(kc, "Betreiber", "geheim123")
+    unter_token = konten.anmelden(kc, "Lena", "lena-geheim")
+    kc.close()
+    nutzlast = json.dumps({"text": adresse}).encode()
+    assert server.api_konto("POST", "/api/qr", nutzlast, unter_token)[0] == 403
+    assert server.api_konto("POST", "/api/qr", nutzlast, None)[0] == 401
+    assert server.api_konto("POST", "/api/qr", nutzlast, haupt_token)[0] == 200
+    assert server.api_konto("GET", "/api/qr", b"", haupt_token)[0] != 200
+    for schlecht in ({}, {"text": 5}, {"text": "irgendwas"}, {"text": "javascript:alert(1)"}):
+        assert server.api_konto("POST", "/api/qr", json.dumps(schlecht).encode(), haupt_token)[0] == 400, schlecht
+    code, _, body, _ = server.api_konto("POST", "/api/qr", json.dumps({"text": "https://" + "a" * 120}).encode(), haupt_token)[:4]
+    assert code == 400 and "Zu lang" in json.loads(body)["error"]
+    assert "/api/qr" in server.KONTO_PFADE
+
+
+def test_qr_oberflaeche_nur_mit_erreichbarer_adresse():
+    """Quelltext der Oberfläche: „Handy verbinden“ unter „Konten und Sicherung“ nur fürs Hauptkonto; der Code zeigt die Adresse dieser Seite, über
+    127.0.0.1 oder localhost steht stattdessen, was zu tun ist; der Text sagt, wie man die App installiert; keine Gedankenstriche, keine
+    Inline-Skripte. Das SVG kommt vom Server (kein Text des Nutzers darin) und wird eingesetzt."""
+    js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
+    teil = js[js.index("// Handy verbinden: QR-Code"):js.index("async function viewKonten()")]
+    assert "const LOKAL = /^(localhost|127(\\.\\d+){3}|\\[?::1\\]?)$/;" in teil and "class=\"qr\">${qr.svg}" in teil
+    assert "App installieren" in teil and "Zum Startbildschirm" in teil and "über https" in teil and "Öffne die App einmal über die Adresse deines Servers" in teil
+    assert "–" not in teil and "—" not in teil and "<script" not in teil and not re.search(r"\bon[a-z]+=", teil)
+    konto = js[js.index("async function viewKonten()"):js.index("function openPw(")]
+    assert "post('qr', {text: adresse})" in konto and "location.origin" in konto and "haupt && !LOKAL.test(location.hostname)" in konto
+    assert "const handySec = haupt ?" in konto and konto.count("${handySec}") == 2
+    unter = konto[konto.index("if (!haupt) {"):]
+    assert "handySec" not in unter[:unter.index("return;")]  # Seite „Dein Konto“ eines Unterkontos
+    css = (WURZEL / "ui" / "style.css").read_text(encoding="utf-8")
+    assert ".handy-qr .qr svg" in css
+
+
 # --- Phase 45: Scryfall schonen, Katalog und Namen nur bei Bedarf (PLAN E26) -------------------------------------------------------------------
 
 import time  # noqa: E402

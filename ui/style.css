@@ -982,3 +982,10 @@ label.inl.quelle-an { min-height: 44px; }
 form.fertige { margin-top: var(--space-6); }
 form.fertige textarea { width: 100%; max-width: 40rem; }
 form.fertige .note-line { margin: var(--space-2) 0 var(--space-3); }
+
+/* QR-Code der Adresse fürs Handy (unter Konten und Sicherung): weißer Grund bleibt weiß, auch im dunklen Look */
+.handy-qr { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-6); align-items: center; }
+.handy-qr .qr { width: min(13rem, 100%); flex: none; border-radius: var(--radius-md); overflow: hidden; }
+.handy-qr .qr svg { display: block; width: 100%; height: auto; }
+.handy-qr p { margin: 0 0 var(--space-2); }
+.handy-qr code { overflow-wrap: anywhere; }

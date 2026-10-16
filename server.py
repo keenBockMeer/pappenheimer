@@ -33,6 +33,7 @@ import katalog
 import konten
 import llm
 import mtg
+import qr
 import sources
 import suche
 import version
@@ -1206,7 +1207,7 @@ def dispatch(conn, method, path, q, body=b"", filename="", fetch=None, edhrec=No
 
 # --- Konten, Anmeldung, Sammlungen (Phase 13, PLAN E14) ------------------------------------------------------------
 
-KONTO_PFADE = ("/api/session", "/api/login", "/api/logout", "/api/konten", "/api/backup.zip", "/api/sicherung", "/api/quellen", "/api/katalog", "/api/proxy-blatt", "/api/update")
+KONTO_PFADE = ("/api/session", "/api/login", "/api/logout", "/api/konten", "/api/backup.zip", "/api/sicherung", "/api/quellen", "/api/katalog", "/api/proxy-blatt", "/api/update", "/api/qr")
 
 
 def _cookie(token, sicher):
@@ -1315,6 +1316,17 @@ def api_update(method, haupt):
     return {"eigene": version.VERSION, "letzte": letzte, "fehler": fehler}
 
 
+def api_qr(d, haupt):
+    """POST /api/qr {text}: der QR-Code zu einer Adresse als SVG (qr.svg: ohne Skript und Verweise), damit sich das Handy mit einem Scan mit der Seite
+    verbindet und sie dort installieren lässt. Nur das Hauptkonto; text ist die Adresse der Seite (höchstens 106 Bytes, sonst eine lesbare Meldung)."""
+    if not haupt:
+        raise PermissionError("Den QR-Code zeigt nur das Hauptkonto")
+    text = d.get("text")
+    if not isinstance(text, str) or not text.startswith(("http://", "https://")):
+        raise ValueError("Erwartet: {text: Adresse der Seite}")
+    return {"svg": qr.svg(text)}
+
+
 def _katalog_job(was, bulk=None):
     """Hintergrund-Job für die Gesamtdaten (Phase 45): „katalog“ lädt den Katalog aller Papier-Drucke, „namen“ die deutschen Kartennamen. Der
     Zustand (Fortschritt in Bytes) steht sofort da, sonst sähe die Anzeige im ersten Augenblick nichts. Läuft oder lief heute schon ein Abruf
@@ -1416,6 +1428,8 @@ def api_konto(method, path, body, token, sicher=False, adresse=""):
                 return (*_json(_proxy_blatt(method, d, True)), {})
             if path == "/api/update":
                 return (*_json(api_update(method, True)), {})
+            if path == "/api/qr" and method == "POST":
+                return (*_json(api_qr(d, True)), {})
             if path == "/api/katalog":
                 return (*_json(api_katalog(method, d, True)), {})
             if path == "/api/konten" and method == "POST" and d.get("aktion") == "add":  # erstes Konto = Hauptkonto, die bisherige Sammlung gehört ihm
@@ -1454,6 +1468,8 @@ def api_konto(method, path, body, token, sicher=False, adresse=""):
                 return (*_json(_proxy_blatt(method, d, haupt)), {})
             if path == "/api/update":  # Phase 50: nur das Hauptkonto, nur auf Knopfdruck
                 return (*_json(api_update(method, haupt)), {})
+            if path == "/api/qr" and method == "POST":  # QR-Code der Adresse fürs Handy, nur das Hauptkonto
+                return (*_json(api_qr(d, haupt)), {})
             if path == "/api/katalog":  # jedes Konto öffnet „Erfassen“, den Schalter der Namen stellt nur das Hauptkonto
                 return (*_json(api_katalog(method, d, haupt)), {})
             if path == "/api/backup.zip" and method == "GET" or path == "/api/sicherung":
