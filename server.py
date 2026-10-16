@@ -2115,11 +2115,12 @@ class Handler(BaseHTTPRequestHandler):
         self._senden(lambda: self._api("POST", u, self.rfile.read(int(laenge))), api=True)
 
 
-def serve(port=PORT, open_browser=True, host="127.0.0.1", daily=True, log=False):
+def serve(port=PORT, open_browser=True, host="127.0.0.1", daily=True, log=False, fenster=None):
     """Oberfläche starten. Auf einer anderen Adresse als 127.0.0.1 (Server) nur mit Anmeldung (E13) oder, solange es kein Hauptkonto gibt,
     im Modus „Einrichtung“ (E28): Dann antwortet der Server nur auf die Einrichtungsseite, und der Code dafür steht einmal im Protokoll.
     Ein Hauptkonto ohne Passwort reicht dort weiter nicht. Auf 127.0.0.1 ändert das nichts. Das Protokoll (eine Zeile je Anfrage,
-    PLAN E29) läuft nur auf dem Server oder mit log. -> Rückgabewert fürs CLI"""
+    PLAN E29) läuft nur auf dem Server oder mit log. fenster: Befehl eines Browsers für ein eigenes App-Fenster (Phase 55, mtg.fenster_befehl);
+    endet sein Prozess (Fenster zu), endet der Server. -> Rückgabewert fürs CLI"""
     global PROTOKOLL
     lokal = host in ("127.0.0.1", "localhost")
     m = None if lokal else konten.modus()
@@ -2155,7 +2156,10 @@ def serve(port=PORT, open_browser=True, host="127.0.0.1", daily=True, log=False)
     if code:  # die einzige Stelle, an der der Code im Protokoll steht
         print(f"Einrichtung: Code {code}\nNoch gibt es kein Hauptkonto. Die Adresse der App im Browser öffnen und dort diesen Code eingeben; "
               f"er gilt, bis das Hauptkonto angelegt ist. Noch einmal zeigen: mtg einrichtung", flush=True)
-    if open_browser:
+    if fenster:  # mit eigenem Profil ist der gestartete Prozess das Fenster selbst und endet, sobald es zu ist (am Rechner geprüft)
+        app = subprocess.Popen([*fenster, f"--app={url}"])
+        threading.Thread(target=lambda: (app.wait(), srv.shutdown()), daemon=True).start()
+    elif open_browser:
         webbrowser.open(url)
     try:
         srv.serve_forever()

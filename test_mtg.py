@@ -2688,7 +2688,10 @@ def test_markt_radar_mit_kopienzahl(conn, tmp_path, monkeypatch):
 def test_ui_stoppen_nur_oberflaechen(monkeypatch):
     laufend = [(11, r'"C:\mtg\.venv\Scripts\python.exe" "C:\mtg\mtg.py" ui'), (12, r'C:\Python\python.exe "C:\mtg\mtg.py" ui'),
                (13, "python C:/mtg/mtg.py ui --port 8766 --no-open"), (14, "python mtg.py --konto lena ui"), (15, "python mtg.py card ui-Test"),
-               (16, "python mtg.py stats"), (17, "python anderes.py ui"), (os.getpid(), "python mtg.py ui")]
+               (16, "python mtg.py stats"), (17, "python anderes.py ui"), (os.getpid(), "python mtg.py ui"),
+               (21, f'"C:\\Edge\\msedge.exe" "--user-data-dir={mtg.fenster_profil()}" --no-first-run --app=http://127.0.0.1:8765'),  # das App-Fenster
+               (22, f'"C:\\Edge\\msedge.exe" --type=renderer "--user-data-dir={mtg.fenster_profil()}"'),  # endet mit dem Hauptprozess
+               (23, '"C:\\Edge\\msedge.exe" --user-data-dir=C:\\anderes --app=http://127.0.0.1:8765')]  # fremdes Profil
     weg = set()
 
     def kill(pid, sig):
@@ -2697,8 +2700,57 @@ def test_ui_stoppen_nur_oberflaechen(monkeypatch):
             raise OSError("schon weg")  # mit dem venv-Starter zusammen beendet
     monkeypatch.setattr(os, "kill", kill)
     assert mtg.ui_stoppen(lambda: [p for p in laufend if p[0] not in weg], warten=2) == [(11, 8765), (12, 8765), (13, 8766), (14, 8765)]
-    assert weg == {11, 12, 13, 14}
+    assert weg == {11, 12, 13, 14, 21}
     assert mtg.ui_stoppen(lambda: [(16, "python mtg.py stats")]) == []
+
+
+import socket  # noqa: E402
+import sys  # noqa: E402
+
+
+def test_ui_fenster_ohne_konsole_und_endet_mit_dem_fenster(daten, monkeypatch, capsys):
+    """Phase 55: mtg ui --fenster startet sich ohne Konsole neu und kehrt sofort zurück; der neue Prozess öffnet Edge (sonst Chrome) mit
+    eigenem Profil im App-Modus, und endet dieser Prozess (Fenster zu), endet der Server. Ohne beide Browser: wie bisher der Browser."""
+    for rel in mtg.FENSTER_BROWSER[1:]:  # erst nur Chrome, dann Edge dazu: Edge geht vor
+        (daten / "pf" / rel).parent.mkdir(parents=True)
+        (daten / "pf" / rel).write_text("")
+    assert mtg.fenster_browser([None, str(daten / "leer"), str(daten / "pf")]) == str(daten / "pf" / mtg.FENSTER_BROWSER[1])
+    (daten / "pf" / mtg.FENSTER_BROWSER[0]).parent.mkdir(parents=True)
+    (daten / "pf" / mtg.FENSTER_BROWSER[0]).write_text("")
+    assert mtg.fenster_browser([str(daten / "pf")]) == str(daten / "pf" / mtg.FENSTER_BROWSER[0]) and mtg.fenster_browser([]) is None
+    gestartet, popen = [], subprocess.Popen
+    for n in ("port", "lokal"):
+        monkeypatch.setattr(server.Handler, n, getattr(server.Handler, n))
+    monkeypatch.setattr(server, "PROTOKOLL", server.PROTOKOLL)
+    monkeypatch.setattr(subprocess, "Popen", lambda befehl, **kw: gestartet.append((befehl, kw)))
+    monkeypatch.setattr(mtg, "fenster_browser", lambda: "edge.exe")
+    monkeypatch.delenv("MTG_IM_HINTERGRUND", raising=False)
+    with socket.socket() as frei:
+        frei.bind(("127.0.0.1", 0))
+        port = frei.getsockname()[1]
+        frei.listen()
+        assert mtg.main(["ui", "--fenster", "--port", str(port)]) == 2 and not gestartet  # Port belegt: Meldung hier, nichts gestartet
+    assert "nicht nutzbar" in capsys.readouterr().err
+    assert mtg.main(["ui", "--fenster", "--port", str(port), "--no-daily"]) == 0
+    (befehl, kw), = gestartet
+    assert befehl[1:] == [str(Path(mtg.__file__).resolve()), "ui", "--fenster", "--port", str(port), "--host", "127.0.0.1", "--no-daily"]
+    assert kw["env"]["MTG_IM_HINTERGRUND"] == "1" and kw["creationflags"] == getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    assert kw["stdout"].name == str(daten / "fenster.log")
+    monkeypatch.setattr(subprocess, "Popen", popen)  # im neuen Prozess: Fenster auf, Fenster zu, Server endet
+    monkeypatch.setenv("MTG_IM_HINTERGRUND", "1")
+    browser, fenster = [sys.executable, "-c", "import sys, pathlib; pathlib.Path(sys.argv[1]).write_text(' '.join(sys.argv[2:]))", str(daten / "argv.txt")], []
+    monkeypatch.setattr(mtg, "fenster_browser", lambda: "edge.exe")
+    monkeypatch.setattr(server, "serve", lambda *a, _serve=server.serve: (fenster.append(a[5]), _serve(*a[:5], browser))[1])  # schreibt, womit er gestartet wurde
+    lauf = threading.Thread(target=lambda: gestartet.append(mtg.main(["ui", "--fenster", "--port", "0", "--no-daily"])), daemon=True)
+    lauf.start()
+    lauf.join(20)
+    assert not lauf.is_alive() and gestartet[-1] == 0, "der Server endet nicht mit dem Fenster"
+    assert fenster == [["edge.exe", f"--user-data-dir={daten / 'fenster'}", "--no-first-run", "--no-default-browser-check"]]
+    assert (daten / "argv.txt").read_text().startswith("--app=http://127.0.0.1:")
+    monkeypatch.setattr(mtg, "fenster_browser", lambda: None)  # kein Edge, kein Chrome: der Browser wie bisher
+    monkeypatch.setattr(server, "serve", lambda *a: gestartet.append(a))
+    mtg.main(["ui", "--fenster", "--port", "0"])
+    assert gestartet[-1][1] is True and gestartet[-1][5] is None and "Kein Edge und kein Chrome" in capsys.readouterr().err
 
 
 # --- Abgleich: Binder-Export mit neuem Dateinamen ------------------------------------------------------------------------------
