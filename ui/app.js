@@ -299,6 +299,7 @@ async function viewHome() {
     ${s.news.length ? `<section class="sec" aria-label="Neuigkeiten"><h2>Neuigkeiten <small>seit dem letzten Import</small></h2>
       <ul class="news">${s.news.map(n => `<li><span class="ic${NEWS_WARN.has(n.kind) ? ' warn' : ''}">${icon(NEWS_ICON[n.kind] || 'info')}</span><div${n.oracle_id ? ` data-oid="${esc(n.oracle_id)}"` : ''}>${esc(n.text)}<div class="s">${esc(n.sub)}</div></div></li>`).join('')}</ul></section>` : ''}</div>`;
   jobsUi(); verlaufHover();
+  if (neueAnsicht) zaehlen($('.display'), s.value, eur0);
 }
 
 // Wertverlauf: eine Linie (Wert je Tag), Fläche als Hauch, Wert am Ende, Fadenkreuz mit Tooltip, Tabelle zum Aufklappen (dataviz-Regeln)
@@ -394,21 +395,25 @@ async function viewCards(p) {
       <span class="search wide">${icon('search', 'sm')}<input type="search" name="q" placeholder="${lm.chat ? 'Name, Suche wie t:vampire c:r, oder eine Frage' : 'Name, oder Suche wie t:vampire c:r mv<=3'}" aria-label="Name oder Suche" aria-describedby="suchhilfe" value="${esc(p.get('q') || '')}" spellcheck="false"></span>
       ${lm.chat ? `<button class="btn" type="button" id="frage" title="${esc(TIP.frage)}">Als Frage</button>` : ''}
       <span class="picks" id="colors" role="group" aria-label="Farben">${Object.keys(COLORS).map(k => `<button type="button" class="pick" data-c="${k}" aria-pressed="${on.has(k)}" aria-label="${COLORS[k]}" title="${COLORS[k]}">${pip(k, true)}</button>`).join('')}</span>
-      <select name="type" aria-label="Typ"><option value="">Alle Typen</option>${opt(TYPES, p.get('type'))}</select>
-      <select name="rarity" aria-label="Seltenheit"><option value="">Alle Seltenheiten</option>${opt(RARITIES, p.get('rarity'))}</select>
-      <select name="status" aria-label="Stapel"><option value="">Alle Stapel</option>${opt(STACKS.map(k => [k, LABEL[k]]), p.get('status'))}</select>
-      <select name="binder" aria-label="Binder"><option value="">Alle Binder</option>${opt(binders.map(b => [b.name, `${b.name}${b.deck ? ' (Deck)' : b.type === 'scan' ? ' (Scan)' : ''}, ${num(b.cards)}`]), p.get('binder'))}</select>
-      <select name="set" aria-label="Serie"><option value="">Alle Serien</option>${opt(sets.items.map(x => [x.code, `${x.name} (${x.code}), ${num(x.copies)}`]), (p.get('set') || '').toUpperCase())}</select>
-      <select name="fn" aria-label="Funktion"><option value="">Alle Funktionen</option>${opt(fns.items, p.get('fn'))}</select>
-      <label class="inl">ab <input type="number" name="min" min="0" step="0.5" value="${esc(p.get('min') || '')}" aria-label="Mindestpreis in Euro"> €</label>
       <select name="sort" aria-label="Sortierung">${opt(SORTS.map(([v, l]) => [v, 'Sortiert nach ' + l]), p.get('sort') || 'name')}</select>
+      <button class="btn" type="button" id="mehr-filter" aria-expanded="false" aria-controls="filter-mehr">Filter<span class="zahl" id="filter-n" hidden></span>${icon('arrow', 'sm')}</button>
+      <div class="filter-mehr" id="filter-mehr" hidden>
+        <select name="type" aria-label="Typ"><option value="">Alle Typen</option>${opt(TYPES, p.get('type'))}</select>
+        <select name="rarity" aria-label="Seltenheit"><option value="">Alle Seltenheiten</option>${opt(RARITIES, p.get('rarity'))}</select>
+        <select name="status" aria-label="Stapel"><option value="">Alle Stapel</option>${opt(STACKS.map(k => [k, LABEL[k]]), p.get('status'))}</select>
+        <select name="binder" aria-label="Binder"><option value="">Alle Binder</option>${opt(binders.map(b => [b.name, `${b.name}${b.deck ? ' (Deck)' : b.type === 'scan' ? ' (Scan)' : ''}, ${num(b.cards)}`]), p.get('binder'))}</select>
+        <select name="set" aria-label="Serie"><option value="">Alle Serien</option>${opt(sets.items.map(x => [x.code, `${x.name} (${x.code}), ${num(x.copies)}`]), (p.get('set') || '').toUpperCase())}</select>
+        <select name="fn" aria-label="Funktion"><option value="">Alle Funktionen</option>${opt(fns.items, p.get('fn'))}</select>
+        <label class="inl">ab <input type="number" name="min" min="0" step="0.5" value="${esc(p.get('min') || '')}" aria-label="Mindestpreis in Euro"> €</label>
+      </div>
     </form>
     <details class="suchhilfe" id="suchhilfe"><summary>Suchhilfe</summary><dl>${SUCHHILFE.map(([k, t]) => `<dt><button type="button" class="link" data-suche="${esc(k)}">${esc(k)}</button></dt><dd>${esc(t)}</dd>`).join('')}</dl>
       <p class="note-line">Begriffe lassen sich kombinieren, zum Beispiel <code>t:creature id:bg fn:graveyard mv<=3</code>. Wörter ohne Doppelpunkt suchen im Namen.</p></details>
     ${lm.embed && lm.vektoren < lm.karten ? `<div class="gap-top">${note(['cards', 'Ähnliche Karten einschalten', `Dein lokales Ollama kann zu jeder Karte die ähnlichsten deiner Sammlung finden. Dafür rechnet es einmal ${num(lm.karten - lm.vektoren)} Karten durch (wenige Minuten).`, `<button class="btn" type="button" data-job="vektoren">Berechnen</button>`, 'vektoren'])}</div>` : ''}
     <div class="chips aktiv" id="aktiv"></div>
     <p class="muted count-line" id="count" aria-live="polite"></p><div class="grid" id="grid"></div><nav class="pager" id="pager" aria-label="Seiten"></nav></section>`;
-  const f = $('#f');
+  const f = $('#f'), mehr = $('#filter-mehr'), mehrNamen = $$('[name]', mehr).map(x => x.name);  // Typ, Seltenheit, Stapel, Binder, Serie, Funktion, Preis: hinter dem Knopf „Filter“
+  $('#mehr-filter').onclick = e => { mehr.hidden = !mehr.hidden; e.currentTarget.setAttribute('aria-expanded', !mehr.hidden); };
   const query = page => {
     const q = new URLSearchParams();
     for (const [k, v] of new FormData(f)) if (v && !(k === 'sort' && v === 'name')) q.set(k, v);
@@ -422,6 +427,8 @@ async function viewCards(p) {
     const viewHash = '#/cards' + (String(q) ? '?' + q : '');
     history.replaceState(null, '', viewHash);
     rendered = viewHash;
+    const nMehr = [...q].filter(([k]) => mehrNamen.includes(k)).length;
+    $('#filter-n').textContent = nMehr; $('#filter-n').hidden = !nMehr;
     // aktive Filter als Marken, ein Klick nimmt einen weg
     $('#aktiv').innerHTML = [...q].filter(([k]) => FILTER_NAME[k]).map(([k, v]) => `<button type="button" class="chip" data-unset="${k}" aria-label="Filter ${esc(FILTER_NAME[k])} entfernen">${esc(FILTER_NAME[k])}: ${esc(
       k === 'color' ? v.split(',').map(c => COLORS[c]).join(', ') : k === 'fn' ? (fns.items.find(([x]) => x === v) || [, v])[1] : k === 'status' ? LABEL[v] : k === 'min' ? eurMin(+v) : v)}${icon('x', 'sm')}</button>`).join('');
@@ -677,18 +684,78 @@ async function viewSort(p) {
   const order = p.get('order') || 'scan', page = +p.get('page') || 1;
   const r = await api(`sort?binder=${encodeURIComponent(binder)}&order=${order}&page=${page}`);
   const link = (o, pg) => `#/sort?binder=${encodeURIComponent(binder)}${o !== 'scan' ? '&order=' + o : ''}${pg > 1 ? '&page=' + pg : ''}`;
-  main.innerHTML = `${head(esc(binder), `${num(r.total)} Zeilen. Nimm die Karten der Reihe nach und leg jede auf den Stapel daneben.`, `<a class="btn ghost" href="#/sort">${icon('left')}Alle Binder</a><button class="btn" id="print" type="button">${icon('printer')}Drucken</button>`)}
+  main.innerHTML = `${head(esc(binder), `${num(r.total)} Zeilen. Nimm die Karten der Reihe nach und leg jede auf den Stapel daneben.`, `<a class="btn ghost" href="#/sort">${icon('left')}Alle Binder</a>${r.rows.length ? `<button class="btn primary" id="spiel" type="button">${icon('cards')}Karte für Karte</button>` : ''}<button class="btn" id="print" type="button">${icon('printer')}Drucken</button>`)}
     <section class="sec" aria-label="Stapel">${legend(Object.fromEntries(STACKS.map(k => [k, r.counts[k]])))}</section>
     <section class="sec" aria-label="Karten in Reihenfolge">
       <div class="toolbar noprint"><label class="inl">Reihenfolge <select id="order">${ORDERS.map(([v, l]) => `<option value="${v}"${v === order ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
       <div class="rows">${r.rows.map(z => `<div class="row" data-oid="${esc(z.oracle_id)}"${peekAt(z.image, z.name, eur(z.price))}>${pic(small(z.image), '', 'thumb')}
         <div class="min0"><div class="name">${esc(z.name)}</div><div class="sub2">${esc(z.set)} #${esc(z.number)}, ${esc(LANG[z.language] || z.language)}${z.foil !== 'normal' ? ', ' + esc(z.foil) : ''}</div></div>
-        <div class="chips big">${z.stacks.map(s => chip(s.stack, `${s.qty > 1 || z.stacks.length > 1 ? s.qty + '× ' : ''}${s.stack === 'deck' ? s.deck : LABEL[s.stack]}`)).join('')}</div>
+        <div class="chips big">${z.stacks.map(s => chip(s.stack, stapelText(z, s))).join('')}</div>
         <div class="price">${eur(z.price)}</div></div>`).join('')}</div>
       ${r.pages > 1 ? `<nav class="pager noprint" aria-label="Seiten"><a class="btn" ${page <= 1 ? 'aria-disabled="true"' : `href="${link(order, page - 1)}"`}>${icon('left')}Zurück</a><span class="muted">Seite ${r.page} / ${r.pages}</span><a class="btn" ${page >= r.pages ? 'aria-disabled="true"' : `href="${link(order, page + 1)}"`}>Weiter${icon('right')}</a></nav>` : ''}
     </section>`;
   $('#order').onchange = e => { location.hash = link(e.target.value, 1); };
   $('#print').onclick = () => print();
+  $('#spiel')?.addEventListener('click', () => sortSpiel(r.rows, page < r.pages ? link(order, page + 1) : null));
+}
+const stapelText = (z, s) => `${s.qty > 1 || z.stacks.length > 1 ? s.qty + '× ' : ''}${s.stack === 'deck' ? s.deck : LABEL[s.stack]}`;
+// Karte für Karte: die Karten einer Seite nacheinander, groß, mit dem Stapel, auf den sie gehören. Die Karte fliegt dorthin, der Zähler springt.
+function sortSpiel(rows, naechste) {
+  const gelegt = Object.fromEntries(STACKS.map(k => [k, 0])), von = document.activeElement;
+  let i = 0, busy = false;
+  const box = document.createElement('div');
+  box.className = 'spiel noprint';
+  box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Karte für Karte sortieren');
+  box.innerHTML = `<div class="spiel-kopf"><button class="btn ghost" type="button" data-s="zu">${icon('x')}Beenden</button><span class="progress" aria-hidden="true"><span id="sp-p" style="--p:0"></span></span><span class="muted" id="sp-n"></span></div>
+    <div class="spiel-buehne" id="sp-b" aria-live="polite"></div>
+    <div class="piles">${STACKS.map(k => `<div class="pile s-${k}" data-pile="${k}"><span>${LABEL[k]}</span><b>0</b></div>`).join('')}</div>
+    <div class="spiel-tasten"><button class="btn" type="button" data-s="zurueck">${icon('left')}Zurück</button><button class="btn primary" type="button" data-s="weiter">Weiter${icon('right')}</button><span class="muted">Leertaste oder Pfeiltasten</span></div>`;
+  const zeigen = () => {
+    const z = rows[i];
+    $('#sp-n', box).textContent = z ? `${i + 1} von ${rows.length}` : '';
+    $('#sp-p', box).style.setProperty('--p', (i / rows.length).toFixed(3));
+    $$('.pile', box).forEach(p => p.classList.toggle('ziel', !!z && z.stacks.some(s => s.stack === p.dataset.pile)));
+    $('[data-s=weiter]', box).disabled = !z; $('[data-s=zurueck]', box).disabled = !i;
+    $('#sp-b', box).innerHTML = z
+      ? `${pic(z.image, z.name, 'spiel-karte')}<div class="spiel-text"><h2>${esc(z.name)}</h2><p class="muted">${esc(z.set)} #${esc(z.number)}, ${esc(LANG[z.language] || z.language)}${z.foil !== 'normal' ? ', ' + esc(z.foil) : ''}</p>
+        <div class="chips big">${z.stacks.map(s => chip(s.stack, stapelText(z, s))).join('')}</div><p class="spiel-preis">${eur(z.price)}</p></div>`
+      : `<div class="spiel-ende"><h2>Alles sortiert</h2><p class="muted">${karten(STACKS.reduce((n, k) => n + gelegt[k], 0))} liegen auf ihren Stapeln.</p>
+        <div class="seg">${naechste ? `<a class="btn primary" href="${naechste}">Nächste Seite</a>` : ''}<button class="btn${naechste ? '' : ' primary'}" type="button" data-s="zu">Zur Liste</button></div></div>`;
+    if (rows[i + 1]?.image) new Image().src = rows[i + 1].image;
+    if (!z) $('.spiel-ende .btn', box).focus();
+  };
+  const zaehler = (k, d) => { gelegt[k] += d; const p = $(`[data-pile="${k}"]`, box); $('b', p).textContent = gelegt[k]; p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); };
+  const vor = async () => {
+    const z = rows[i];
+    if (busy || !z) return;
+    busy = true;
+    const img = $('.spiel-karte', box), ziel = $(`[data-pile="${z.stacks[0].stack}"]`, box);
+    if (img && !calm.matches) {  // die Karte fliegt auf ihren Stapel
+      const a = img.getBoundingClientRect(), b = ziel.getBoundingClientRect();
+      await img.animate([{transform: 'none', opacity: 1}, {transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(.12) rotate(14deg)`, opacity: .3}],
+        {duration: 380, easing: 'cubic-bezier(.5, 0, .8, .4)', fill: 'forwards'}).finished.catch(() => {});
+    }
+    z.stacks.forEach(s => zaehler(s.stack, s.qty));
+    i++; zeigen(); busy = false;
+  };
+  const zurueck = () => {
+    if (busy || !i) return;
+    rows[--i].stacks.forEach(s => zaehler(s.stack, -s.qty));
+    zeigen();
+  };
+  const zu = () => { removeEventListener('hashchange', zu); document.removeEventListener('keydown', taste); box.remove(); von?.focus?.(); };
+  const taste = e => {
+    if (e.key === 'Escape') zu();
+    else if (e.key === 'ArrowLeft') zurueck();
+    else if (e.key === 'ArrowRight' || (/^( |Enter)$/.test(e.key) && !e.target.closest('button, a'))) { e.preventDefault(); vor(); }
+  };
+  box.onclick = e => {
+    const b = e.target.closest('[data-s], .spiel-karte');
+    if (b) ({zu, zurueck, weiter: vor})[b.dataset.s || 'weiter']();
+  };
+  document.body.append(box);
+  document.addEventListener('keydown', taste); addEventListener('hashchange', zu);
+  zeigen(); $('[data-s=weiter]', box).focus();
 }
 
 // --- Verkaufen: Einzeln und Bulk, Regeln, Exporte, erkannte Verkäufe ----------------------------------------------
@@ -1660,7 +1727,8 @@ function viewHelp() {
     <section id="h-stapel"><h2>Die vier Stapel</h2>
       <dl><dt><span class="dot d-deck"></span>Deck</dt><dd>${TIP.deck}</dd><dt><span class="dot d-keep"></span>Behalten</dt><dd>${TIP.keep}</dd>
         <dt><span class="dot d-sell"></span>Verkaufen</dt><dd>${TIP.sell}</dd><dt><span class="dot d-bulk"></span>Bulk</dt><dd>${TIP.bulkstack}</dd></dl>
-      <p>Die Regeln stellst du unter Verkaufen ein. Für eine einzelne Karte entscheidest du im Kartendetail (Klick auf die Karte): behalten, verkaufen oder Bulk.</p></section>
+      <p>Die Regeln stellst du unter Verkaufen ein. Für eine einzelne Karte entscheidest du im Kartendetail (Klick auf die Karte): behalten, verkaufen oder Bulk.</p>
+      <p><b>Karte für Karte.</b> Unter Sortieren zeigt „Karte für Karte“ jede Karte eines Binders groß mit dem Stapel, auf den sie gehört. Mit der Leertaste (oder „Weiter“) kommt die nächste, die Pfeiltaste nach links geht einen Schritt zurück, Esc beendet. Die Zähler unten zeigen, wie hoch die Stapel auf dem Tisch schon sind.</p></section>
     <section id="h-verkaufen"><h2>Verkaufen</h2>
       <ol><li>Unter Verkaufen die Liste für den Ankauf herunterladen (Excel). Bei einem Ankäufer wie KEEPSEVEN schickst du das Formular des Sammlungsankaufs ab und lädst die Liste über den Link in der Bestätigungs-Mail hoch (er kauft nur englische und deutsche Karten). Oder einzelne Karten über deren Kartensuche anbieten.</li>
         <li>Verkaufte Karten in deiner Scanner-App löschen (zum Beispiel ManaBox).</li><li>Neuen Export hier ablegen. Karten von der Verkaufsliste, die fehlen, bucht die App als verkauft und zeigt die Summe.</li></ol>
@@ -3351,7 +3419,28 @@ async function viewMessbilder() {
 const VIEWS = {'': ['Übersicht', viewHome], cards: ['Karten', viewCards], sets: ['Serien', viewSets], sort: ['Sortieren', viewSort], scan: ['Scannen', viewScan], sell: ['Verkaufen', viewSell], decks: ['Decks', viewDecks], wuensche: ['Wünsche', viewWuensche], spiele: ['Spiele', viewSpiele], help: ['Hilfe', viewHelp],
   konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true]};  // true: nicht in der Navigation (Link im Fuß)
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
-let rendered = null, enterTimer;
+let rendered = null, enterTimer, neueAnsicht = false;
+// Zahl läuft beim ersten Aufruf der Ansicht hoch (nicht beim Neuzeichnen, nicht bei reduzierter Bewegung)
+const zaehlen = (el, ziel, fmt) => {
+  if (!el || calm.matches) return;
+  const t0 = performance.now();
+  el.textContent = fmt(0);
+  const schritt = t => { const k = Math.min((t - t0) / 800, 1); el.textContent = fmt(ziel * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(schritt); };
+  requestAnimationFrame(schritt);
+};
+// Kacheln neigen sich zur Maus (nur mit Maus, nicht bei reduzierter Bewegung, höchstens 7 Grad)
+let geneigt = null;
+const aufrichten = () => { geneigt?.style.removeProperty('--rx'); geneigt?.style.removeProperty('--ry'); geneigt = null; };
+document.addEventListener('pointermove', e => {
+  const c = e.pointerType === 'mouse' && !calm.matches ? e.target.closest('.grid > .card') : null;
+  if (c !== geneigt) aufrichten();
+  if (!c) return;
+  geneigt = c;
+  const b = c.getBoundingClientRect();
+  c.style.setProperty('--ry', `${((e.clientX - b.left) / b.width - .5) * 14}deg`);
+  c.style.setProperty('--rx', `${(.5 - (e.clientY - b.top) / b.height) * 14}deg`);
+}, {passive: true});
+document.documentElement.addEventListener('pointerleave', aufrichten);
 // neue Ansicht: Abschnitte blenden gestaffelt ein (nicht bei Neuzeichnen derselben Ansicht, das soll ruhig bleiben)
 const animateIn = () => {
   if (calm.matches) return;
@@ -3363,7 +3452,7 @@ async function render(force) {
   const hash = location.hash || '#/';
   if (!hash.startsWith('#/') || loginOffen) return;  // Sprunglink (#main) ist keine Ansicht; vor der Anmeldung nichts laden
   if (!force && hash === rendered) return;
-  const neu = hash.split('?')[0] !== (rendered || '').split('?')[0];
+  const neu = neueAnsicht = hash.split('?')[0] !== (rendered || '').split('?')[0];
   rendered = hash;
   const [path, qs] = hash.slice(2).split('?');
   const [title, view] = VIEWS[path] || ['Nicht gefunden', viewMissing];
