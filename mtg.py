@@ -2802,24 +2802,28 @@ UI_PROZESS = re.compile(r"mtg\.py.*\sui(\s|$)")  # ponytail: jede Oberfläche (p
 
 
 def _prozesse():
-    """Laufende Python-Prozesse als [(pid, Befehlszeile)]: Windows über PowerShell, sonst ps."""
+    """Laufende Python-Prozesse und Browser (Edge, Chrome: das App-Fenster, Phase 55) als [(pid, Befehlszeile)]: Windows über PowerShell, sonst ps."""
     import subprocess
-    befehl = (["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_Process -Filter \"Name LIKE 'python%'\" | "
+    befehl = (["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_Process -Filter \"Name LIKE 'python%' OR Name = 'msedge.exe' OR Name = 'chrome.exe'\" | "
                "ForEach-Object { \"$($_.ProcessId) $($_.CommandLine)\" }"] if os.name == "nt" else ["ps", "-eo", "pid=,args="])
     out = subprocess.run(befehl, capture_output=True, text=True, errors="replace", check=False).stdout
     return [(int(p), rest) for p, _, rest in (z.strip().partition(" ") for z in out.splitlines()) if p.isdigit()]
 
 
 def ui_stoppen(prozesse=_prozesse, warten=5.0):
-    """Laufende Oberflächen beenden, egal auf welchem Port und auch ohne offenes Fenster. Wartet, bis sie weg sind. -> [(pid, port)]"""
-    ziele = [(pid, int(m.group(1)) if (m := re.search(r"--port[= ](\d+)", cl)) else 8765) for pid, cl in prozesse()
+    """Laufende Oberflächen beenden, egal auf welchem Port und auch ohne offenes Fenster, dazu ihr App-Fenster (Phase 55: der Browser mit dem
+    Profil aus fenster_profil; bliebe er offen, ginge das Fenster eines neuen Starts in ihm auf, und der neue Server endete sofort). Wartet,
+    bis alle weg sind. -> [(pid, port)] der Oberflächen"""
+    laufend, profil = prozesse(), str(fenster_profil()).lower()
+    ziele = [(pid, int(m.group(1)) if (m := re.search(r"--port[= ](\d+)", cl)) else 8765) for pid, cl in laufend
              if pid != os.getpid() and UI_PROZESS.search(cl)]
-    for pid, _ in ziele:
+    fenster = [pid for pid, cl in laufend if "--app=" in cl and profil in cl.lower()]  # nur der Hauptprozess trägt --app, die übrigen enden mit ihm
+    for pid in [pid for pid, _ in ziele] + fenster:
         try:
             os.kill(pid, signal.SIGTERM)  # Windows: sofort beendet; die Datenbank übersteht das (SQLite-Transaktionen)
         except OSError:
             pass  # schon weg, etwa zusammen mit dem Starter der venv
-    offen, ende = {pid for pid, _ in ziele}, time.monotonic() + warten
+    offen, ende = {pid for pid, _ in ziele} | set(fenster), time.monotonic() + warten
     while offen and time.monotonic() < ende:
         offen &= {pid for pid, _ in prozesse()}
         if offen:
@@ -2865,10 +2869,55 @@ def cmd_verknuepfung(a, ordner=None):
         print(f"Verknüpfung {'angelegt' if z.startswith('+') else 'entfernt'}: {z[2:]}")
 
 
+FENSTER_BROWSER = ("Microsoft/Edge/Application/msedge.exe", "Google/Chrome/Application/chrome.exe")  # können --app; Edge hat jedes Windows (im EWR entfernbar)
+
+
+def fenster_profil():
+    """Eigenes Browser-Profil des App-Fensters (Phase 55), neben der Sammlung; steht nicht in der Sicherung."""
+    return Path(DB).parent / "fenster"
+
+
+def fenster_browser(basen=None):
+    """Edge oder Chrome für das App-Fenster, gesucht in den Programmordnern von Windows. -> Pfad oder None (auch außerhalb von Windows)"""
+    basen = [os.environ.get(v) for v in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA")] if basen is None else basen
+    return next((str(p) for rel in FENSTER_BROWSER for b in basen if b and (p := Path(b) / rel).is_file()), None)
+
+
+def _ui_im_hintergrund(a):
+    """mtg ui --fenster ohne schwarzes Fenster: dieselbe Oberfläche noch einmal starten, ohne Konsole (Ausgaben nach data/fenster.log), und
+    sofort zurück, damit sich der Starter schließt. Ist der Port belegt, sagt es dieses Fenster, statt dass still nichts aufgeht."""
+    import socket
+    import subprocess
+    with socket.socket() as s:
+        try:
+            s.bind((a.host, a.port))
+        except OSError as e:
+            print(f"Port {a.port} nicht nutzbar: {e}", file=sys.stderr)
+            return 2
+    argv = [*(["--konto", a.konto] if a.konto else []), "ui", "--fenster", "--port", str(a.port), "--host", a.host,
+            *(["--no-daily"] if a.no_daily else []), *(["--log"] if a.log else [])]
+    fenster_profil().parent.mkdir(parents=True, exist_ok=True)
+    with open(fenster_profil().parent / "fenster.log", "w", encoding="utf-8") as log:
+        subprocess.Popen([sys.executable, str(Path(__file__).resolve()), *argv], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                         env=os.environ | {"MTG_IM_HINTERGRUND": "1", "PYTHONIOENCODING": "utf-8"},
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    print(f"{version.NAME} öffnet sich in einem eigenen Fenster.")
+    return 0
+
+
 def cmd_ui(a):
     import server  # erst hier, server importiert mtg
+    fenster = None
+    if a.fenster:
+        exe = fenster_browser()
+        if not exe:
+            print("Kein Edge und kein Chrome gefunden: Die Seite öffnet sich im Browser, dieses Fenster offen lassen.", file=sys.stderr)
+        elif not os.environ.get("MTG_IM_HINTERGRUND"):
+            return _ui_im_hintergrund(a)
+        else:
+            fenster = [exe, f"--user-data-dir={fenster_profil()}", "--no-first-run", "--no-default-browser-check"]
     try:
-        return server.serve(a.port, not a.no_open, a.host, not a.no_daily, a.log)
+        return server.serve(a.port, not a.no_open, a.host, not a.no_daily, a.log, fenster)
     except OSError as e:
         print(f"Port {a.port} nicht nutzbar: {e}", file=sys.stderr)
         return 2
@@ -3147,6 +3196,7 @@ def main(argv=None):
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--host", default="127.0.0.1", help="z. B. 0.0.0.0 auf dem Server (ohne Hauptkonto: Einrichtung im Browser mit dem Code aus dem Protokoll)")
     s.add_argument("--no-open", action="store_true", help="Browser nicht öffnen")
+    s.add_argument("--fenster", action="store_true", help="eigenes Fenster (Windows, Edge oder Chrome) ohne Konsole; schließt es, endet die Oberfläche")
     s.add_argument("--no-daily", action="store_true", help="kein täglicher Lauf (Preise, Wertverlauf, Sicherung)")
     s.add_argument("--log", action="store_true", help="jede Anfrage protokollieren (Zeit, Adresse, Methode, Pfad, Status, Dauer); auf einer anderen Adresse als 127.0.0.1 ohnehin an")
     sub.add_parser("undo", help="Letzten Import rückgängig machen")

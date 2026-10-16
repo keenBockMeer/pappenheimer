@@ -65,6 +65,7 @@ Ausbau v6 (Veröffentlichung: jeder betreibt es auf eigener Hardware, kein zentr
 - [ ] Phase 52 – README neu (Bilder, Scannen in Schritten, englischer Abschnitt)
 - [ ] Phase 53 – Generalprobe und Veröffentlichung
 - [ ] Phase 54 – Englische Oberfläche (spät, in Stufen)
+- [ ] Phase 55 – Eigenes Programmfenster unter Windows (Edge im App-Modus, ohne Konsole, Fenster zu beendet die App) · gebaut, Tests grün, am Rechner des Autors mit einer Probe-Sammlung geprüft; offen: der Start über die echte Verknüpfung nach dem nächsten Update
 
 ## Ziel
 Alles lokal auf dem Desktop, im Browser unter `http://127.0.0.1:8765`:
@@ -1420,6 +1421,20 @@ Vorziehen geht bei 38, 47, 48 und 51 (hängen an nichts außer 36). Pflicht vor 
 
 **Abnahme je Stufe:** jeder Schlüssel der umgestellten Ansichten hat beide Sprachen (Test) · in der englischen Ansicht steht kein deutscher Text mehr (Browser-Probe) · Umschalten ohne Neuladen · 375 px ohne Querscrollen · die deutsche Ansicht ist Wort für Wort wie vorher.
 **Offen bleibt:** weitere Sprachen, Preise in anderen Währungen (die Cardmarket-Liste ist in Euro), Ankauf-Beispiele außerhalb Deutschlands.
+
+### Phase 55 – Eigenes Programmfenster unter Windows (Wunsch des Autors, 2026-10-16)
+**Ziel:** Pappenheimer fühlt sich am Windows-Rechner wie ein Programm an: ein eigenes Fenster statt eines Browser-Tabs, kein schwarzes Fenster, Fenster zu heißt beendet. Keine neue Abhängigkeit (E2).
+- **Gewählt:** Edge im App-Modus (`--app=`, eigenes Profil), sonst Chrome. Verworfen: pywebview (neue Abhängigkeit, kaum Mehrwert), Electron oder Tauri (über 100 MB, anderer Unterbau). Ein Installer bleibt ein eigener Schritt.
+- **Abnahme:** `mtg ui --fenster` kehrt sofort zurück, die Oberfläche läuft ohne Konsole weiter · mit eigenem Profil endet der gestartete Browser-Prozess mit dem Fenster, und dann endet der Server · `mtg stop` beendet Server und Fenster · ohne Edge und Chrome wie bisher · Port belegt: Meldung im Starter statt Stille · Tests auf Linux und Windows ohne echten Browser.
+
+**Ergebnis (2026-10-16):** Gebaut, `python -m pytest -q`: 248 bestanden (ein neuer Test, einer erweitert).
+- `mtg.py`: `FENSTER_BROWSER`, `fenster_browser` (Programmordner von Windows, Edge vor Chrome), `fenster_profil` (`data/fenster`, neben der Sammlung, nicht in der Sicherung), `_ui_im_hintergrund` (prüft den Port, startet `mtg.py ui --fenster` noch einmal mit `CREATE_NO_WINDOW` und dem Merker `MTG_IM_HINTERGRUND`, Ausgaben nach `data/fenster.log`), `cmd_ui` mit `--fenster`. `ui_stoppen` beendet auch den Browser-Hauptprozess mit `--app=` und diesem Profil, sonst ginge das Fenster eines neuen Starts im alten Browser auf und der neue Server endete sofort; `_prozesse` liest dafür auch `msedge.exe` und `chrome.exe`.
+- `server.serve(fenster=…)`: startet den Browser mit `--app=<Adresse>` und ruft `srv.shutdown()`, sobald sein Prozess endet.
+- `Pappenheimer starten.cmd` ruft `ui --fenster` und hält nur bei einem Fehler an (`if errorlevel 1 pause`). Die Verknüpfung bleibt, wie sie ist.
+- **Am Rechner des Autors (2026-10-16, Edge, leere Probe-Sammlung über `MTG_DB` im temporären Ordner):** Start nach 0,5 s zurück, Fenster „Übersicht · Pappenheimer“, Server antwortet; Fenster geschlossen, Server nach 0,5 s weg; zweiter Start, dann `mtg stop`: Server und Fenster weg. Vorab gemessen: Der gestartete Edge-Prozess lebt genau so lange wie sein Fenster (0,1 s nach dem Schließen weg, keine Reste).
+- **Befund am Rande (nicht aus dieser Phase):** Beim allerersten Laden einer frischen Sammlung antwortet eine der parallelen Anfragen gelegentlich mit 500 („database is locked“ beim Anlegen der Datenbank, mit dem Code von v0.9.0 in 1 von 5 Proben); die nächste Abfrage klappt.
+- **Grenzen:** Unter dem Fenster steckt Edge (Rechtsklick zeigt dessen Menü). Fenster und Verknüpfung erscheinen in der Taskleiste getrennt. Wer die Oberfläche mit `--konto` startet, dessen Fenster beendet `mtg stop` nicht (anderes Profil). Ein Hintergrund-Job (etwa Preise) endet mit dem Fenster, wie bisher mit der Konsole.
+- **Offen (real, Autor):** nach dem nächsten Update über die echte Verknüpfung starten und ansehen (Fenstergröße, Symbol in der Taskleiste).
 
 ### Ablauf ohne Aufsicht (Phasen 36, 37 und 39 bis 48)
 Für eine Session, die mehrere Phasen nacheinander abarbeitet, ohne dass der Autor dabeisitzt. „Eine Phase je Session“ gilt weiter: Jede Phase bekommt einen frischen Agenten mit eigenem Kontext, die Session selbst steuert und prüft nur.

@@ -2,6 +2,11 @@
 
 Format: je Version die Abschnitte Neu, Geändert, Behoben, Sicherheit. Versionen nach SemVer, die neueste steht oben.
 
+## Unveröffentlicht
+
+### Neu
+- Unter Windows öffnet sich Pappenheimer in einem eigenen Fenster statt in einem Tab des Browsers: ohne Adressleiste, mit eigenem Platz in der Taskleiste, und das schwarze Fenster schließt sich gleich nach dem Start. Das Fenster schließen beendet Pappenheimer, `Pappenheimer beenden` schließt auch das Fenster. Das Fenster stellt Microsoft Edge (sonst Google Chrome) mit einem eigenen Profil in `data/fenster`; fehlen beide, öffnet sich wie bisher der Browser. Von Hand: `mtg ui --fenster`. Geht kein Fenster auf, steht der Grund in `data/fenster.log`.
+
 ## 0.9.0 (2026-10-14)
 
 ### Neu
