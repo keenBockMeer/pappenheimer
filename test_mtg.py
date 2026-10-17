@@ -7607,8 +7607,9 @@ def test_beispiel_erster_echter_import_nennt_und_entfernt_es(netz, fetch, tmp_pa
     assert code == 200 and echt["status"] == "importiert" and echt["beispiel"]["entfernt"] is True and "wurde vorher entfernt" in echt["text"]
     assert not mtg.beispiel_info(conn)["da"] and mtg.beispiel_marker(conn) is None
     a, b = abzug(conn), abzug(ref)
-    for x in (a, b):  # zwei getrennte Importe liegen nie sicher in derselben Sekunde: ohne die Zeit (letzte Spalte, `at`) vergleichen
+    for x in (a, b):  # zwei getrennte Importe liegen nie sicher in derselben Sekunde: ohne die Zeit (letzte Spalte, `at`) vergleichen, auch in meta „undo“
         x["imports"] = [r[:-1] for r in x["imports"]]
+        x["meta"] = [(k, json.dumps({**json.loads(v), "at": None}) if k == "undo" else v) for k, v in x["meta"]]
     for t in ("collection", "imports", "changes", "sales", "value_history", "deck_log", "card_status", "notizen", "meta"):
         assert a[t] == b[t], t
     assert "Beispiel" not in {r[0] for r in conn.execute("SELECT binder FROM collection")}
