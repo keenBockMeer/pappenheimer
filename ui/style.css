@@ -7,8 +7,8 @@
    Regeln
    - Farbe: Bedienung monochrom (gebrochenes Weiß bzw. Fast-Schwarz), Farbe nur für Daten: vier Stapel und Mana.
      Eine Grau-Familie (warm). Kein reines Schwarz/Weiß. Stapel-Flächen ≤ 80 % Sättigung, Stapel-Text ≥ 4,5:1.
-     Ausnahme Hintergrund (E35): Schimmer und Funken tragen die fünf Mana-Farben, nie stärker als 16 %, nie hinter Text ohne Fläche.
-     Karten im Hintergrund: nur transform und opacity, nie ein Filter (Scryfall: kein Weichzeichnen, Schärfen, Entsättigen, Umfärben, Verzerren).
+     Ausnahme Hintergrund (E35): Der Schimmer trägt die fünf Mana-Farben, nie stärker als 16 %, nie hinter Text ohne Fläche. Die Galaxie
+     zeigt Daten (jede Karte ein Stern in ihrer Farbe), klein und gedeckt. Kartenbilder nie mit Filter (Scryfall: kein Weichzeichnen, Schärfen, Entsättigen, Umfärben, Verzerren).
    - Form (Shape Lock): Flächen 12px, Bedienelemente 8px, Marken 4px, Kartenbilder in Kartenform, Kreise nur für
      Manasymbole. Keine Pillen.
    - Flächen nur, wo sie etwas bedeuten (Hinweise, Regeln, Decks, Dialoge); sonst gliedern Abstand und Überschrift.
@@ -18,7 +18,7 @@
    - Bewegung: spielerisch, aber kurz (unter 0,6 s) und nur transform/opacity: Auftritt der Kacheln, Neigung der Karte zur Maus,
      Zähler, Flug auf den Stapel (E34); aus bei prefers-reduced-motion.
    - Darstellung: Dunkel (Standard, PLAN E2), Hell, oder wie das System; Tokens unten, Umschalter im Fuß.
-   - Ebenen: Schimmer -2, Körnung, Funken und Karten -1, Kopf 10, Scanner im Vollbild 20 bis 25, Toast 30, Ablegen 35, Vorschau 40, Tooltip 45, Sprunglink 50.
+   - Ebenen: Schimmer -2, Körnung und Galaxie -1, Kopf 10, Scanner im Vollbild 20 bis 25, Toast 30, Ablegen 35, Vorschau 40, Tooltip 45, Sprunglink 50.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 @font-face { font-family: "Geist"; src: url("/fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 
@@ -60,7 +60,9 @@
   /* Körnung gegen sterile Flächen, liegt hinter dem Inhalt (Kartenbilder bleiben unverändert) */
   --grain-opacity: .045; --grain-filter: none;
   /* Hintergrund (E35): die fünf Farben des Mana-Rads aus dem Logo, sattere Töne als die Symbole, nur als Schimmer */
-  --aura-w: #f1e2a0; --aura-u: #3f8fe0; --aura-b: #8a6bc4; --aura-r: #e2603a; --aura-g: #4cb06c; --aura-stark: 15%; --funken-a: .85;
+  --aura-w: #f1e2a0; --aura-u: #3f8fe0; --aura-b: #8a6bc4; --aura-r: #e2603a; --aura-g: #4cb06c; --aura-stark: 15%;
+  /* Galaxie (E35): Sterne für Weiß, Mehrfarbig und Farblos (Blau, Schwarz, Rot, Grün wie der Schimmer), Deckkraft des Ganzen */
+  --stern-w: #f1e2a0; --stern-m: #e6c25a; --stern-c: #c9c6bd; --galaxie-a: .9;
 
   /* Typografie */
   --font-display: "Geist", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
@@ -140,7 +142,7 @@
   --data-bar: #8f8c80; --data-baseline: #cfcdc5;
   --mana-ring: rgba(40, 36, 20, .28);
   --grain-opacity: .05; --grain-filter: invert(1);
-  --aura-stark: 9%; --funken-a: .5;
+  --aura-stark: 9%; --stern-w: #b8962e; --stern-m: #8c5e0c; --stern-c: #8a877e; --galaxie-a: .75;
   --shadow-sm: 0 1px 2px hsl(40 15% 20% / .12);
   --shadow-md: 0 4px 14px hsl(40 15% 20% / .1), 0 1px 3px hsl(40 15% 20% / .08);
   --shadow-lg: 0 14px 34px hsl(40 15% 20% / .14), 0 3px 8px hsl(40 15% 20% / .08);
@@ -155,7 +157,7 @@ html { scroll-behavior: smooth; }
 body { margin: 0; min-height: 100dvh; background: var(--color-background); color: var(--color-text); font: var(--weight-regular) var(--text-base)/1.5 var(--font-body);
   -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
 body::before { content: ""; position: fixed; inset: 0; z-index: var(--z-grain); pointer-events: none; background: url("/grain.svg"); opacity: var(--grain-opacity); filter: var(--grain-filter); }
-/* Hintergrund (E35): fünf Farbwolken treiben sehr langsam (nur transform), darüber das Canvas mit den Funken (app.js) */
+/* Hintergrund (E35): fünf Farbwolken treiben sehr langsam (nur transform), darüber die Galaxie */
 body::after { content: ""; position: fixed; inset: -25%; z-index: -2; pointer-events: none; will-change: transform;
   background:
     radial-gradient(40% 40% at 18% 22%, color-mix(in srgb, var(--aura-u) var(--aura-stark), transparent), transparent),
@@ -164,22 +166,18 @@ body::after { content: ""; position: fixed; inset: -25%; z-index: -2; pointer-ev
     radial-gradient(40% 40% at 16% 84%, color-mix(in srgb, var(--aura-w) var(--aura-stark), transparent), transparent),
     radial-gradient(36% 36% at 50% 50%, color-mix(in srgb, var(--aura-b) calc(var(--aura-stark) * .8), transparent), transparent);
   animation: aura-in 2.4s var(--ease-out) backwards, aura-drift 90s ease-in-out infinite alternate; }
-#funken { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; animation: aura-in 2s var(--ease-out) backwards; }
 @keyframes aura-in { from { opacity: 0; } }
 @keyframes aura-drift { from { transform: rotate(-4deg) scale(1); } to { transform: rotate(5deg) scale(1.12) translate3d(2%, -2%, 0); } }
-:root[data-hg=aus] body::after, :root[data-hg=aus] #funken, :root[data-hg=schimmer] #funken, body.vollbild::after, body.vollbild #funken { display: none; }
-:root[data-hg=karten] #funken, :root[data-hg=an] #karten-hg, :root[data-hg=schimmer] #karten-hg, :root[data-hg=aus] #karten-hg, body.vollbild #karten-hg { display: none; }
-/* Meine Karten (E35): zufällige Karten der Sammlung schweben und drehen sich sehr langsam hinter der Seite (app.js, kartenHg). Nur transform und opacity, kein Filter:
-   Scryfall verbietet, Kartenbilder weichzuzeichnen, zu schärfen, zu entsättigen, umzufärben oder zu verzerren. */
-#karten-hg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; perspective: 1000px; animation: aura-in 2.4s var(--ease-out) backwards; }
-.bk { position: absolute; left: calc(var(--px) - var(--w) / 2); top: calc(var(--py) - var(--w) * .7); width: var(--w); opacity: var(--o);
-  translate: calc(var(--mx, 0) * var(--d) * 1px) calc(var(--my, 0) * var(--d) * 1px); transition: translate .8s var(--ease-out);
-  animation: schweben var(--t) ease-in-out var(--s) infinite alternate; }
-.bk img { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
-@keyframes schweben {
-  from { transform: translate3d(0, 0, 0) rotateZ(var(--z0)) rotateY(var(--y0)) rotateX(var(--x0)); }
-  to { transform: translate3d(var(--dx), var(--dy), 0) rotateZ(var(--z1)) rotateY(var(--y1)) rotateX(var(--x1)); }
-}
+/* Galaxie (E35): die Sammlung als Sterne hinter der Seite (app.js, gZeichnen). Einmal gezeichnet, schräg gelegt und nur per transform gedreht;
+   beim Öffnen wirbelt sie aus der Mitte auf, mit der Maus wandert sie leicht. Bei weniger Bewegung steht sie still (Regel unten). */
+#galaxie { position: fixed; inset: -2rem; z-index: -1; pointer-events: none; overflow: hidden; perspective: 1400px;
+  translate: calc(var(--mx, 0) * 18px) calc(var(--my, 0) * 12px); transition: translate 1.2s var(--ease-out); }
+#galaxie canvas { position: absolute; left: 50%; top: 50%; opacity: var(--galaxie-a); transform: rotateX(58deg); will-change: transform;
+  animation: galaxie-auf 3s var(--ease-out) backwards, galaxie-drehen 1200s linear 3s infinite; }
+@keyframes galaxie-auf { from { opacity: 0; transform: rotateX(58deg) rotateZ(140deg) scale(.4); } to { transform: rotateX(58deg) rotateZ(0deg) scale(1); } }
+@keyframes galaxie-drehen { from { transform: rotateX(58deg) rotateZ(0deg); } to { transform: rotateX(58deg) rotateZ(-360deg); } }
+@media (max-width: 700px) { #galaxie canvas { opacity: calc(var(--galaxie-a) * .7); } }  /* am Handy liegt mehr Text auf weniger Himmel */
+:root[data-hg=aus] body::after, body.vollbild::after, :root:not([data-hg=galaxie]) #galaxie, body.vollbild #galaxie { display: none; }
 a { color: inherit; }
 img { display: block; }
 b, strong { font-weight: var(--weight-semibold); }
@@ -882,7 +880,7 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 @media print {
-  header, footer, .noprint, #toast, #drop, #peek, #tip, #funken, #karten-hg, body::after { display: none !important; }
+  header, footer, .noprint, #toast, #drop, #peek, #tip, #galaxie, body::after { display: none !important; }
   :root { color-scheme: light; --color-background: #fff; --color-surface: #fff; --color-surface-alt: #f2f2f2; --color-text: #000; --color-text-secondary: #222; --color-text-muted: #555; --color-border: #bbb;
     --ink-deck: #1b569e; --ink-keep: #9c3c14; --ink-sell: #0c6446; --ink-bulk: #725000; }
   body { background: #fff; color: #000; }
