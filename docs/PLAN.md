@@ -76,6 +76,12 @@ Ausbau v7 (Scanner schneller: Zählen beim Durchblättern, Druck durch Ausschlus
 Wunsch des Autors (2026-10-18):
 - [ ] Phase 60 – Deck einscannen und jeder Druck wählbar (alle Drucke einer Karte auf der Scan-Liste, Druckwahl mit eigenen Drucken, Übernehmen als fertiges Deck) – gebaut, Tests grün; offen: am Handy mit echten Karten
 
+Ideen von Archidekt (Wunsch des Autors, 2026-10-18; nur Ideen, alles neu geschrieben wie E36; der Autor wählte die Punkte 1 bis 4 der Vergleichsliste, auf seinen Wunsch in einer Session):
+- [ ] Phase 61 – Decks bearbeiten (Karte rein, Karte raus, Vorschlag aus „Verbessern“ tauschen, Deck kopieren)
+- [ ] Phase 62 – Spieltisch zum Ausprobieren (Zug für Zug: ziehen, ausspielen, tappen, Friedhof, Exil, Kommandozone, Leben, Bibliothek durchsuchen)
+- [ ] Phase 63 – Wahrscheinlichkeitsrechner (mindestens k Karten einer Gruppe oder einer Karte bis Zug N)
+- [ ] Phase 64 – Decks vergleichen (zwei eigene Decks oder ein eigenes mit einer eingefügten Liste, mit dem, was fehlt)
+
 ## Ziel
 Alles lokal auf dem Desktop, im Browser unter `http://127.0.0.1:8765`:
 1. ManaBox-CSV beliebig oft importieren, ohne Duplikate.
@@ -1651,6 +1657,33 @@ Vorgebauter Katalog mit Fingerabdrücken und Namen als Datei einer Veröffentlic
 **Abnahme:** Test `test_jeder_druck_waehlbar_und_deck_einscannen` (Druckwahl mit eigen, Suche auf dem Server mit Scan-Liste und Sammlung, alle Drucke einer Karte, Übernehmen als Deck, zweites Übernehmen, Umbenennen samt Commander, vorbehaltene Namen); `test_fertige_decks_einstellung_wirkt_auf_verfuegbar` nimmt einen Scan-Binder jetzt an.
 
 **Ergebnis (2026-10-18):** Gebaut, `python -m pytest -q` grün. **Offen (real, Autor):** ein Deck am Handy einscannen und übernehmen; auf der Scan-Liste einen Druck tauschen und ansehen, ob die nächsten Kopien folgen; ob die vielen Kacheln bei Karten mit sehr vielen Drucken (Sol Ring, Standardländer) am Handy noch gut zu bedienen sind.
+
+## Ideen von Archidekt (Stand 2026-10-18)
+**Herkunft:** Der Autor wollte wissen, was archidekt.com besser macht. Angesehen wurden nur öffentliche Seiten als Besucher, ohne Konto (Startseite, Decksuche, eine öffentliche Commander-Deckansicht, „Deck sandbox“, Spieltest, Vergleich, Kartensuche, Sammlung, FAQ). Der eingebaute Browser konnte die Seiten an dem Tag nicht lesen; ihr Text wurde deshalb über einen Abruf der öffentlichen Seiten gelesen. Nichts davon ist gespeichert oder eingecheckt; wie bei E36 zählen nur Ideen, Code, Bilder und Daten von dort werden weder geladen noch übernommen.
+**Vergleich (am Code geprüft):** Gleich gut oder besser hat Pappenheimer schon: Ansichten Bilder, Stapel, Liste; Gruppen nach Rolle, Kartentyp, Manawert; Manakurve; Farbquellen gegen Symbole; exakte Starthand; Bracket; Combos; Proxys; Zusammensuchen; Besitz von selbst (Archidekt markiert ihn von Hand). Besser bei Archidekt, nach Nutzen für den Autor: (1) Decks von Hand bearbeiten, (2) Spieltisch, (3) Wahrscheinlichkeit frei wählbar, (4) Decks vergleichen, (5) mehr Gruppen und Zählungen, (6) eigene Kategorien und Vielleicht-Liste (Schema), (7) Salt-Summe, zufälliger Commander, (8) Suchformular. Weggelassen: Community, Kommentare, Mitbearbeiter, fremde Decks, Trends, US-Händler, Kaufknöpfe, Deckbild. Gewählt: 1 bis 4.
+
+### Phase 61 – Decks bearbeiten
+Gespeicherte, gebaute Decks (`decks`, `deck_cards`) waren nur anzusehen oder aufzulösen. Fertige Decks bleiben, wie sie sind (ManaBox ist ihre Quelle, E7; Scan-Binder ändert der Dialog einer Kopie, E18).
+- `deckbuild.deck_aendern(conn, did, rein=None, raus=None)`: eine Kopie von `raus` heraus und eine von `rein` hinein, in einer Transaktion (Tauschen = beides). Nie der Commander; `rein` muss in `cards` stehen, für Commander erlaubt sein und in die Farbidentität passen; eine zweite Kopie nur bei Standardländern und Karten mit „A deck can have any number of cards named“. Die Rolle wie beim Deckbau (Standardland, Land, Tag, sonst `core`). `deck_kopie(conn, did)` legt eine Kopie an („… (Kopie)“, gleicher Commander und gleiche Karten); der Sortier-Plan gibt jeder Kopie einer Karte höchstens ein Deck, was fehlt, zeigt „Zusammensuchen“ unter „Ohne Kopie“. `deck_suche(conn, did, q)`: Karten im Besitz zum Namen, in der Farbidentität, mit freien Kopien.
+- `POST /api/deck/ID/aendern` `{rein, raus}`, `POST /api/deck/ID/kopie`, `GET /api/deck/ID/suche?q=`.
+- Oberfläche: Knopf „Bearbeiten“ im Kopf eines gespeicherten Decks: Suche „Karte hinzufügen“ und ein Minus an jeder Karte der Liste; unter „Verbessern“ je Vorschlag „Tauschen“; Knopf „Kopieren“.
+
+**Abnahme:** Test `test_deck_bearbeiten` (rein, raus, tauschen, Commander bleibt, Farbidentität, zweite Kopie, Standardland, Kopie, Suche mit freien Kopien).
+
+### Phase 62 – Spieltisch zum Ausprobieren
+Bisher gab es Starthand, Mulligan und „Nächste Karte“. Neu die Ansicht `#/spieltisch?id=` bzw. `?binder=` (nicht im Menü, Knopf „Spieltisch“ unter der Starthand): Bibliothek, Hand, Spielfeld (Länder und übrige getrennt), Friedhof, Exil, Kommandozone mit Commander-Steuer, Lebenspunkte (40), Zug. Knöpfe: Neues Spiel, Mulligan, Karte ziehen, Nächster Zug (enttappen, ziehen), Bibliothek durchsuchen, Mischen. Eine Karte antippen öffnet die Ziele (Feld, Hand, Friedhof, Exil, oben oder unter die Bibliothek, Kommandozone für den Commander); auf dem Feld tappt sie. Die Regeln des Tischs stehen ohne DOM in `ui/deck.js` (`Deck.Tisch`, wie `ui/zaehler.js`, vor app.js geladen, in `EINRICHTUNG_DATEIEN`); kein Server, nichts gespeichert. Gegner, Spielsteine und Zähler auf Karten: nicht jetzt.
+
+**Abnahme:** Test `test_spieltisch_regeln` (Node: neues Spiel 7 Karten, Mulligan, ziehen, Zug enttappt und zieht, Commander-Steuer, durchsuchen und mischen, keine Karte geht verloren).
+
+### Phase 63 – Wahrscheinlichkeitsrechner
+Bisher nur feste Zahlen (spielbare Starthand, drei Länder bis Zug 3, Ramp bis Zug 2). Neu unter der Starthand: Gruppe wählen (Rollen, Kartentypen, Manawert, eine einzelne Karte), „mindestens“ 1 bis 4, „bis Zug“ 1 bis 10, „im ersten Zug ziehen“ (Mehrspieler) an oder aus. Gerechnet exakt hypergeometrisch wie `deckbuild.mindestens`, im Browser über `Deck.mindestens` aus `ui/deck.js`.
+
+**Abnahme:** Test `test_wahrscheinlichkeit_wie_der_server` (Node gegen `deckbuild.mindestens` für viele Fälle, Abweichung unter 1e-9).
+
+### Phase 64 – Decks vergleichen
+Neu die Ansicht `#/vergleich` (Knopf „Vergleichen“ in jedem Deck und unter Decks): Deck A und Deck B, je ein eigenes (gebaut oder fertig) oder eine eingefügte Liste (wie beim Import gelesen, `mtg.parse_decklist`, Namen erst aus der eigenen Datenbank, dann Scryfall über `mtg.resolve`). `deckbuild.vergleich(conn, a, b)` → je Karte Menge in A und in B, Kopien im Besitz und frei, Preis; Gruppen „in beiden“, „nur in A“, „nur in B“; für jede Seite, was dir fehlt, und was es kostet. `POST /api/vergleich` `{a, b}` mit je `{id}`, `{binder}` oder `{text}`.
+
+**Abnahme:** Test `test_decks_vergleichen` (zwei eigene Decks, eigenes gegen Liste, unbekannter Name, was fehlt samt Preis).
 
 ## Nicht jetzt
 Neuigkeiten von der App per Telegram oder Hermes verschicken (Fragen an den Hermes-Agenten gehen seit E19) · Partner-/Background-Commander beim Deckbau (fertige Decks dürfen zwei haben) · Mana-Kurven-**Optimierung** (Analyse und Karsten-Sollwerte kommen in Phase 15) · Rück-Import aus Moxfield (Textlisten-Import gibt es) · Direkt-Upload zu Cardmarket oder KEEPSEVEN (Cardmarket nimmt keine neuen API-Nutzer an; Listen-Export: Phase 17) · eigenes Bestandsbuch für ManaBox-Binder (E7; für Scan-Binder gilt E18) · Laya als Anfrage-Router · LLM als Deckbauer oder Regel-Auskunft (E15)

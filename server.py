@@ -1178,6 +1178,14 @@ def dispatch(conn, method, path, q, body=b"", filename="", fetch=None, edhrec=No
             teil = path[len("/api/deck/"):]
             if method == "POST" and teil.endswith("/delete"):
                 return _json({"deleted": deckbuild.delete_deck(conn, int(teil[:-len("/delete")]))})
+            did, _, was = teil.partition("/")
+            if method == "POST" and was == "aendern":  # Phase 61: {rein, raus} je eine oracle_id
+                d = json.loads(body or b"{}")
+                return _json(deckbuild.deck_aendern(conn, int(did), d.get("rein"), d.get("raus")))
+            if method == "POST" and was == "kopie":
+                return _json({"id": deckbuild.deck_kopie(conn, int(did))})
+            if method == "GET" and was == "suche":
+                return _json({"items": deckbuild.deck_suche(conn, int(did), q.get("q", ""))})
             d = deckbuild.deck_detail(conn, int(teil[:-4] if teil.endswith(".txt") else teil))
             if not d:
                 return _json({"error": "unbekanntes Deck"}, 404)

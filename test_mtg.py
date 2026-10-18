@@ -2167,6 +2167,48 @@ def test_verbessern_leiter(welt, conn):
     assert json.loads(server.dispatch(conn, "GET", "/api/improve", {"id": str(did)}, names=welt.names)[2])["stufen"][2]["items"][0]["rein"]["name"] == "Unbesitz B"
 
 
+def test_deck_bearbeiten(conn):
+    """Phase 61: rein, raus, tauschen; Commander, Farbidentität, Legalität und zweite Kopie werden abgelehnt (das Herausnehmen auch zurück),
+    Standardländer und „any number“ dürfen mehrfach; Kopie mit gleichen Karten, der Plan gibt jeder Kopie höchstens ein Deck; Suche mit freien Kopien"""
+    karte(conn, 1, "Chef", ci="BG", typ="Legendary Creature — Elf")
+    karte(conn, 2, "Grün", ci="G", qty=2)
+    karte(conn, 3, "Blau", ci="U")
+    karte(conn, 4, "Forest", typ="Basic Land — Forest", eur=0.1)
+    karte(conn, 5, "Ratten", ci="B", text="A deck can have any number of cards named Ratten.")
+    karte(conn, 6, "Verboten", ci="G", legal=False)
+    karte(conn, 7, "Grün Zwei", ci="G")
+    karte(conn, 8, "Grün Drei", ci="G")
+    conn.execute("INSERT INTO decks(id, name, commander_oracle_id, bracket, saved_at) VALUES (1, 'Chef', ?, 3, 'x')", (oid(1),))
+    conn.executemany("INSERT INTO deck_cards VALUES (1,?,?)", [(oid(1), "commander"), (oid(2), "core")])
+    conn.commit()
+    drin = lambda d: sorted((c["name"], c["qty"], c["role"]) for c in d["cards"])
+    assert drin(deckbuild.deck_aendern(conn, 1, rein=oid(7))) == [("Grün", 1, "core"), ("Grün Zwei", 1, "core")]
+    for rein, fehler in ((oid(3), "Farbidentität"), (oid(2), "schon im Deck"), (oid(6), "nicht erlaubt"), (oid(1), "Commander"), ("x", "Unbekannte")):
+        with pytest.raises(ValueError, match=fehler):
+            deckbuild.deck_aendern(conn, 1, rein=rein, raus=oid(7))
+    for raus, fehler in ((oid(3), "nicht im Deck"), (oid(1), "Commander")):
+        with pytest.raises(ValueError, match=fehler):
+            deckbuild.deck_aendern(conn, 1, raus=raus)
+    assert drin(deckbuild.deck_detail(conn, 1)) == [("Grün", 1, "core"), ("Grün Zwei", 1, "core")]  # nichts halb geändert
+    for n in (4, 4, 5, 5):
+        d = deckbuild.deck_aendern(conn, 1, rein=oid(n))
+    assert drin(d) == [("Forest", 2, "basic"), ("Grün", 1, "core"), ("Grün Zwei", 1, "core"), ("Ratten", 2, "core")]
+    d = deckbuild.deck_aendern(conn, 1, rein=oid(8), raus=oid(7))  # tauschen
+    assert {c["name"] for c in d["cards"]} == {"Forest", "Grün", "Grün Drei", "Ratten"} and d["commander"]["name"] == "Chef"
+    neu = deckbuild.deck_kopie(conn, 1)
+    k = deckbuild.deck_detail(conn, neu)
+    assert k["name"] == "Chef (Kopie)" and drin(k) == drin(d) and k["commander"]["name"] == "Chef"
+    assert {f["name"] for f in deckbuild.pick_list(conn, neu)["fehlt"]} == {"Chef", "Grün Drei", "Ratten"}  # je eine Kopie, die hat das erste Deck
+    assert [(r["name"], r["frei"]) for r in deckbuild.deck_suche(conn, 1, "grün")] == [("Grün Zwei", 1), ("Grün", 0), ("Grün Drei", 0)]
+    assert deckbuild.deck_suche(conn, 1, "g") == []
+    code, _, b = server.dispatch(conn, "POST", "/api/deck/1/aendern", {}, json.dumps({"raus": oid(8), "rein": oid(7)}).encode())
+    assert code == 200 and "Grün Zwei" in {c["name"] for c in json.loads(b)["cards"]}
+    code, _, b = server.dispatch(conn, "POST", "/api/deck/1/aendern", {}, json.dumps({"raus": oid(3)}).encode())
+    assert code == 400 and "nicht im Deck" in json.loads(b)["error"]
+    assert json.loads(server.dispatch(conn, "GET", "/api/deck/1/suche", {"q": "drei"})[2])["items"][0]["name"] == "Grün Drei"
+    assert json.loads(server.dispatch(conn, "POST", "/api/deck/1/kopie", {})[2])["id"] == neu + 1
+
+
 def test_zusammensuchen_pick_liste(welt, conn):
     d = deckbuild.build(conn, welt.CMD, 4, fetch=welt.fetch, fetch_names=welt.names)
     did = deckbuild.save_deck(conn, d)

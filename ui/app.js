@@ -1073,16 +1073,36 @@ const bilderHtml = gs => gs.map(g => `<div class="group"><h2>${esc(g.label)} <sm
 // Stapel wie auf dem Tisch: Karten überlappen, sichtbar bleibt die Titelzeile; Mehrfache liegen bis zu viermal übereinander
 const stapelHtml = gs => `<div class="piles">${gs.map(g => `<div class="pile"><h3>${esc(g.label)} <small>${g.count}</small></h3><div class="pcards">${g.cards.flatMap(x => Array(Math.min(x.qty, 4)).fill(x))
   .map(x => `<a class="pc" href="#" data-oid="${esc(x.oracle_id)}" aria-label="${esc(x.name)}${x.qty > 1 ? `, ${x.qty}×` : ''}"${deckPeek(x)}>${pic(x.image, x.name)}</a>`).join('')}</div></div>`).join('')}</div>`;
-const listeHtml = gs => `<div class="dlist">${gs.map(g => `<div class="group"><h3>${esc(g.label)} <small>${g.count}</small></h3><table class="tbl dl">${g.cards.map(x => `
+const listeHtml = (gs, weg) => `<div class="dlist">${gs.map(g => `<div class="group"><h3>${esc(g.label)} <small>${g.count}</small></h3><table class="tbl dl">${g.cards.map(x => `
   <tr data-oid="${esc(x.oracle_id)}"${deckPeek(x)}><td class="num">${x.qty}</td><td class="nm">${esc(x.name)}</td><td>${x.mana_cost ? mana(x.mana_cost) : ''}</td>
-  <td class="rt">${x.price != null && x.role !== 'basic' ? eur(x.price) : ''}</td></tr>`).join('')}</table></div>`).join('')}</div>`;
+  <td class="rt">${x.price != null && x.role !== 'basic' ? eur(x.price) : ''}</td>${weg ? `<td class="rt"><button class="btn small ghost" type="button" data-raus="${esc(x.oracle_id)}" aria-label="Eine ${esc(x.name)} herausnehmen">${icon('minus', 'sm')}</button></td>` : ''}</tr>`).join('')}</table></div>`).join('')}</div>`;
+// Bearbeiten (Phase 61): nur gespeicherte, gebaute Decks; im Bearbeiten zeigt die Liste ein Minus an jeder Karte, darüber „Karte hinzufügen“
+let deckEdit = null;
+const editHtml = d => `<form class="toolbar noprint" data-deckadd="${d.id}" role="search"><label class="inl" for="deck-add">Karte hinzufügen</label>
+  <input id="deck-add" name="q" autocomplete="off" minlength="2" required placeholder="Name einer Karte aus deiner Sammlung"><button class="btn" type="submit">${icon('search')}Suchen</button></form>
+  <div id="deck-add-res" aria-live="polite"></div><p class="note-line">Plus und Minus ändern das gespeicherte Deck sofort. Fertig? Noch einmal „Bearbeiten“.</p>`;
 function deckKarten(d) {
   aktDeck = d;
-  const view = merk('mtg-deckview', 'bilder', DVIEW), by = merk('mtg-deckgroup', 'rolle', DGROUP), gs = gruppen(d, by);
-  return `<section class="sec" aria-label="Karten im Deck" id="deckkarten"><div class="toolbar noprint">
-    <div class="seg" role="group" aria-label="Ansicht">${DVIEW.map(([k, l]) => `<button type="button" class="btn small" data-dview="${k}" aria-pressed="${view === k}">${l}</button>`).join('')}</div>
+  const edit = d.id != null && deckEdit === d.id;
+  const view = edit ? 'liste' : merk('mtg-deckview', 'bilder', DVIEW), by = merk('mtg-deckgroup', 'rolle', DGROUP), gs = gruppen(d, by);
+  return `<section class="sec" aria-label="Karten im Deck" id="deckkarten">${edit ? editHtml(d) : ''}<div class="toolbar noprint">
+    ${edit ? '' : `<div class="seg" role="group" aria-label="Ansicht">${DVIEW.map(([k, l]) => `<button type="button" class="btn small" data-dview="${k}" aria-pressed="${view === k}">${l}</button>`).join('')}</div>`}
     <label class="inl">Gruppiert nach <select id="dgroup">${DGROUP.map(([k, l]) => `<option value="${k}"${by === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
-    ${view === 'liste' ? listeHtml(gs) : view === 'stapel' ? stapelHtml(gs) : bilderHtml(gs)}</section>`;
+    ${view === 'liste' ? listeHtml(gs, edit) : view === 'stapel' ? stapelHtml(gs) : bilderHtml(gs)}</section>`;
+}
+async function deckAendern(rein, raus) {  // raus, rein oder beides (Tauschen aus „Verbessern“)
+  try { await post(`deck/${aktDeck.id}/aendern`, {rein, raus}); flash(rein && raus ? 'Getauscht' : rein ? 'Ins Deck gelegt' : 'Herausgenommen'); render(true); }
+  catch (e) { if (!(e instanceof LoginNoetig)) flash(e.message); }
+}
+async function deckSuche(f) {
+  const box = $('#deck-add-res');
+  try {
+    const r = await api(`deck/${f.dataset.deckadd}/suche?q=${encodeURIComponent(f.q.value)}`);
+    box.innerHTML = r.items.length ? `<div class="rows">${r.items.map(k => `<div class="row" data-oid="${esc(k.oracle_id)}"${peekAt(k.image, k.name, eur(k.price))}>${pic(small(k.image), '', 'thumb')}
+      <div class="min0"><div class="name">${esc(k.name)}</div><div class="sub2">${k.frei ? `${k.frei} frei` : 'keine freie Kopie, steckt schon in einem Deck'}</div></div>
+      <div class="price">${eur(k.price)}</div><button class="btn small" type="button" data-rein="${esc(k.oracle_id)}">${icon('plus', 'sm')}Ins Deck</button></div>`).join('')}</div>`
+      : '<p class="muted">Nichts gefunden. Gesucht wird in deiner Sammlung unter Karten, die zur Farbe des Commanders passen und in Commander erlaubt sind.</p>';
+  } catch (e) { if (!(e instanceof LoginNoetig)) box.innerHTML = ladeFehler(e); }
 }
 const deckNeu = () => { const alt = $('#deckkarten'); if (alt && aktDeck) alt.outerHTML = deckKarten(aktDeck); };
 
@@ -1132,12 +1152,12 @@ async function improveUi() {
   const box = $('#improve');
   if (!box) return;
   try {
-    const r = await api('improve?' + box.dataset.q), voll = r.stufen.filter(st => st.items.length);
+    const r = await api('improve?' + box.dataset.q), voll = r.stufen.filter(st => st.items.length), tausch = box.dataset.q.startsWith('id=');
     box.innerHTML = `<h2>Verbessern ${info('improve', 'Verbessern')}</h2>${r.grund ? `<p class="muted">${esc(r.grund)}</p>` : !voll.length ? '<p class="muted">Nichts gefunden, was beliebter ist als die schwächsten Karten im Deck und frei oder bis 5 € zu haben ist.</p>'
       : `<p class="lead">Karten, die bei EDHREC für diesen Commander beliebter sind als die schwächste Karte derselben Rolle in deinem Deck.${proxyAn() ? ` <a href="#/proxy?karten=${encodeURIComponent(voll.filter(st => st.key !== 'frei').flatMap(st => st.items.map(u => u.rein.name)).join('\n'))}">Die zum Kaufen als Proxys ausprobieren</a>` : ''}</p>${voll.map(st => `<h3>${esc(st.label)}</h3><div class="rows">${st.items.map(u => `
         <div class="row swap"><span data-oid="${esc(u.rein.oracle_id)}"${peekAt(u.rein.image, u.rein.name, eur(u.rein.price))}>${pic(small(u.rein.image), '', 'thumb')}</span>
           <div class="min0"><div class="name" data-oid="${esc(u.rein.oracle_id)}">${esc(u.rein.name)}</div><div class="sub2">statt <span class="link" data-oid="${esc(u.raus.oracle_id)}">${esc(u.raus.name)}</span>, ${esc(u.label)}, in ${Math.round(u.rein.inc * 100)} % der Decks</div></div>
-          <div></div><div class="price">${st.key === 'frei' ? 'hast du' : eur(u.rein.price)}</div></div>`).join('')}</div>`).join('')}`}`;
+          <div>${tausch ? `<button class="btn small" type="button" data-rein="${esc(u.rein.oracle_id)}" data-raus="${esc(u.raus.oracle_id)}">Tauschen</button>` : ''}</div><div class="price">${st.key === 'frei' ? 'hast du' : eur(u.rein.price)}</div></div>`).join('')}</div>`).join('')}`}`;
   } catch (e) { if (!(e instanceof LoginNoetig)) box.innerHTML = `<h2>Verbessern</h2>${ladeFehler(e)}`; }
 }
 
@@ -1203,7 +1223,8 @@ function showDeck(d, buildId, themeSel = 'auto') {
           ${themeSelect(d, themeSel)}
           <button class="btn primary" type="button" id="save">Deck speichern</button>` : `<span class="tag">Bracket ${d.bracket}</span>`}
         <a class="btn" ${saved ? `href="/api/deck/${d.id}.txt" download="${esc(c.name)}.txt"` : 'href="#" id="txt"'}>${icon('text')}Textliste (Moxfield, Archidekt)</a>${bracketBtn}
-        ${saved ? `<a class="btn" href="#/decks?id=${d.id}&pick=1">${icon('layers')}Zusammensuchen</a><a class="btn" href="#/decks?id=${d.id}&zerlegen=1">Zerlegen: wohin?</a><button class="btn danger" type="button" id="del">${icon('trash')}Deck auflösen</button>` : ''}<a class="btn ghost" href="#/decks">${icon('left')}Alle Decks</a></div></div></section>
+        ${saved ? `<button class="btn" type="button" id="bearb" aria-pressed="${deckEdit === d.id}">${icon('cards')}Bearbeiten</button><button class="btn" type="button" id="deck-kopie">Kopieren</button>
+          <a class="btn" href="#/decks?id=${d.id}&pick=1">${icon('layers')}Zusammensuchen</a><a class="btn" href="#/decks?id=${d.id}&zerlegen=1">Zerlegen: wohin?</a><button class="btn danger" type="button" id="del">${icon('trash')}Deck auflösen</button>` : ''}<a class="btn ghost" href="#/decks">${icon('left')}Alle Decks</a></div></div></section>
     ${deckKarten(d)}
     ${manaHtml(d.stats)}
     ${handHtml(d)}
@@ -1222,6 +1243,13 @@ function showDeck(d, buildId, themeSel = 'auto') {
       catch (e) { flash('Fehler: ' + e.message); }
     };
     $('#txt').onclick = e => { e.currentTarget.href = URL.createObjectURL(new Blob([text], {type: 'text/plain'})); e.currentTarget.download = c.name + '.txt'; };
+  }
+  if (saved) {
+    $('#bearb').onclick = () => { deckEdit = deckEdit === d.id ? null : d.id; render(true); };
+    $('#deck-kopie').onclick = async () => {
+      try { const r = await post(`deck/${d.id}/kopie`); flash('Kopie angelegt, sie teilt sich die Karten mit dem Original'); location.hash = `#/decks?id=${r.id}`; }
+      catch (e) { if (!(e instanceof LoginNoetig)) flash(e.message); }
+    };
   }
   if (saved) $('#del').onclick = async () => {
     if (!confirm(`Deck „${c.name}“ auflösen? Die Karten werden wieder frei.`)) return;
@@ -1633,6 +1661,7 @@ document.addEventListener('submit', e => {
   else if (f.dataset.spiel) spielForm(f, e.submitter);
   else if (f.dataset.gruppe) gruppeForm(f);
   else if (f.dataset.tisch) tischForm(f);
+  else if (f.dataset.deckadd) deckSuche(f);
   else if (f.dataset.proxy) proxyForm(f);
   else if (f.dataset.erf) erfForm(f);
   else if (f.dataset.erfab) erfUebernehmen(f);
@@ -2109,6 +2138,8 @@ document.addEventListener('click', e => {
   if (sw) return switchTo(sw.dataset.open);
   const del = e.target.closest('[data-del]');
   if (del) return delKonto(del.dataset.del, del.dataset.label);
+  const dk = e.target.closest('[data-rein], [data-raus]');
+  if (dk) return deckAendern(dk.dataset.rein, dk.dataset.raus);
   const a = e.target.closest('[data-oid]');
   if (a && !e.target.closest('input')) { e.preventDefault(); openCard(a.dataset.oid).catch(err => flash('Fehler: ' + err.message)); }
 });

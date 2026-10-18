@@ -707,6 +707,73 @@ def delete_deck(conn, did):
         return conn.execute("DELETE FROM decks WHERE id = ?", (did,)).rowcount
 
 
+VIELE = "a deck can have any number of cards named"  # Relentless Rats und Co. dürfen mehrfach ins Deck
+
+
+def deck_aendern(conn, did, rein=None, raus=None):
+    """Gespeichertes Deck von Hand ändern (Phase 61): eine Kopie von raus heraus, eine von rein hinein, Tauschen = beides, in einer Transaktion.
+    Der Commander bleibt; rein muss bekannt sein, für Commander erlaubt, in der Farbidentität und (außer Standardländern) neu im Deck."""
+    d = conn.execute("SELECT commander_oracle_id FROM decks WHERE id = ?", (did,)).fetchone()
+    if not d:
+        raise ValueError("Unbekanntes Deck")
+    if not (rein or raus):
+        raise ValueError("Keine Karte angegeben")
+    if d[0] and d[0] in (rein, raus):
+        raise ValueError("Der Commander bleibt im Deck")
+    karte = lambda oid: conn.execute("SELECT name, type_line, oracle_text, color_identity, legal_commander FROM cards WHERE oracle_id = ? "
+                                     "ORDER BY updated_at DESC LIMIT 1", (oid,)).fetchone()
+    with conn:  # eine Ausnahme nimmt auch das Herausnehmen zurück
+        if raus and not conn.execute("DELETE FROM deck_cards WHERE rowid = (SELECT MIN(rowid) FROM deck_cards WHERE deck_id = ? AND oracle_id = ?)",
+                                     (did, raus)).rowcount:
+            raise ValueError("Die Karte steckt nicht im Deck")
+        if rein:
+            c, cmd = karte(rein), karte(d[0])
+            if not c:
+                raise ValueError("Unbekannte Karte")
+            tl = c["type_line"] or ""
+            if not c["legal_commander"]:
+                raise ValueError(f"{c['name']} ist in Commander nicht erlaubt")
+            if cmd and not set(c["color_identity"] or "") <= set(cmd["color_identity"] or ""):
+                raise ValueError(f"{c['name']} passt nicht zur Farbidentität des Commanders")
+            if not tl.startswith("Basic") and VIELE not in (c["oracle_text"] or "").lower() and conn.execute(
+                    "SELECT 1 FROM deck_cards WHERE deck_id = ? AND oracle_id = ?", (did, rein)).fetchone():
+                raise ValueError(f"{c['name']} ist schon im Deck")
+            tags = {r[0] for r in conn.execute("SELECT tag FROM tags WHERE oracle_id = ?", (rein,))}
+            role = "basic" if tl.startswith("Basic") else "land" if is_land(tl) else next((ROLE[t] for t in TAGS if t in tags), "core")
+            conn.execute("INSERT INTO deck_cards VALUES (?,?,?)", (did, rein, role))
+    return deck_detail(conn, did)
+
+
+def deck_kopie(conn, did):
+    """Kopie eines gespeicherten Decks (Phase 61): gleicher Commander, gleiche Karten, Name mit „(Kopie)“. -> neue ID"""
+    d = deck_detail(conn, did)
+    if not d:
+        raise ValueError("Unbekanntes Deck")
+    meta = conn.execute("SELECT value FROM meta WHERE key = ?", (f"deck:{did}",)).fetchone()
+    with conn:
+        neu = conn.execute("INSERT INTO decks(name, commander_oracle_id, bracket, saved_at) SELECT name || ' (Kopie)', commander_oracle_id, bracket, ? "
+                           "FROM decks WHERE id = ?", (mtg.now_iso(), did)).lastrowid
+        conn.execute("INSERT INTO deck_cards SELECT ?, oracle_id, role FROM deck_cards WHERE deck_id = ? ORDER BY rowid", (neu, did))
+        if meta:
+            conn.execute("INSERT OR REPLACE INTO meta VALUES (?,?)", (f"deck:{neu}", meta[0]))
+    return neu
+
+
+def deck_suche(conn, did, q, limit=24):
+    """Karten im Besitz für „Karte hinzufügen“ (Phase 61): Name enthält q, passt zur Farbidentität, für Commander erlaubt; frei = Kopien,
+    die kein fertiges und kein gespeichertes Deck belegt. Freie Karten zuerst."""
+    d = deck_detail(conn, did)
+    if not d or len(q.strip()) < 2:
+        return []
+    ci, frei = set((d["commander"] or {}).get("ci") or ""), free_copies(conn)
+    rows = conn.execute(
+        f"SELECT c.oracle_id, c.name, c.type_line, c.mana_cost, c.image_url image, c.color_identity ci, MIN({mtg.PRICE}) price "
+        f"FROM collection col JOIN cards c USING (scryfall_id) WHERE {mtg.OWNED} AND c.legal_commander AND c.name LIKE ? "
+        f"GROUP BY c.oracle_id ORDER BY c.name", (f"%{q.strip()}%",)).fetchall()
+    out = [dict(r) | {"frei": frei.get(r["oracle_id"], 0)} for r in rows if set(r["ci"] or "") <= ci]
+    return sorted(out, key=lambda r: not r["frei"])[:limit]
+
+
 def cheapest(conn):
     """oracle_id -> billigster Preis unter den Kopien im Besitz."""
     return {r[0]: r[1] for r in conn.execute(
