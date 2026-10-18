@@ -288,6 +288,17 @@ def test_scan_fingerabdruecke(voll):
     assert (server.api_scan(voll, {"v": 2})["ids"], server.api_scan(voll, {"v": 1})["ids"]) == ([ids[2]], [])
 
 
+def test_scan_pruefen_zeigt_den_erkannten_druck(conn):
+    """Prüfen: Wer eine Karte in mehreren Drucken hat, sieht den erkannten Druck (Bild, Set und Nummer je Druck), nicht irgendeinen Reprint."""
+    karte(conn, 1, "Sol Ring", serie="c21", nr=263)
+    karte(conn, 2, "Sol Ring", oracle=1, serie="cmm", nr=410)
+    fp = base64.b64encode(bytes(8)).decode()
+    assert server.dispatch(conn, "POST", "/api/scan", {}, json.dumps({"v": 1, "fp": {uid(1): fp, uid(2): fp}}).encode())[0] == 200
+    r = server.api_scan(conn, {"v": 1})
+    assert r["oids"] == [oid(1), oid(1)]
+    assert {i: (b.rsplit("/", 1)[1], d) for i, b, d in zip(r["ids"], r["bilder"], r["drucke"])} == {uid(1): ("1.jpg", "C21 263"), uid(2): ("2.jpg", "CMM 410")}
+
+
 def test_arena_drucke(conn):
     """Arena-Drucke (nur digital, ohne Euro-Preis) im Bestand sind Scanfehler: Hinweis und is:arena; der Scanner nimmt den Papier-Druck
     mit gleichem Bild, wenn du ihn hast, sonst dessen Preis aus der Kartendatenbank."""
@@ -5988,7 +5999,9 @@ def test_einrichtung_server_startet_und_antwortet_nur_auf_die_einrichtung(einric
     schliche = ["/", "/app.js/", "/./app.js", "/%61pp.js", "/APP.JS", "/app.js%00", "/../server.py", "/..%2fserver.py", "/fonts/",
                 "/fonts/../app.js", "/gibtsnicht", "/index.html/", "/konten.db", "/einrichtung.code", "/data/einrichtung.code"]
     offen = {pfad for pfad in dateien + schliche if anfrage("GET", pfad)[0] != 403}
-    assert offen == set(server.EINRICHTUNG_DATEIEN) == {"/", "/app.js", "/style.css", "/favicon.svg", "/grain.svg", "/fonts/Geist-Variable.woff2"}
+    assert offen == set(server.EINRICHTUNG_DATEIEN) == {"/", "/zaehler.js", "/app.js", "/style.css", "/favicon.svg", "/grain.svg", "/fonts/Geist-Variable.woff2"}
+    seite = (ui / "index.html").read_text(encoding="utf-8")
+    assert set(re.findall(r'(?:src|href)="(/[^"]*)"', seite)) - {"/manifest.webmanifest", "/icon-180.png"} <= offen  # was die Seite lädt, ist offen (Manifest und Symbol braucht erst die App)
     assert len(dateien) > 12 and all(anfrage("GET", pfad)[0] == 200 for pfad in offen) and anfrage("GET", "/app.js?v=1")[0] == 200
     status, kopf, body = anfrage("GET", "/")
     assert body == (ui / "index.html").read_bytes() and kopf["Content-Security-Policy"] == dict(server.SICHERHEIT)["Content-Security-Policy"]
@@ -8115,3 +8128,227 @@ def test_paket_bricht_bei_falscher_pruefsumme_ab(tmp_path, monkeypatch):
     assert paket.python_holen(tmp_path) == emb and emb.read_bytes() == b"x" and len(geladen) == 1  # stimmt sie, bleibt die Datei
     assert re.search(r'^PY_SHA256 = "[0-9a-f]{64}"$', (WURZEL / "deploy" / "paket.py").read_text(encoding="utf-8"), re.M)
     assert paket.TOP == "pappenheimer/" and paket.ZIP == "pappenheimer-windows.zip"
+
+
+# --- Ausbau v7: reine Zähllogik in ui/zaehler.js, mit Node geprüft (PLAN E37) -----------------------------------------------------------------
+node_noetig = pytest.mark.skipif(not shutil.which("node"), reason="ui/zaehler.js prüft Node; ohne Node übersprungen")
+
+
+def node_js(rumpf, daten):
+    """führt rumpf (Rumpf einer Funktion: Z = ui/zaehler.js, D = daten) in Node aus und gibt sein Ergebnis als JSON zurück"""
+    js = (f"const Z = require({json.dumps(str(WURZEL / 'ui' / 'zaehler.js'))}); const D = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
+          f"process.stdout.write(JSON.stringify((() => {{ {rumpf} }})()));")
+    r = subprocess.run(["node", "-e", js], input=json.dumps(daten), capture_output=True, text=True, encoding="utf-8", timeout=60)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+KONSENS = {"sofortWert": .9, "sofortAbstand": .2, "gestuetztWert": .65, "gestuetztAbstand": .08}  # nur für den Test, die echten stehen in app.js
+
+
+def konsens_folgen(folgen, schnell=True, schwellen=KONSENS):
+    """je Folge die Nummern der Bilder, bei denen Konsens zählt, und die Stufen"""
+    return node_js("return D.folgen.map(f => { const k = new Z.Konsens(D.opt), r = f.map(b => k.bild(b));"
+                   " return {zaehlen: r.flatMap((x, i) => x.zaehlen ? [i] : []), stand: r.map(x => x.stand)}; });",
+                   {"opt": {"schnell": schnell, **schwellen}, "folgen": folgen})
+
+
+def bild(urteil="sicher", id="A", wert=.75, abstand=.1, ruhig=True, bei=None):
+    return {"urteil": urteil, "id": id, "oid": id, "wert": wert, "abstand": abstand, "ruhig": ruhig, "bei": bei}
+
+
+@node_noetig
+def test_zaehler_konsens_stufen_und_folgen():
+    """Abnahme Phase 56 (Test, E37): die Bildfolgen aus dem Plan. Ein ruhiges Bild weit über der Schwelle zählt sofort, sonst zwei sichere,
+    drei gestützte mit einem sicheren; ein schwaches Zwischenbild wirft nicht um, ein anderes Viereck schon; je Folge wird einmal gezählt."""
+    P, Q = [100, 100, 20], [300, 120, 20]  # zwei Orte im Kamerabild, Spielraum 20 Pixel
+    sofort, schwach = bild(wert=.95, abstand=.3), bild("unsicher", "B", .61, .01)
+    faelle = {
+        "sofort": ([sofort], [0], ["sofort"]),
+        "sofort, aber nicht ruhig": ([{**sofort, "ruhig": False}, {**sofort, "ruhig": False}], [], ["sofort", "sofort"]),
+        "zwei sichere": ([bild(ruhig=False), bild()], [1], ["sicher", "sicher"]),
+        "sicher, schwach, sicher": ([bild(bei=P), {**schwach, "bei": P}, bild(bei=P)], [2], ["sicher", "schwach", "sicher"]),
+        "sicher, anderes Viereck, sicher": ([bild(bei=P), {**schwach, "bei": Q}, bild(bei=P, ruhig=False), bild(bei=P)], [3], ["sicher", "schwach", "sicher", "sicher"]),
+        "sicher, nichts, sicher": ([bild(), bild("nichts", wert=.5), bild()], [], ["sicher", "nichts", "sicher"]),
+        "Karte weg und zurück": ([bild(), bild(), bild("leer", None, 0, 0), bild(), bild()], [1, 4], None),
+        "zweite andere Karte": ([bild(), bild(), bild(id="B", ruhig=False), bild(id="B")], [1, 3], None),
+        "anderer Druck unterbricht": ([bild(), bild(id="B"), bild()], [], None),
+        "nichts ruhig": ([bild(ruhig=False)] * 4, [], None),
+        "einmal je Folge": ([bild()] * 6, [1], None),
+        "gestützt allein zählt nie": ([bild("unsicher", wert=.66)] * 5, [], ["gestuetzt"] * 5),
+        "gestützt mit einem sicheren": ([bild("unsicher", wert=.66), bild(), bild("unsicher", wert=.66)], [2], ["gestuetzt", "sicher", "gestuetzt"]),
+        "gestützt braucht Abstand": ([bild("unsicher", wert=.66, abstand=.05), bild(), bild("unsicher", wert=.66, abstand=.05)], [], ["schwach", "sicher", "schwach"]),
+        "Zwilling zählt nie": ([bild("zwilling", wert=.95, abstand=.3)] * 4, [], ["schwach"] * 4),
+        "sofort braucht den Abstand": ([bild(wert=.95, abstand=.15)], [], ["sicher"]),
+    }
+    erg = dict(zip(faelle, konsens_folgen([f for f, _, _ in faelle.values()])))
+    for name, (_, zaehlen, stand) in faelle.items():
+        assert erg[name]["zaehlen"] == zaehlen, name
+        assert stand is None or erg[name]["stand"] == stand, name
+    # ohne Schwellen (unendlich) gibt es weder sofort noch gestützt; ein schwaches Zwischenbild wirft trotzdem nicht um
+    ohne = konsens_folgen([[sofort], [bild("unsicher", wert=.69)] * 2 + [bild()], [bild(), {**schwach}, bild()]], schwellen={})
+    assert [x["zaehlen"] for x in ohne] == [[], [], [2]] and ohne[0]["stand"] == ["sicher"]
+
+
+@node_noetig
+def test_zaehler_ruhig_aus_dem_mini_bild():
+    """Phase 56: Ruhig liegt eine Karte, wenn sich in ihrer Zone von Mini-Bild zu Mini-Bild kaum etwas ändert (Rauschen der Kamera ja,
+    eine Bewegung nein); zu wenige Bilder, eine zu kleine Zone oder ein anderes Format heißen nein."""
+    erg = node_js("""
+      let a = 3; const rnd = () => (a = (a * 16807) % 2147483647) / 2147483647;
+      const bild = (dx = 0, rausch = 2) => { const px = new Uint8Array(48 * 80); for (let y = 0; y < 80; y++) for (let x = 0; x < 48; x++) px[y * 48 + x] = 60 + 120 * ((((x - dx) >> 2) + (y >> 2)) & 1) + (rnd() * 2 - 1) * rausch; return {w: 48, h: 80, px}; };
+      const Z1 = [10, 20, 20, 28], still = [bild(), bild(), bild(), bild()], schief = [bild(), bild(1), bild(2), bild(3)];
+      return {still: Z.ruhigIn(still, Z1, 4), bewegt: Z.ruhigIn(schief, Z1, 4), eins: Z.ruhigIn(still.slice(0, 1), Z1, 4), klein: Z.ruhigIn(still, [10, 20, 1, 1], 4),
+              quer: Z.ruhigIn([still[0], {w: 80, h: 48, px: still[1].px}], Z1, 4), rand: Z.ruhigIn(still, [40, 70, 20, 20], 4), laut: Z.ruhigIn([bild(0, 12), bild(0, 12)], Z1, 4)};
+    """, {})
+    assert erg == {"still": True, "bewegt": False, "eins": False, "klein": False, "quer": False, "rand": True, "laut": False}
+
+
+@node_noetig
+def test_zaehler_konsens_aus_wie_vorher():
+    """Abnahme Phase 56: Schalter aus verhält sich Bild für Bild wie vorher (n === 2 in erfZeigen und scanZeigen). Die alte Regel steht hier
+    nach, zufällige Folgen gehen durch beide."""
+    def vorher(folge):
+        key, n, out = None, 0, []
+        for i, b in enumerate(folge):
+            sicher = b["urteil"] == "sicher"
+            n = n + 1 if sicher and key == b["id"] and b["ruhig"] else 1 if sicher else 0
+            key = b["id"] if sicher else None
+            if n == 2:
+                out.append(i)
+        return out
+    zufall = random.Random(55)
+    folgen = [[bild(zufall.choice(["leer", "nichts", "unsicher", "zwilling", "sicher", "sicher", "sicher"]), zufall.choice("AAB"),
+                    round(zufall.uniform(.5, 1), 3), round(zufall.uniform(0, .4), 3), zufall.random() < .8,
+                    zufall.choice([None, [100, 100, 20], [300, 100, 20]])) for _ in range(zufall.randint(1, 14))] for _ in range(400)]
+    erg = konsens_folgen(folgen, schnell=False)
+    assert [x["zaehlen"] for x in erg] == [vorher(f) for f in folgen]
+    assert sum(len(x["zaehlen"]) for x in erg) > 100  # die Folgen zählen oft genug, um etwas zu prüfen
+
+
+def test_zaehler_eingebunden_mit_schalter():
+    """Phase 56: zaehler.js steht vor app.js und kennt weder DOM noch Netz; erfZeigen und scanZeigen zählen nur noch über Konsens, der Schalter
+    „Schnell zählen“ gilt fürs Prüfen und Erfassen, der Browser merkt ihn sich (E38: aus = wie vorher)."""
+    seite, js, z = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("index.html", "app.js", "zaehler.js"))
+    assert seite.index('<script src="/zaehler.js"></script>') < seite.index('<script src="/app.js"></script>')
+    assert not re.search(r"\b(document|window|fetch|XMLHttpRequest|localStorage)\b", z)
+    assert "n === 2" not in js and "scanZug" not in js and js.count("new Zaehler.Konsens(") == 1
+    assert js.count("id=\"scan-schnell\"") == 1 and js.count("$('#scan-schnell').onchange = schnellSetzen;") == 2 and "merke('mtg-scan-schnell'" in js
+    for name in ("KONS_SOFORT_WERT", "KONS_SOFORT_ABSTAND", "KONS_GESTUETZT_WERT", "KONS_GESTUETZT_ABSTAND"):
+        assert re.search(rf"\b{name} = {{lokal: [^,]+, server: [^}}]+}}", js), name
+
+
+# Phase 57: Bildfolgen aus Mini-Bildern (48 × 80), die der Test selbst zeichnet: zufällige Muster je „Karte“, Bewegung als Verschiebung,
+# Unschärfe als Mittel über die Spur, ein heller Fleck als Hand oder Daumen. Kein Bild von Dritten.
+SZENEN_JS = r"""
+const W = 48, H = 80, KW = 16, KH = 22, ZN = [16, 30, KW, KH];
+let a = D.seed | 0;
+const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const muster = (w, h, glatt, lo, hi) => {
+  let p = Float32Array.from({length: w * h}, () => rnd());
+  for (let r = 0; r < glatt; r++) {
+    const q = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < w && Y < h) { s += p[Y * w + X]; n++; } } q[y * w + x] = s / n; }
+    p = q;
+  }
+  let mn = Infinity, mx = -Infinity; for (const v of p) { mn = Math.min(mn, v); mx = Math.max(mx, v); }
+  return {w, h, px: p.map(v => lo + (v - mn) / (mx - mn || 1) * (hi - lo))};
+};
+const grund = muster(W, H, 6, 35, 80), hand = muster(14, 34, 3, 150, 190);
+const karte = () => muster(KW, KH, 2, 20, 235);  // im Mini-Bild ist ein Kartenbild unscharf
+// Kamerabild: Grund, dann die Dinge (das oberste zuletzt): {m, x, y, hell, spur: Versätze der Bewegung in diesem Bild}
+const bild = dinge => {
+  const px = Float32Array.from(grund.px);
+  for (const d of dinge) {
+    const spur = d.spur || [[0, 0]], f = 1 / spur.length, acc = new Float32Array(W * H), cov = new Float32Array(W * H);
+    for (const [sx, sy] of spur) for (let j = 0; j < d.m.h; j++) for (let i = 0; i < d.m.w; i++) {
+      const X = Math.round(d.x + sx + i), Y = Math.round(d.y + sy + j);
+      if (X >= 0 && Y >= 0 && X < W && Y < H) { acc[Y * W + X] += f * (d.m.px[j * d.m.w + i] + (d.hell || 0)); cov[Y * W + X] += f; }
+    }
+    for (let k = 0; k < W * H; k++) if (cov[k]) px[k] = px[k] * (1 - cov[k]) + acc[k];
+  }
+  return {w: W, h: H, px: Uint8ClampedArray.from(px, v => v + (rnd() * 2 - 1) * 3)};
+};
+const still = (dinge, n) => Array.from({length: n}, () => bild(dinge));
+const kopie = m => ({m, x: ZN[0] + Math.round(rnd() * 2 - 1), y: ZN[1] + Math.round(rnd() * 2 - 1), hell: (rnd() * 2 - 1) * 8});
+// die oberste Karte wegschnippen: Der Daumen kommt von rechts unten auf die Zone, die Karte fliegt in n Bildern (verwischt) nach ziel und bleibt
+// dort liegen, oder ohne ziel nach rechts oben aus dem Bild; liegen = was sonst noch im Bild liegt (unten im Stapel, schon Abgelegtes)
+const schnipp = (unten, oben, {ziel = null, n = 4, liegen = []} = {}) => {
+  const out = [], h0 = {m: hand, x: ZN[0] + 9, y: ZN[1] + 12}, nach = ziel || {x: oben.x + 40, y: oben.y - 30}, weg = {...oben, ...nach};
+  out.push(bild([...liegen, ...unten, oben, {...h0, x: h0.x + 4, y: h0.y + 8}]), bild([...liegen, ...unten, oben, h0]));
+  let alt = 0;
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, spur = [0, .33, .66, 1].map(u => { const v = alt + (t - alt) * u; return [(nach.x - oben.x) * v, (nach.y - oben.y) * v]; });
+    out.push(bild([...liegen, ...unten, {...oben, spur}, {...h0, x: h0.x + 10 * t, y: h0.y + 20 * t}])); alt = t;
+  }
+  return {bilder: [...out, ...still([...liegen, ...(ziel ? [weg] : []), ...unten], 16)], liegt: ziel ? [weg] : []};
+};
+const A = karte(), B = karte(), stapel = n => Array.from({length: n}, () => kopie(A));
+// einen Stapel ganz durchblättern; ziele(i) = wohin die i-te weggeschnippte Karte fliegt (null: aus dem Bild)
+const blaettern = (n, ziele, mehr = {}) => {
+  const s = stapel(n); let bilder = still(s, 6), liegen = [];
+  for (let i = n - 1; i >= 1; i--) { const r = schnipp(s.slice(0, i), s[i], {ziel: ziele(i), liegen, ...mehr}); bilder = bilder.concat(r.bilder); liegen = liegen.concat(r.liegt); }
+  return bilder;
+};
+const szenen = {};
+{ const s = stapel(1); szenen.liegt = {bilder: still(s, 150), echt: 0, fragen: 0}; }
+for (const n of [2, 3, 5]) szenen['stapel' + n] = {bilder: blaettern(n, i => ({x: 32 - (i % 2) * 32, y: 4 + 14 * (i % 3)})), echt: n - 1, abgelegt: true};  // abgelegt neben dem Stapel, je an einer neuen Stelle
+szenen.ausDemBild = {bilder: blaettern(3, () => null), echt: 2};  // ohne Zeugen fragt die App
+szenen.ablageStapel = {bilder: blaettern(4, () => ({x: 32, y: 4})), echt: 3};  // alle auf dieselbe Stelle: oft ist nur die erste ein Zeuge
+{ const s = stapel(1), wink = [-14, -6, 2, 10, 18, 26].map(x => bild([...s, {m: hand, x: ZN[0] + x, y: ZN[1] - 4, spur: [[0, 0], [3, 0]]}]));
+  szenen.wink = {bilder: [...still(s, 6), ...wink, ...still(s, 20)], echt: 0}; }
+{ const s = stapel(1), ab = {m: A, x: 32, y: 4, hell: 5}, wink = [-14, -6, 2, 10, 18, 26].map(x => bild([ab, ...s, {m: hand, x: ZN[0] + x, y: ZN[1] - 4}]));
+  szenen.ablageWink = {bilder: [...still([ab, ...s], 6), ...wink, ...still([ab, ...s], 20)], echt: 0}; }
+{ const s = stapel(1), raus = [0, 8, 20, 34].map(d => bild([{...s[0], y: s[0].y - d, spur: [[0, 0], [0, -4]]}, {m: hand, x: ZN[0] + 2, y: ZN[1] - d + 10}]));
+  szenen.herausnehmen = {bilder: [...still(s, 6), ...raus, ...still([], 10)], echt: 0, fragen: 0};
+  szenen.wegUndZurueck = {bilder: [...still(s, 6), ...raus, ...still([], 2), ...[...raus].reverse(), ...still(s, 20)], echt: 0};
+  const hin = {...s[0], x: 34, y: 50};  // herausgenommen, neben den Stapel gelegt: eine Karte, nie zwei Orte
+  szenen.danebenGelegt = {bilder: [...still(s, 6), ...raus.slice(0, 2), ...still([hin], 20)], echt: 0, fragen: 0}; }
+{ const s = stapel(1), b = {m: B, x: ZN[0], y: ZN[1]};
+  szenen.andereKarte = {bilder: [...still(s, 6), bild([...s, {m: hand, x: ZN[0], y: ZN[1] - 6}]), bild([b, {m: hand, x: ZN[0] + 4, y: ZN[1] - 6}]), ...still([b], 10)], echt: 0, fragen: 0}; }
+{ const s = stapel(3), schieb = [1, 2, 3].map(d => bild([...s.map(k => ({...k, x: k.x + d, y: k.y + d})), {m: hand, x: ZN[0] + 14 + d, y: ZN[1] + 8}]));
+  szenen.geschoben = {bilder: [...still(s, 6), ...schieb, ...still(s.map(k => ({...k, x: k.x + 3, y: k.y + 3})), 20)], echt: 0}; }
+{ const s = stapel(1), stups = bild([{...s[0], spur: [[0, 0], [1, 0]]}]);
+  szenen.angestossen = {bilder: [...still(s, 6), stups, ...still([{...s[0], x: s[0].x + 1}], 20)], echt: 0, fragen: 0}; }
+const erg = {};
+for (const [name, sz] of Object.entries(szenen)) {
+  const k = new Z.Kopien(), ev = [];
+  k.karte(sz.bilder[0], ZN);
+  const t0 = performance.now();
+  sz.bilder.slice(1).forEach((b, i) => { const r = k.bild(b); if (r.ereignis) ev.push([i + 1, r.ereignis]); });
+  erg[name] = {kopien: ev.filter(e => e[1] === 'kopie').length, fragen: ev.filter(e => e[1] === 'frage').length, echt: sz.echt, fragenSoll: sz.fragen ?? null,
+               abgelegt: !!sz.abgelegt, ms: (performance.now() - t0) / (sz.bilder.length - 1), ev};
+}
+return erg;
+"""
+
+
+@node_noetig
+def test_zaehler_kopien_beim_durchblaettern():
+    """Abnahme Phase 57 (Test, E37): Wer einen Stapel gleicher Karten wegschnippt und neben dem Stapel ablegt, bekommt die Kopien gezählt (über
+    alle Folgen mindestens 85 %, der Rest wird gefragt oder fehlt); fliegen sie aus dem Bild, fragt die App oder lässt aus. Nie mehr Kopien als wirklich
+    da sind, und keine bei einer Karte, die nur liegt, einer Hand, die darüber fährt (auch mit einem Ablagestapel, der dieselbe Karte zeigt),
+    einer herausgenommenen Karte (danach leer, eine andere oder daneben gelegt), derselben Karte, die wieder hingelegt wird, einem
+    verschobenen Stapel und einer angestoßenen Karte. Fragen nie bei einer Karte, die nur liegt oder angestoßen wird, und ohne Bruch."""
+    gezaehlt = abgelegt = 0
+    for seed in range(1, 9):
+        erg = node_js(SZENEN_JS, {"seed": seed})
+        for name, e in erg.items():
+            assert e["kopien"] <= e["echt"], (seed, name, e)
+            assert e["fragenSoll"] is None or e["fragen"] == e["fragenSoll"], (seed, name, e)
+            if e["abgelegt"]:
+                gezaehlt += e["kopien"]; abgelegt += e["echt"]
+    assert gezaehlt >= .85 * abgelegt, (gezaehlt, abgelegt)
+
+
+def test_blaettern_eingebunden_nur_beim_erfassen_mit_schnell_zaehlen():
+    """Phase 57 (E38): Die Schleife mit dem Mini-Bild läuft im Takt der Kamera nur beim Erfassen und nur mit „Schnell zählen“; eine Kopie geht
+    wie „+1“ durch erfZaehlen, ohne Zeugen fragt die App (eine Zeile mit „+1“), jede gezählte Karte setzt die Stapelzone neu."""
+    js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
+    assert re.search(r"const BLAETTERN_MINI = \[48, 80\], RUHIG_BILDER = \d+, RUHIG_DIFF = [\d.]+, BLAETTERN_INNEN = [\d.]+, BLAETTERN_OPT = \{[^}]*\}, BLAETTERN_SELBST = (true|false);", js)
+    assert "if (scanSchnell && v.readyState >= 2" in js and "if (scanModus === 'erfassen') { const r = b.kop.bild(m);" in js
+    assert "v.requestVideoFrameCallback(schritt); else requestAnimationFrame(schritt);" in js
+    assert js.count("blaetternKarte(") == 4 and js.count("new Zaehler.Kopien(") == 1  # erkannt, gewählt, „+1“ und die Funktion selbst
+    assert "erfZaehlen(b.id, b.wie);" in js and "'Weitere Kopie gelegt?' : `${n} weitere Kopien gelegt?`" in js and 'id="blaettern-frage">' in js
+    assert "for (let i = 0; i < +kb.dataset.blaettern; i++) erfZaehlen(blaettern.id, blaettern.wie);" in js  # die Antwort zählt, so viele angeboten sind
+    assert "blaettern = null;" in js.split("const scanStop = () =>")[1].split("\n")[0]  # Kamera aus: nichts mehr verfolgen
