@@ -92,6 +92,7 @@ const TIP = {
   namen: 'Die deutschen Namen, wie sie auf deutschen Karten gedruckt sind, braucht „Namen der Karte lesen“, um deutsche Karten am Namen zu erkennen. Scryfall liefert sie nur in den Gesamtdaten mit allen Sprachen (rund 378 MB), die der Server dann alle 30 Tage neu lädt. Ohne sie liest die App englische Namen, und deutsche Karten erkennt sie nur am Bild. Der Schalter gilt für die ganze Installation und wird vom Hauptkonto gestellt. Laden kann der Server sie nur dort, wo er Namen lesen kann (Tesseract, im Docker-Image dabei).',
   druckpruefen: 'Die Karte ist erkannt. Ihr Bild gibt es aber in mehreren Drucken, und die App hat einen davon genommen. Tipp den richtigen an und speichere. Stimmt er schon, speichere einfach.',
   titel: 'Die App liest zuerst den Namen oben auf der Karte und wählt dann unter den Drucken dieses Namens das passende Bild. So erkennt sie mehr Karten von selbst und verwechselt ähnliche Bilder seltener. Dafür gehen je Karte zwei schmale Streifen mit der Namenszeile an deinen Server. Sie werden dort gelesen und nicht gespeichert, das übrige Kamerabild bleibt auf dem Gerät. Ist der Name nicht lesbar (Spiegelung auf Foil oder Hülle, sehr alte Karten, Name quer), vergleicht die App wie bisher nur das Bild.',
+  schnell: 'Die App zählt eine Karte, sobald sie sich sicher genug ist: bei einem sehr klaren Bild nach einem Blick, sonst nach zwei oder drei. Ein unscharfes Bild zwischendurch wirft die Zählung nicht mehr um. Beim Erfassen merkt sie auch Kopien beim Durchblättern: Schnippst du die gezählte Karte weg und liegt darunter eine gleiche, fragt sie „Weitere Kopie gelegt?“; schnippst du weiter, sammelt die Frage mit („3 weitere Kopien?“), ein Tipp auf das Plus zählt sie alle. Ohne den Haken zählt sie wie bisher erst, wenn zwei Bilder nacheinander sicher sind, und weitere Kopien nur über +1.',
   frei: 'Die App sucht die Karte im ganzen Kamerabild: Sie muss nicht im Rahmen liegen, nur ganz zu sehen sein und ungefähr aufrecht stehen. Am besten geht es auf einem ruhigen Untergrund, von dem sich die Karte abhebt. Findet die App keine Karte, gilt der Rahmen in der Mitte. Fertige Karten legst du außerhalb des Bilds ab, sonst zählt die App sie noch einmal. Ohne den Haken zählt nur der Rahmen.',
   vollbild: 'Am Handy füllt die Kamera beim Erfassen den Bildschirm. Oben steht, was auf der Scan-Liste liegt; „Liste“ am Rand zeigt sie zum Prüfen und Übernehmen. Unten stellst du Foil, Sprache und Zustand für die nächsten Karten ein, „+1“ zählt die letzte Karte noch einmal, und ein Tipp auf sie ändert sie. Das Kreuz oben links beendet die Kamera.',
   setlock: 'Die App vergleicht nur mit den Drucken der gewählten Sets. Das macht die Erkennung schnell und genau, Karten aus anderen Sets erkennt sie dann aber nicht: Set dazunehmen. Für einen Commander-Precon das Commander-Set wählen (etwa DSC), für Booster das Set und seine Specials.',
@@ -2377,11 +2378,11 @@ function karteFinden(src, sw, sh) {
 
 // Ansicht „Scannen“: Kamera mit Kartenrahmen, je Bild fpSuche. Prüfen (Phase 24): eigene Karte, das Ergebnis steht, sobald dieselbe Karte zweimal
 // nacheinander sicher erkannt ist. Erfassen (Phase 25): neue Karten mit Set-Lock in einen Scan-Binder (erfZeigen).
-let scanIx = null, scanStream = null, scanTimer = null, scanLog = [], scanZug = {oid: null, n: 0}, scanStand = '', scanModus = 'pruefen', scanQ = null, scanBox = '';
+let scanIx = null, scanStream = null, scanTimer = null, scanLog = [], scanStand = '', scanModus = 'pruefen', scanQ = null, scanBei = null, scanVier = null, scanBox = '';
 let scanFrei = merk('mtg-scan-frei', '1', [['1'], ['0']]) === '1';  // Karte frei im Bild suchen (Phase 33); aus: nur der Rahmen
 const scanWork = document.createElement('canvas'), scanQuelle = document.createElement('canvas');
 let scanWache = null;  // Wake Lock (Phase 27): der Bildschirm bleibt an, solange die Kamera läuft
-const scanStop = () => { clearTimeout(scanTimer); scanTimer = null; scanStream?.getTracks().forEach(t => t.stop()); scanStream = null; scanWache?.release().catch(() => {}); scanWache = null; blatt(); document.body.classList.remove('vollbild'); };
+const scanStop = () => { clearTimeout(scanTimer); scanTimer = null; blaettern = null; scanStream?.getTracks().forEach(t => t.stop()); scanStream = null; scanWache?.release().catch(() => {}); scanWache = null; blatt(); document.body.classList.remove('vollbild'); };
 const wachHalten = async () => {
   if (!scanStream || scanWache || document.visibilityState !== 'visible') return;
   try { scanWache = await navigator.wakeLock.request('screen'); scanWache.addEventListener('release', () => { scanWache = null; }); } catch { /* ohne Wake Lock: der Bildschirm darf ausgehen */ }
@@ -2446,7 +2447,7 @@ function scanEnde() {  // Kamera aus, die Ansicht bleibt: am Handy zurück aus d
 const scanTeile = st => [...[...new Set(st.deck)].map(d => ['deck', 'Deck: ' + d]), ...['keep', 'sell', 'bulk'].filter(k => st[k]).map(k => [k, LABEL[k]])];
 const scanRow = e => {
   const k = scanIx.karten[e.oid];
-  return `<div class="row" data-oid="${esc(e.oid)}"${peekAt(k.image, k.name, eur(e.preis))}>${pic(small(k.image), '', 'thumb')}<div class="min0"><div class="name">${esc(k.name)}</div></div>
+  return `<div class="row" data-oid="${esc(e.oid)}"${peekAt(e.bild, k.name, eur(e.preis))}>${pic(small(e.bild), '', 'thumb')}<div class="min0"><div class="name">${esc(k.name)}</div><div class="sub2">${esc(e.druck)}</div></div>
     <div class="chips">${stackChips(k.stacks)}</div><div class="price">${eur(e.preis)}</div></div>`;
 };
 const KAMERA_TIPPS = [['Licht', 'Gleichmäßig und hell, am besten Tageslicht oder eine Lampe schräg von der Seite. Eine Lampe direkt über der Karte spiegelt. Die Taschenlampe nur im Dunkeln, auf Foils und Hüllen blendet sie.'],
@@ -2488,7 +2489,7 @@ const scanModusWahl = e => {  // Reiter Prüfen/Erfassen; die Wahl merkt sich de
 };
 
 async function viewScan(p) {
-  scanStand = ''; scanZug = {oid: null, n: 0};
+  scanStand = ''; scanKons = null;
   scanModus = merk('mtg-scan-modus', 'pruefen', SCAN_MODI);
   if (p.get('modus')) scanModus = p.get('modus') === 'erfassen' ? 'erfassen' : 'pruefen';
   if (scanModus === 'erfassen') return viewErfassen();
@@ -2497,9 +2498,11 @@ async function viewScan(p) {
   main.innerHTML = `${scanKopf('pruefen')}
     <div id="scan-prep"></div>
     ${camBox(scanIx, scanIx ? 'Kamera starten, dann eine Karte davor halten.' : 'Erst die Erkennungsbilder vorbereiten.')}
+    <div class="toolbar">${schnellSchalter()}</div>
     <section class="sec" aria-label="Zuletzt gescannt"><h2>Zuletzt gescannt</h2><div class="rows" id="scan-log">${scanIx && scanLog.length ? scanLog.map(scanRow).join('') : '<p class="muted">Noch nichts.</p>'}</div></section>`;
   $('#cam-go').onclick = () => scanStart();
   $('#cam').onchange = e => scanStart(e.target.value);
+  $('#scan-schnell').onchange = schnellSetzen;
   main.onclick = e => { if (scanModusWahl(e)) return; if (e.target.closest('#voll-zu')) return scanEnde(); const b = e.target.closest('[data-scanpick]'); if (b) scanTreffer(+b.dataset.scanpick); };
   if (!r.fehlt.length) return;
   const lauf = async () => {  // einmalig alle, später nur neue Drucke (nach einem Import)
@@ -2562,6 +2565,7 @@ async function scanStart(deviceId) {
   st.textContent = 'Karte vor die Kamera halten.';
   if (scanModus === 'erfassen') erfKamera();
   scanLoop();
+  blaetternStart(v);
 }
 
 // Rahmen g (Pixel in src) samt 8 % Rand auf 300 px Kartenbreite (doppelt so groß wie das Scryfall-Bild im Index). src ist das Kamerabild oder
@@ -2642,6 +2646,8 @@ function scanViereck(q) {
   const lage = $('#cam-lage'), alt = scanQ;
   if (lage) { lage.classList.toggle('frei', !!q); if (q) $('.viereck', lage).setAttribute('points', q.e.map(p => p.map(Math.round).join()).join(' ')); }
   scanQ = q ? [0, 1].map(i => (q.e[0][i] + q.e[1][i] + q.e[2][i] + q.e[3][i]) / 4) : null;
+  scanBei = q ? [...scanQ, FIND_RUHIG * Math.hypot(q.e[1][0] - q.e[0][0], q.e[1][1] - q.e[0][1])] : null;  // für Konsens: dasselbe Viereck wie qBei
+  scanVier = q || null;  // für die Stapelzone (Phase 57)
   return !q || (!!alt && Math.hypot(scanQ[0] - alt[0], scanQ[1] - alt[1]) < FIND_RUHIG * Math.hypot(q.e[1][0] - q.e[0][0], q.e[1][1] - q.e[0][1]));
 }
 // Suche auf dem Server (Phase 32): die Fingerabdrücke der Lagen FP_VOR als base64; leer, wenn keine Karte im Rahmen liegt (einfarbige Fläche)
@@ -2682,17 +2688,96 @@ async function freiServer(src, vierecke, mehr = {}) {
   return best;
 }
 
+// --- Mini-Bild je Kamerabild (Phasen 56 und 57, PLAN E37, E38) ---------------------------------------------------------------------------
+// Neben der Erkennung (scanLoop, 120 ms und länger je Bild) misst eine eigene Schleife im Takt der Kamera (requestVideoFrameCallback, sonst
+// requestAnimationFrame) ein Mini-Bild des ganzen Kamerabilds (BLAETTERN_MINI Punkte, grau), nur mit „Schnell zählen“; aus: wie vorher.
+// Ruhig (Phase 56): Hat sich im Viereck einer erkannten Karte in den RUHIG_BILDER Kamerabildern bis zum Bild der Erkennung nichts bewegt
+// (Zaehler.ruhigIn, mittlere Änderung unter RUHIG_DIFF), liegt sie ruhig, auch wenn das Bild der Erkennung davor sie noch nicht kannte. So
+// zählt Konsens „sofort“ auch frei im Bild nach einem Bild; im Rahmen gilt die Karte ohnehin als ruhig.
+// Kopien (Phase 57): Die zuletzt gezählte Karte liegt in ihrer Stapelzone (der innere Teil BLAETTERN_INNEN des Vierecks bzw. Rahmens), die
+// Mini-Bilder gehen an Zaehler.Kopien. Wird sie weggeschnippt und liegt eine gleiche darunter, zählt die App sie wie „+1“ (erfZaehlen), mit
+// Zeugen von selbst (BLAETTERN_SELBST), ohne Zeugen fragt sie in einer Zeile unter der Karte; nur beim Erfassen.
+// Die Werte kommen aus dem Prüfstand (tests/blaettern_eval.js, PLAN Phasen 56 und 57): vor einer Änderung neu messen.
+// Gemessen am 2026-10-18 (PLAN Phase 57): Von selbst gezählt stimmte die Zahl nur in 70 % der Folgen (Hürde 90 %), mit Frage bei jeder erkannten
+// Kopie in 91 %, überzählt nie. Deshalb fragt die App (BLAETTERN_SELBST aus, der Rückweg aus dem Plan); die Werte von Zaehler.Kopien gelten.
+const BLAETTERN_MINI = [48, 80], RUHIG_BILDER = 3, RUHIG_DIFF = 4, BLAETTERN_INNEN = .8, BLAETTERN_OPT = {}, BLAETTERN_SELBST = false;
+const miniWork = document.createElement('canvas');
+function miniBild(src, sw, sh) {  // -> {w, h, px} (Graubild, zeilenweise), hochkant oder quer wie das Kamerabild
+  const [k, l] = BLAETTERN_MINI, w = sw > sh ? l : k, h = sw > sh ? k : l;
+  if (miniWork.width !== w || miniWork.height !== h) { miniWork.width = w; miniWork.height = h; }
+  const c = miniWork.getContext('2d', {willReadFrequently: true});
+  c.imageSmoothingQuality = 'high';
+  c.drawImage(src, 0, 0, w, h);
+  const d = c.getImageData(0, 0, w, h).data, px = new Uint8Array(w * h);
+  for (let i = 0, j = 0; i < px.length; i++, j += 4) px[i] = (77 * d[j] + 150 * d[j + 1] + 29 * d[j + 2]) >> 8;
+  return {w, h, px};
+}
+// Rechteck um ein Viereck; Stapelzone im Mini-Bild aus einem Rechteck in Pixeln des Kamerabilds (sw breit)
+const rechteck = q => { const xs = q.e.map(p => p[0]), ys = q.e.map(p => p[1]); return {x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys)}; };
+const blaetternZone = (m, r, sw) => { const f = m.w / sw, i = (1 - BLAETTERN_INNEN) / 2; return [(r.x + r.w * i) * f, (r.y + r.h * i) * f, r.w * BLAETTERN_INNEN * f, r.h * BLAETTERN_INNEN * f]; };
+// Kostet ein Mini-Bild im Mittel mehr als BLAETTERN_MS (am Rechner aus dem Hauptspeicher 0,1 bis 0,6 ms; was es aus dem Kamerabild kostet,
+// hängt am Gerät), nimmt die Schleife nur jedes zweite, dritte oder vierte Kamerabild, damit die Erkennung nicht wartet.
+const BLAETTERN_MS = 2;
+let blaettern = null;  // {v, verlauf (die letzten Mini-Bilder), kop, id, wie (der gezählte Druck), ms (gleitendes Mittel), n}
+function blaetternStart(v) {
+  const strom = scanStream;
+  blaettern = {v, verlauf: [], kop: new Zaehler.Kopien(BLAETTERN_OPT), id: null, wie: null, ms: 0, n: 0};
+  const schritt = () => {
+    if (scanStream !== strom || !blaettern) return;
+    const b = blaettern;
+    if (scanSchnell && v.readyState >= 2 && $('#voll-schleier')?.hidden !== false) {
+      if (++b.n % Math.min(4, Math.max(1, Math.ceil(b.ms / BLAETTERN_MS))) === 0) {
+        const t0 = performance.now(), m = miniBild(v, v.videoWidth, v.videoHeight);
+        b.verlauf = [...b.verlauf.slice(-RUHIG_BILDER), m];
+        if (scanModus === 'erfassen') { const r = b.kop.bild(m); if (r.ereignis) blaetternEreignis(r.ereignis); }
+        b.ms = .9 * b.ms + .1 * (performance.now() - t0);
+      }
+    } else b.verlauf = [];
+    if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(schritt); else requestAnimationFrame(schritt);
+  };
+  schritt();
+}
+// lag das Viereck q in den Mini-Bildern verlauf (bis zum Bild der Erkennung) still? (Phase 56)
+const miniRuhig = (q, verlauf) => !!q && !!blaettern && verlauf.length > RUHIG_BILDER && Zaehler.ruhigIn(verlauf, blaetternZone(verlauf[0], rechteck(q), blaettern.v.videoWidth), RUHIG_DIFF);
+// eine Karte ist gezählt (erkannt, gewählt oder „+1“): ab jetzt ihre Stapelzone verfolgen (Phase 57)
+function blaetternKarte(id, wie) {
+  const b = blaettern, m = b?.verlauf.at(-1);
+  $('#blaettern-frage')?.remove();
+  if (b) b.offen = 0;
+  if (!m || !scanSchnell || scanModus !== 'erfassen') return;
+  Object.assign(b, {id, wie});
+  b.kop.karte(m, blaetternZone(m, scanVier ? rechteck(scanVier) : scanG(b.v), b.v.videoWidth));
+}
+function blaetternEreignis(art) {
+  const b = blaettern;
+  if (!b?.id) return;
+  if (art === 'kopie' && BLAETTERN_SELBST) {
+    erfZug = {...erfZug, frei: false, fremd: 0};  // die Erkennung zählt dieselbe Karte nicht noch einmal
+    erfZaehlen(b.id, b.wie);
+    return;
+  }
+  // ohne Zeugen (oder BLAETTERN_SELBST aus) fragt die App; schnippst du weiter, sammelt die Frage die erkannten Kopien („3 weitere Kopien?“).
+  // Die Erkennung zählt die Kopie dann nicht selbst (sonst zählte sie doppelt, wenn du die Frage auch beantwortest)
+  erfZug = {...erfZug, frei: false, fremd: 0};
+  const n = b.offen = (b.offen || 0) + 1, el = $('#blaettern-frage');
+  const html = `${n === 1 ? 'Weitere Kopie gelegt?' : `${n} weitere Kopien gelegt?`} <button class="btn small primary" type="button" data-blaettern="${n}">${icon('plus', 'sm')}${n}</button>
+    <button class="btn small" type="button" data-blaettern="0" aria-label="Keine weitere Kopie">${icon('x', 'sm')}</button>`;
+  if (el) el.innerHTML = html;
+  else $('#scan-hit .hit .min0')?.insertAdjacentHTML('beforeend', `<p class="note-line" id="blaettern-frage">${html}</p>`);
+}
+
 // je Bild eine Suche: Prüfen und Erfassen mit Set-Lock im Browser, Erfassen ohne Set-Wahl beim Server (die nächste erst nach seiner Antwort)
 async function scanLoop() {
   const v = $('#cam-video'), strom = scanStream;
   let pause = 120;
   if (!v || !strom) return;
   if (v.readyState >= 2 && $('#voll-schleier')?.hidden !== false) {  // ein offenes Blatt verdeckt die Kamera: nichts zählen
-    const g = scanRahmenZeigen(v), frei = scanFrei ? karteFinden(v, v.videoWidth, v.videoHeight) : [];
-    if (scanModus !== 'erfassen') { if (scanIx) { const best = sucheLokal(scanIx, v, g, frei); scanZeigen(best, scanViereck(best[0]?.score >= FP_NEIN && best.q)); } }
-    else if (!erf.alle) { if (erfIx?.codes === erf.sets.join()) { const best = sucheLokal(erfIx.ix, v, g, frei); erfZeigen(erfLokal(best), scanViereck(best[0]?.score >= FP_NEIN && best.q)); } }
+    const g = scanRahmenZeigen(v), frei = scanFrei ? karteFinden(v, v.videoWidth, v.videoHeight) : [], verlauf = blaettern?.verlauf || [];
+    const ruhig = q => scanViereck(q) || miniRuhig(q, verlauf);  // Mini-Bilder bis zu diesem Kamerabild (Phase 56)
+    if (scanModus !== 'erfassen') { if (scanIx) { const best = sucheLokal(scanIx, v, g, frei); scanZeigen(best, ruhig(best[0]?.score >= FP_NEIN && best.q)); } }
+    else if (!erf.alle) { if (erfIx?.codes === erf.sets.join()) { const best = sucheLokal(erfIx.ix, v, g, frei); erfZeigen(erfLokal(best), ruhig(best[0]?.score >= FP_NEIN && best.q)); } }
     else {
-      try { const r = await erfServer(v, g, frei); if (scanStream === strom) erfZeigen(r, scanViereck(r.urteil !== 'nichts' && r.q)); }
+      try { const r = await erfServer(v, g, frei); if (scanStream === strom) erfZeigen(r, ruhig(r.urteil !== 'nichts' && r.q)); }
       catch (e) { if (e instanceof LoginNoetig) return; pause = 1500; if (scanStream === strom) erfStatus('netz'); }
     }
   }
@@ -2703,8 +2788,8 @@ function scanZeigen(best, ruhig = true) {
   const b = best[0], st = $('#scan-status');
   if (!st) return;
   const sicher = b && b.score >= FP_SICHER, stand = !b || b.score < FP_NEIN ? 'leer' : sicher ? 'sicher' : 'unsicher:' + best.map(x => x.oid).join();
-  scanZug = sicher && scanZug.oid === b.oid && ruhig ? {oid: b.oid, n: scanZug.n + 1} : {oid: sicher ? b.oid : null, n: sicher ? 1 : 0};
-  if (scanZug.n === 2) scanTreffer(b.i);  // genau einmal je Karte im Rahmen; nimmst du sie raus und legst die nächste hin, zählt es neu
+  const k = konsens('lokal').bild({urteil: stand.split(':')[0], id: b?.oid, oid: b?.oid, wert: b?.score, abstand: b && (best[1] ? b.score - best[1].score : 1), ruhig, bei: scanBei});
+  if (k.zaehlen) scanTreffer(b.i);  // genau einmal je Karte im Rahmen; nimmst du sie raus und legst die nächste hin, zählt es neu
   if (stand === scanStand) return;  // nur bei Änderung neu zeichnen, sonst flackert es und Klicks gehen verloren
   scanStand = stand;
   $('#scan-hit .hit')?.classList.toggle('alt', stand !== 'sicher' && stand !== 'leer');  // unsicher: das Urteil darunter gehört zur Karte davor
@@ -2712,18 +2797,18 @@ function scanZeigen(best, ruhig = true) {
   st.innerHTML = stand === 'leer' ? 'Keine Karte aus deiner Sammlung im Bild.' : stand === 'sicher' ? 'Erkannt.'
     : `Unsicher. Ist es eine davon? <div class="kand">${best.map(x => {
       const k = scanIx.karten[x.oid];
-      return `<button type="button" class="kandb" data-scanpick="${x.i}" title="${esc(k.name)}">${pic(small(k.image), k.name)}</button>`;
+      return `<button type="button" class="kandb" data-scanpick="${x.i}" title="${esc(k.name)}">${pic(small(scanIx.bilder[x.i]), k.name)}</button>`;
     }).join('')}</div>`;
 }
 
-function scanTreffer(i) {
-  const oid = scanIx.oids[i], k = scanIx.karten[oid], preis = scanIx.preise[i], teile = scanTeile(k.stacks);
+function scanTreffer(i) {  // gezeigt wird der erkannte Druck (Bild, Set, Preis), das Urteil gilt für die Karte
+  const oid = scanIx.oids[i], k = scanIx.karten[oid], preis = scanIx.preise[i], bild = scanIx.bilder[i], druck = scanIx.drucke[i], teile = scanTeile(k.stacks);
   ton();
-  scanLog = [{oid, preis}, ...scanLog].slice(0, 20);
-  $('#scan-hit').innerHTML = `<div class="hit"><a href="#" data-oid="${esc(oid)}" aria-label="${esc(k.name)} ansehen">${pic(small(k.image), k.name)}</a><div class="min0">
+  scanLog = [{oid, preis, bild, druck}, ...scanLog].slice(0, 20);
+  $('#scan-hit').innerHTML = `<div class="hit"><a href="#" data-oid="${esc(oid)}" aria-label="${esc(k.name)} ansehen">${pic(small(bild), k.name)}</a><div class="min0">
     <div class="name">${esc(k.name)}</div>
     ${teile.length === 1 ? `<div class="urteil u-${teile[0][0]}">${esc(teile[0][1])}</div>` : `<div class="urteil">${teile.length === 2 ? esc(teile.map(t => t[1]).join(' oder ')) : teile.length ? 'Mehrere Stapel' : 'Kein Stapel'}</div><div class="chips big">${stackChips(k.stacks, true)}</div>`}
-    <div class="sub2">${eur(preis)}</div></div></div>`;
+    <div class="sub2">${esc(druck)}, ${eur(preis)}</div></div></div>`;
   $('#scan-log').innerHTML = scanLog.map(scanRow).join('');
 }
 
@@ -2738,6 +2823,21 @@ function scanTreffer(i) {
 // erst „Übernehmen“ legt die geprüfte Liste in einen Scan-Binder.
 const FP_ABSTAND = 0.03;  // vor dem Echttest geschätzt (PLAN Phase 25): darunter zählt nichts von selbst, die App fragt
 const ERF_FREI = 4;       // so viele Bilder nacheinander ohne Karte aus den Sets gelten als „Karte herausgenommen“
+// Schnell zählen (Phase 56, PLAN E37, E38): Konsens über mehrere Bilder (ui/zaehler.js) statt zweier sicherer nacheinander. Sofort zählt ein
+// ruhiges Bild mit Wert und Abstand ab KONS_SOFORT_*, gestützt (unsicher, aber ab KONS_GESTUETZT_WERT und mit dem Abstand des Urteils) zählt
+// mit zwei weiteren Bildern derselben Karte, von denen eins sicher ist. Getrennt für den Index im Browser (lokal: Prüfen und Set-Lock) und die
+// Suche auf dem Server (Werte und Schwellen sind dort andere, katalog.SUCHE_*). Die Zahlen kommen aus der Messung (tests/suche_eval.js,
+// tests/finden_eval.js; PLAN Phase 56): vor einer Änderung neu messen. Aus: wie vor Phase 56.
+// Gemessen am 2026-10-18 (PLAN Phase 56): Kein falscher Treffer lag lokal über Wert 0,813 oder Abstand 0,098, auf dem Server über Abstand
+// 0,128; sofort liegt mit gut 0,02 Reserve darüber. Gestützt bleibt aus (unendlich): Es zählte 1 bis 3 % mehr Karten, aber knapp unter der
+// Schwelle auch falsche (Server bei 0,65: 2 von 200 Folgen, lokal bei 0,76: 5 falsche Bilder).
+const KONS_SOFORT_WERT = {lokal: .86, server: .75}, KONS_SOFORT_ABSTAND = {lokal: .12, server: .15};
+const KONS_GESTUETZT_WERT = {lokal: Infinity, server: Infinity}, KONS_GESTUETZT_ABSTAND = {lokal: FP_ABSTAND, server: .08};
+let scanSchnell = merk('mtg-scan-schnell', '0', [['1'], ['0']]) === '1', scanKons = null;
+const schnellSchalter = () => `<label class="inl"><input type="checkbox" id="scan-schnell"${scanSchnell ? ' checked' : ''}> Schnell zählen ${info('schnell', 'Schnell zählen')}</label>`;
+const schnellSetzen = e => { scanSchnell = e.target.checked; merke('mtg-scan-schnell', scanSchnell ? '1' : '0'); };  // gilt fürs Prüfen und Erfassen
+const konsens = weg => scanKons?.weg === weg && scanKons.schnell === scanSchnell ? scanKons : (scanKons = Object.assign(new Zaehler.Konsens({schnell: scanSchnell,
+  sofortWert: KONS_SOFORT_WERT[weg], sofortAbstand: KONS_SOFORT_ABSTAND[weg], gestuetztWert: KONS_GESTUETZT_WERT[weg], gestuetztAbstand: KONS_GESTUETZT_ABSTAND[weg]}), {weg}));
 const ERF_ZULETZT_H = 12; // so lange bietet die Liste an, die zuletzt übernommene Erfassung zurückzuholen
 const FOIL = {normal: 'Normal', foil: 'Foil', etched: 'Etched Foil'};
 // Schnellwahl im Vollbild (Phase 34): vier Felder in einer Zeile, deshalb Kürzel (Sprache wie Scryfall, Zustand wie Cardmarket)
@@ -2745,7 +2845,7 @@ const LANG_KURZ = Object.fromEntries(Object.keys(LANG).map(k => [k, {zh_CN: 'ZHS
 const COND_KURZ = {mint: 'MT', near_mint: 'NM', excellent: 'EX', good: 'GD', light_played: 'LP', played: 'PL', poor: 'PO'};
 const erfArt = z => [`${z.set_code} #${z.number}`, z.foil !== 'normal' && FOIL[z.foil], LANG[z.language] || z.language, COND[z.condition] || z.condition].filter(Boolean).join(', ');
 const optionen = (obj, sel) => Object.entries(obj).map(([v, l]) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
-let erf = null, erfIx = null, erfSetsAlle = null, erfZug = {key: null, n: 0, frei: true, wahl: false, oids: [], fremd: 0, anders: 0}, erfNr = 0, erfKette = Promise.resolve(), erfBest = [], erfKand = [], katJob = null, katalogTimer = null;
+let erf = null, erfIx = null, erfSetsAlle = null, erfZug = {frei: true, wahl: false, oids: [], fremd: 0, anders: 0}, erfNr = 0, erfKette = Promise.resolve(), erfBest = [], erfKand = [], katJob = null, katalogTimer = null;
 const erfMerken = () => merke('mtg-erfassen', JSON.stringify({sets: erf.sets, binder: erf.binder, lang: erf.lang, cond: erf.cond, foil: erf.foil, mess: erf.mess, huelle: erf.huelle, alle: erf.alle, titel: erf.titel}));
 // Scans, die den Server nicht erreicht haben, merkt sich der Browser je Sammlung: Sie überstehen den Neuaufbau der Ansicht und das Neuladen
 const erfOffenKey = () => 'mtg-erf-offen:' + (sess.aktiv || '');
@@ -2760,7 +2860,7 @@ async function viewErfassen() {
   const binder = !alt.binder || (/^Scan \d{4}-\d\d-\d\d$/.test(alt.binder) && alt.binder !== heute) ? heute : alt.binder;  // gestriger Standardname: heute ein neuer
   erf = {sets: alt.sets || [], binder, lang: alt.lang || 'en', cond: alt.cond || 'near_mint', foil: alt.foil || 'normal', liste: ei.liste, zuletzt: ei.zuletzt, offen, letzte: null,
          mess: !!alt.mess, huelle: !!alt.huelle, messStand: null, alle: alt.alle === true, titel: alt.titel !== false, kat, kontext: []};
-  erfZug = {key: null, n: 0, frei: true, wahl: false, oids: [], fremd: 0, anders: 0}; erfBest = []; erfTitel = null; erfDa = false;
+  erfZug = {frei: true, wahl: false, oids: [], fremd: 0, anders: 0}; erfBest = []; scanKons = null; erfTitel = null; erfDa = false;
   const bereit = erfKann();
   main.innerHTML = `${scanKopf('erfassen')}
     <details class="panel erf" id="erf-setup"${bereit ? '' : ' open'}><summary><span id="erf-sum"></span><span class="muted small-print">ändern</span></summary>
@@ -2771,6 +2871,7 @@ async function viewErfassen() {
         <div id="erf-kat"></div>
         <div id="erf-katalog"></div>
         <label class="inl"><input type="checkbox" id="erf-frei"${scanFrei ? ' checked' : ''}> Karte frei im Bild suchen ${info('frei', 'Karte frei im Bild suchen')}</label>
+        ${schnellSchalter()}
         ${erf.alle && kat.titel ? `<label class="inl"><input type="checkbox" id="erf-titel"${erf.titel ? ' checked' : ''}> Namen der Karte lesen ${info('titel', 'Namen der Karte lesen')}</label>` : ''}
         ${erf.alle ? `<label class="inl"><input type="checkbox" id="erf-namen" disabled> Deutsche Kartennamen laden (rund ${num(DEUTSCH_MB)} MB) ${info('namen', 'Deutsche Kartennamen laden')}</label><div id="erf-namen-stand"></div>` : ''}</div>
       <div class="erf-grid gap-top">
@@ -2812,6 +2913,7 @@ async function viewErfassen() {
   };
   for (const [id, k] of [['erf-mess', 'mess'], ['erf-huelle', 'huelle']]) $('#' + id).onchange = e => { erf[k] = e.target.checked; erfMerken(); erfSumme(); messUi(); };
   $('#erf-frei').onchange = e => { scanFrei = e.target.checked; merke('mtg-scan-frei', scanFrei ? '1' : '0'); };
+  $('#scan-schnell').onchange = schnellSetzen;
   if ($('#erf-titel')) $('#erf-titel').onchange = e => { erf.titel = e.target.checked; erfTitel = null; erfMerken(); };
   if ($('#erf-namen')) $('#erf-namen').onchange = e => katalogNamen(e.target.checked);
   katalogOeffnen();
@@ -3021,13 +3123,14 @@ function erfKamera() {  // Kamera läuft: Vorbereitung zuklappen, Platz fürs Bi
 // schneller Wechsel ohne leeren Rahmen) und ist es unsicher, fragt die App, statt die neue Karte still liegen zu lassen.
 // Beide Wege liefern dieselbe Form: urteil (leer, nichts, unsicher, zwilling, sicher) und kand = die Drucke zur Wahl, der beste zuerst, je Druck
 // {id, oid, name, set_code, number, image}; ohne Set-Wahl dazu pruefen (der Druck ist geraten) und wahl (die anderen Drucke desselben Bilds).
+// Dazu wert und abstand des besten Treffers (für Konsens, Phase 56).
 function erfLokal(best) {  // Set-Lock: Ergebnis von fpSuche über den Index im Browser
   const ix = erfIx.ix, b = best[0], z = best[1];
   const druck = j => { const id = ix.ids[j], d = ix.drucke[id]; return {id, oid: d.oid, name: d.name, set_code: d.set, number: d.number, image: d.image}; };
-  if (!b || b.score < FP_NEIN) return {urteil: b ? 'nichts' : 'leer', kand: best.map(x => druck(x.i))};
+  if (!b || b.score < FP_NEIN) return {urteil: b ? 'nichts' : 'leer', kand: best.map(x => druck(x.i)), wert: b?.score};
   const d = ix.drucke[ix.ids[b.i]], zwillinge = (erfIx.bild[d.ill] || []).filter(j => j !== b.i && ix.drucke[ix.ids[j]].set !== d.set);
   return {urteil: zwillinge.length ? 'zwilling' : b.score >= FP_SICHER && (!z || b.score - z.score >= FP_ABSTAND) ? 'sicher' : 'unsicher',
-          kand: (zwillinge.length ? [b.i, ...zwillinge] : best.map(x => x.i)).map(druck)};
+          kand: (zwillinge.length ? [b.i, ...zwillinge] : best.map(x => x.i)).map(druck), wert: b.score, abstand: z ? b.score - z.score : 1};
 }
 // Erst den Namen lesen (Phase 35, PLAN E21). Liegt die Karte ruhig (ein Viereck dort, wo das Viereck der Karte im Bild davor lag, oder ohne
 // Viereck die Karte im Rahmen), gehen einmal je Karte die Streifen mit der Namenszeile an den Server (titelBild, TITEL_VERSUCHE). Er nennt die
@@ -3061,7 +3164,8 @@ async function erfServer(src, g, vierecke = []) {
     if (r && (r.urteil === 'sicher' || !(a?.treffer[0].wert >= r.treffer[0]?.wert))) a = r;
   }
   erfDa = !!a && a.urteil !== 'nichts';
-  return a ? {urteil: a.urteil, q: a.q, kand: a.treffer.map(t => ({...t.druck, pruefen: t.pruefen, wahl: t.drucke.map(d => d.id)}))} : {urteil: 'leer', kand: []};
+  return a ? {urteil: a.urteil, q: a.q, kand: a.treffer.map(t => ({...t.druck, pruefen: t.pruefen, wahl: t.drucke.map(d => d.id)})), wert: a.treffer[0]?.wert, abstand: a.treffer[0]?.abstand}
+    : {urteil: 'leer', kand: []};
 }
 // was zu einem gezählten Druck auf die Scan-Liste geht: ist er geraten, die anderen Drucke desselben Bilds, sonst die anderen Kandidaten
 const erfWie = (d, kand) => ({wahl: d.pruefen ? d.wahl : kand.filter(x => x.id !== d.id).map(x => x.id), pruefen: !!d.pruefen});
@@ -3069,8 +3173,10 @@ const erfWie = (d, kand) => ({wahl: d.pruefen ? d.wahl : kand.filter(x => x.id !
 function erfZeigen(r, ruhig = true) {
   if (!$('#scan-status')) return;
   erfBest = r.kand;
+  const kons = konsens(erf.alle ? 'server' : 'lokal');
   if (r.urteil === 'leer' || r.urteil === 'nichts') {  // leerer Rahmen sofort, sonst erst nach ERF_FREI Bildern ohne Treffer: die Karte ist raus
-    erfZug = {...erfZug, key: null, n: 0, anders: 0, fremd: r.urteil === 'nichts' ? erfZug.fremd + 1 : ERF_FREI};
+    kons.bild({urteil: r.urteil});
+    erfZug = {...erfZug, anders: 0, fremd: r.urteil === 'nichts' ? erfZug.fremd + 1 : ERF_FREI};
     if (erfZug.fremd >= ERF_FREI) erfZug = {...erfZug, frei: true, wahl: false};
     return erfStatus(r.urteil === 'nichts' ? 'fremd' : 'leer');
   }
@@ -3078,16 +3184,16 @@ function erfZeigen(r, ruhig = true) {
   const d = r.kand[0], ids = r.kand.map(x => x.id).join();
   erfZug.anders = !erfZug.frei && !erfZug.oids.includes(d.oid) ? erfZug.anders + 1 : 0;
   if (erfZug.wahl) return erfStatus('wahl:' + ids, r.kand);
-  const sicher = r.urteil === 'sicher';
-  erfZug.n = sicher && erfZug.key === d.id && ruhig ? erfZug.n + 1 : sicher ? 1 : 0;
-  erfZug.key = sicher ? d.id : null;
-  const neu = erfZug.frei || !erfZug.oids.includes(d.oid);
-  if (sicher && erfZug.n === 2 && neu) {
+  const k = kons.bild({urteil: r.urteil, id: d.id, oid: d.oid, wert: r.wert, abstand: r.abstand, ruhig, bei: scanBei});
+  const sicher = r.urteil === 'sicher', neu = erfZug.frei || !erfZug.oids.includes(d.oid);
+  if (k.zaehlen && neu) {
     erfZug = {...erfZug, frei: false, oids: [d.oid]};
     erfZaehlen(d.id, erfWie(d, r.kand), true);
+    blaetternKarte(d.id, erfWie(d, r.kand));
     return erfStatus('gezaehlt');
   }
   if (sicher || (!erfZug.frei && erfZug.anders < ERF_FREI)) return erfStatus(sicher && neu ? 'sicher' : 'gezaehlt');  // die gezählte Karte liegt noch im Rahmen
+  if (kons.schnell && kons.id !== null && erfZug.anders < ERF_FREI) return erfStatus(kons.gezaehlt ? 'gezaehlt' : 'sicher');  // gehört zur laufenden Folge: keine Auswahl dazwischen
   return erfStatus(`${r.urteil === 'zwilling' ? 'zwilling' : 'unsicher'}:${ids}`, r.kand);
 }
 
@@ -3279,10 +3385,18 @@ async function erfKlick(e) {
   if (pick) {
     const d = erfKand.find(x => x.id === pick.dataset.erfpick);
     erfZug = {...erfZug, frei: false, wahl: false, oids: [d.oid, ...erfKand.filter(x => x !== d).map(x => x.oid)]}; scanStand = '';
+    blaetternKarte(d.id, erfWie(d, erfKand));
     return erfZaehlen(d.id, erfWie(d, erfKand), true);
   }
   if (t.closest('[data-messbild]')) return messAusloeser();
-  if (t.closest('#erf-plus, [data-erfplus]')) return erf.letzte ? erfZaehlen(erf.letzte.id, erf.letzte) : flash('Erst eine Karte scannen');
+  const kb = t.closest('[data-blaettern]');  // Antwort auf „Weitere Kopie gelegt?“ (Phase 57): so viele Kopien wie angeboten, oder keine
+  if (kb && blaettern?.id) {
+    $('#blaettern-frage')?.remove();
+    blaettern.offen = 0;
+    for (let i = 0; i < +kb.dataset.blaettern; i++) erfZaehlen(blaettern.id, blaettern.wie);
+    return;
+  }
+  if (t.closest('#erf-plus, [data-erfplus]')) { if (!erf.letzte) return flash('Erst eine Karte scannen'); blaetternKarte(erf.letzte.id, erf.letzte); return erfZaehlen(erf.letzte.id, erf.letzte); }
   if (t.closest('[data-erfzurueck]')) {
     await erfKette;  // erst die laufenden Scans, sonst nähme „zurück“ die vorletzte Karte
     try { const l = await post('erfassen', {aktion: 'liste-zurueck'}); erf.liste = l; erfListe(); flash(`Von der Liste genommen: ${l.weg}`); }

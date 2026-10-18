@@ -476,10 +476,10 @@ SCAN_SETS_MAX = 6   # so viele Sets auf einmal beim Erfassen (etwa Precon mit Sp
 
 def _scan_eigen(conn):
     """Eigene Drucke für den Scanner. Arena-Drucke (nur digital, etwa KLR) haben dasselbe Bild wie ein Papier-Druck: Besitzt du den auch,
-    fehlen sie (der Scan trifft dann den Papier-Druck). -> scryfall_id -> (id, oracle_id, Name, Bild, Preis, illustration_id, Arena)"""
+    fehlen sie (der Scan trifft dann den Papier-Druck). -> scryfall_id -> (id, oracle_id, Name, Bild, Preis, illustration_id, Arena, Set, Nummer)"""
     eigen = {r[0]: r for r in conn.execute(
         f"SELECT DISTINCT c.scryfall_id, c.oracle_id, c.name, c.image_url, COALESCE(c.price_eur, c.price_eur_foil), "
-        f"json_extract(c.json, '$.illustration_id'), {mtg.ARENA} FROM collection col JOIN cards c USING (scryfall_id) WHERE {mtg.OWNED}")}
+        f"json_extract(c.json, '$.illustration_id'), {mtg.ARENA}, c.set_code, c.number FROM collection col JOIN cards c USING (scryfall_id) WHERE {mtg.OWNED}")}
     papier = {r[5] for r in eigen.values() if not r[6]}
     return {s: r for s, r in eigen.items() if not (r[6] and r[5] in papier)}
 
@@ -487,9 +487,10 @@ def _scan_eigen(conn):
 def api_scan(conn, q=None, body=None, set_suche=None):
     """Scanner (Phase 24, PLAN E17): Bild-Fingerabdrücke der eigenen Drucke. Der Browser rechnet sie aus dem Scryfall-Bild (Python kann
     kein JPEG lesen) und schickt sie her (body: {v, fp: {scryfall_id: base64}}, ältere Versionen fliegen raus; erlaubt sind eigene Drucke und
-    die der Sets fürs Erfassen). GET (q: v) liefert alle der Version v, die noch fehlenden Drucke mit Bild und je Karte Name, Bild und Stapel
-    aus dem Sortier-Plan, damit der Scan ohne weitere Anfrage antwortet; ein Arena-Druck ohne Preis bekommt den des günstigsten Papier-Drucks
-    mit gleichem Bild. Mit set=KÜRZEL[,…] (Erfassen, Phase 25): der Index der Drucke dieser Sets (scan_set)."""
+    die der Sets fürs Erfassen). GET (q: v) liefert alle der Version v mit Preis, Bild und Set samt Nummer je Druck (gezeigt wird der erkannte
+    Druck, nicht irgendein Druck mit demselben Namen), die noch fehlenden Drucke mit Bild und je Karte Name, Bild und Stapel aus dem
+    Sortier-Plan, damit der Scan ohne weitere Anfrage antwortet; ein Arena-Druck ohne Preis bekommt den des günstigsten Papier-Drucks mit
+    gleichem Bild. Mit set=KÜRZEL[,…] (Erfassen, Phase 25): der Index der Drucke dieser Sets (scan_set)."""
     q = q or {}
     if body is not None:
         d = json.loads(body or b"{}")
@@ -519,7 +520,8 @@ def api_scan(conn, q=None, body=None, set_suche=None):
     ids = sorted(fp)
     stapel, leer = mtg.stacks_by_card(mtg.plan(conn)), {"deck": [], "keep": 0, "sell": 0, "bulk": 0}
     return {"v": v, "ids": ids, "oids": [eigen[s][1] for s in ids], "preise": [eigen[s][4] if eigen[s][4] is not None else bildpreis.get(eigen[s][5]) for s in ids],
-            "fp": base64.b64encode(b"".join(fp[s] for s in ids)).decode(), "len": len(fp[ids[0]]) if ids else 0,
+            "bilder": [eigen[s][3] for s in ids], "drucke": [f"{eigen[s][7]} {eigen[s][8]}" for s in ids],
+            "fp":base64.b64encode(b"".join(fp[s] for s in ids)).decode(), "len": len(fp[ids[0]]) if ids else 0,
             "karten": {r[1]: {"name": r[2], "image": r[3], "stacks": stapel.get(r[1], leer)} for r in eigen.values()},
             "fehlt": [{"id": s, "image": r[3]} for s, r in eigen.items() if s not in fp and r[3]]}
 
@@ -1521,8 +1523,9 @@ def api_konto(method, path, body, token, sicher=False, adresse=""):
 # (Handler._einrichtung): die Seite mit ihren Dateien (EINRICHTUNG_DATEIEN) und EINRICHTUNG_API, alles andere 403. Wer den Code nicht kennt,
 # liest und schreibt nichts (E13); der Code steht einmal im Protokoll (serve) und kommt nur im Körper einer Anfrage, nie in der Adresse.
 
-EINRICHTUNG_DATEIEN = {"/": "index.html", "/app.js": "app.js", "/style.css": "style.css", "/favicon.svg": "favicon.svg", "/grain.svg": "grain.svg",
-                       "/fonts/Geist-Variable.woff2": "fonts/Geist-Variable.woff2"}  # genau was die Seite braucht (favicon.svg ruft auch Docker ab)
+EINRICHTUNG_DATEIEN = {"/": "index.html", "/zaehler.js": "zaehler.js", "/app.js": "app.js", "/style.css": "style.css", "/favicon.svg": "favicon.svg",
+                       "/grain.svg": "grain.svg", "/fonts/Geist-Variable.woff2": "fonts/Geist-Variable.woff2"}
+# genau was die Seite braucht: index.html lädt zaehler.js vor app.js (nur Rechenregeln des Scanners, Phase 56), favicon.svg ruft auch Docker ab
 EINRICHTUNG_API = ("/api/einrichtung", "/api/einrichtung/sicherung")
 EINRICHTUNG_JSON = 4096           # so viele Bytes höchstens hat eine Anfrage an /api/einrichtung (Code, Name, Passwort)
 VERWERFEN = 4096                  # so viele Bytes Körper liest der Server noch, bevor er eine Anfrage ablehnt (Handler._verwerfen)

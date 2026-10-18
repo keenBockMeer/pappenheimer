@@ -13,7 +13,12 @@
 // gefundenErstes = schon das erste. frei und rahmen: top1, top3 und das Urteil (zusammen 1): sicherRichtig, sicherFalsch, unsicher, nichts.
 // ms: finden = karteFinden, frei = Entzerren und Erkennen danach, rahmen = Erkennung von vorher. zeig: N hängt die N-te Szene mit den gefundenen
 // Vierecken unten an die Seite (zum Ansehen) und hört dort auf.
-async function findenEval(n = 200, {seed = 7, licht = 1, lage = 1, hand = .25, server = false, messbilder = false, zeig = null} = {}) {
+// Phase 56: folge: N (2 bis 12) zeigt jede Szene N Bilder lang (das erste ist die Szene von oben, die übrigen dieselbe mit eigenem Rauschen und
+// leichtem Wackeln, zitter skaliert es; wackeln und konsensMessen stehen in suche_eval.js, das vorher eingefügt sein muss) und spielt beide
+// Wege durch Konsens: rahmen (Karte im Rahmen, immer ruhig) und frei (ruhig wie scanViereck: das Viereck des erkannten Treffers liegt dort, wo
+// es im Bild davor lag; das erste Bild einer Folge also nie). folgen.rahmen/frei.konsens wie bei suche_eval.js, msBild = Erkennung je Bild
+// (frei: mit karteFinden), bilderJeSekunde = was scanLoop so schafft (mit seiner Pause von 120 ms).
+async function findenEval(n = 200, {seed = 7, licht = 1, lage = 1, hand = .25, server = false, messbilder = false, zeig = null, folge = 0, zitter = 1} = {}) {
   let a = seed;
   const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const um = (x, f = licht) => (rnd() * 2 - 1) * x * f, zw = (lo, hi) => lo + rnd() * (hi - lo), grau = (lo, hi, t = 12) => { const g = zw(lo, hi); return [g + um(t, 1), g + um(t, 1), g + um(t, 1)].map(Math.round).join(); };
@@ -34,13 +39,22 @@ async function findenEval(n = 200, {seed = 7, licht = 1, lage = 1, hand = .25, s
   let ix = null, karten;
   if (!server && !messbilder) { const r = await api('scan?v=' + FP_V); ix = fpIndex(r); karten = ix.oids.map((oid, j) => ({wahr: oid, name: ix.karten[oid].name, image: ix.karten[oid].image})); }
   else if (!messbilder) karten = (await api(`scan/katalog?v=${FP_V}&probe=${Math.min(5000, n * 4)}`)).probe.map(p => ({wahr: p.id, name: p.name, image: p.image}));
-  const lokal = (best, wahr) => ({pos: best.findIndex(b => b.oid === wahr), urteil: !best[0] || best[0].score < FP_NEIN ? 'nichts' : best[0].score >= FP_SICHER ? 'sicher' : 'unsicher', vorn: best[0] && `${ix.karten[best[0].oid].name} ${best[0].score.toFixed(2)}`});
-  const fern = (r, passt) => ({pos: r ? r.treffer.findIndex(passt) : -1, urteil: r?.urteil || 'nichts', vorn: r?.treffer[0] && `${r.treffer[0].druck.name} ${r.treffer[0].wert.toFixed(2)}`});
+  // dazu je Bild, was Konsens bekommt (b): id, wert und abstand des besten Treffers, q = das Viereck dazu
+  const lokal = (best, wahr) => ({pos: best.findIndex(b => b.oid === wahr), urteil: !best[0] || best[0].score < FP_NEIN ? 'nichts' : best[0].score >= FP_SICHER ? 'sicher' : 'unsicher', vorn: best[0] && `${ix.karten[best[0].oid].name} ${best[0].score.toFixed(2)}`,
+                                  b: {id: best[0]?.oid, wert: best[0]?.score, abstand: best[0] && (best[1] ? best[0].score - best[1].score : 1)}, q: best[0]?.score >= FP_NEIN ? best.q : null});
+  const fern = (r, passt) => ({pos: r ? r.treffer.findIndex(passt) : -1, urteil: r?.urteil || 'nichts', vorn: r?.treffer[0] && `${r.treffer[0].druck.name} ${r.treffer[0].wert.toFixed(2)}`,
+                               b: {id: r?.treffer[0]?.druck.id, wert: r?.treffer[0]?.wert, abstand: r?.treffer[0]?.abstand}, q: r && r.urteil !== 'nichts' ? r.q : null});
   const erkennen = {
-    rahmen: async (src, cx, cy, w, h, wahr) => server ? fern(await (async fp => fp.length ? post('scan/suche', {v: FP_V, fp}) : null)(fpLagen(src, cx, cy, w, h)), x => bild(x.aussehen) === bild(wahr)) : lokal(fpSuche(ix, src, cx, cy, w, h), wahr),
-    frei: async (src, vier, wahr) => server ? fern(await freiServer(src, vier), x => bild(x.aussehen) === bild(wahr)) : lokal(freiSuche(ix, src, vier), wahr),
+    rahmen: async (src, cx, cy, w, h, wahr) => server ? fern(await (async fp => fp.length ? nochmal(() => post('scan/suche', {v: FP_V, fp})) : null)(fpLagen(src, cx, cy, w, h)), x => bild(x.aussehen) === bild(wahr)) : lokal(fpSuche(ix, src, cx, cy, w, h), wahr),
+    frei: async (src, vier, wahr) => server ? fern(await nochmal(() => freiServer(src, vier)), x => bild(x.aussehen) === bild(wahr)) : lokal(freiSuche(ix, src, vier), wahr),
   };
   const res = {rahmen: leer(), frei: leer()}, gruende = {}, ms = {finden: [], frei: [], rahmen: []}, eckfehler = [], fehler = [];
+  const folgen = {rahmen: [], frei: []}, msBild = {rahmen: [], frei: []};
+  // ein Bild der Folge für Konsens; frei: ruhig und bei wie scanViereck (vor = Mitte des Vierecks im Bild davor oder null)
+  const fBild = (r, frei, vor) => {
+    const q = frei ? r.q : null, mitte = q && [0, 1].map(i => (q.e[0][i] + q.e[1][i] + q.e[2][i] + q.e[3][i]) / 4), weit = q && FIND_RUHIG * Math.hypot(q.e[1][0] - q.e[0][0], q.e[1][1] - q.e[0][1]);
+    return {urteil: r.urteil, ...r.b, oid: r.b.id, ruhig: !q || (!!vor && Math.hypot(mitte[0] - vor[0], mitte[1] - vor[1]) < weit), bei: q ? [...mitte, weit] : null, richtig: r.pos === 0, mitte};
+  };
   let proben = 0, gefunden = 0, erstes = 0, vierecke = 0;
 
   if (messbilder) {  // echte Kamerabilder: im Rahmen wie messbilder_eval.js bzw. suche_eval.js, frei über das ganze Bild; richtig ist die Karte des Etiketts
@@ -160,15 +174,26 @@ async function findenEval(n = 200, {seed = 7, licht = 1, lage = 1, hand = .25, s
   }
   let anderes = null;
   for (let k = 0; k < n && karten.length; k++) {
+    globalThis.evalStand = {k, n};  // Fortschritt, von außen lesbar
     const karte = karten.splice(Math.floor(rnd() * karten.length), 1)[0];
     let im;
     try { im = await laden(karte.image); } catch { continue; }
     const L = {hell: 1 + um(.35), kontrast: 1 + um(.2), satt: 1 + um(.3), unscharf: Math.abs(um(1.5)), stich: [235 + um(20) | 0, 235 + um(20) | 0, 235 + um(20) | 0], glanz: [rnd(), rnd(), 60 + rnd() * 120, (.15 + rnd() * .35) * licht]};
+    const a0 = a;
     imRahmen(im, L);
     let t0 = performance.now();
     const r = await erkennen.rahmen(P, 244, 340, 488, 680, karte.wahr);
     ms.rahmen.push(performance.now() - t0);
-    const s = szene(im, L, anderes);
+    if (folge) {  // dieselbe Karte im Rahmen, weitere Bilder (Phase 56)
+      const a1 = a, f = [fBild(r, false)];
+      msBild.rahmen.push(ms.rahmen.at(-1));
+      for (let i = 1; i < folge; i++) {
+        a = a0; imRahmen(im, L); wackeln(P, pg, seed * 7919 + k * 31 + i, zitter);
+        const t1 = performance.now(); f.push(fBild(await erkennen.rahmen(P, 244, 340, 488, 680, karte.wahr), false)); msBild.rahmen.push(performance.now() - t1);
+      }
+      folgen.rahmen.push(f); a = a1;
+    }
+    const a2 = a, vorher = anderes, s = szene(im, L, anderes);
     anderes = im;
     t0 = performance.now();
     const vier = karteFinden(S, s.W, s.H);
@@ -186,6 +211,16 @@ async function findenEval(n = 200, {seed = 7, licht = 1, lage = 1, hand = .25, s
     t0 = performance.now();
     const fr = await erkennen.frei(S, vier, karte.wahr);
     ms.frei.push(performance.now() - t0);
+    if (folge) {  // dieselbe Szene, weitere Bilder: karteFinden und Erkennung je Bild, ruhig wie scanViereck (Phase 56)
+      const a3 = a, f = [fBild(fr, true, null)];
+      msBild.frei.push(ms.finden.at(-1) + ms.frei.at(-1));
+      for (let i = 1; i < folge; i++) {
+        a = a2; szene(im, L, vorher); wackeln(S, sg, seed * 7919 + k * 31 + i, zitter);
+        const t1 = performance.now(), v2 = karteFinden(S, s.W, s.H);
+        f.push(fBild(await erkennen.frei(S, v2, karte.wahr), true, f.at(-1).bei && f.at(-1).mitte)); msBild.frei.push(performance.now() - t1);
+      }
+      folgen.frei.push(f); a = a3;
+    }
     proben++; vierecke += vier.length; gefunden += da; erstes += fehl[0] <= .04;
     if (da) eckfehler.push(Math.min(...fehl));
     zaehl(res.rahmen, r); zaehl(res.frei, fr);
@@ -197,5 +232,7 @@ async function findenEval(n = 200, {seed = 7, licht = 1, lage = 1, hand = .25, s
           gefunden: +(gefunden / proben).toFixed(3), gefundenErstes: +(erstes / proben).toFixed(3), viereckeJeBild: +(vierecke / proben).toFixed(2), eckfehler: [.5, .9].map(p => q(eckfehler, p)),
           frei: quote(res.frei), rahmen: quote(res.rahmen), unterschiedTop1: +((res.frei.top1 - res.rahmen.top1) / proben).toFixed(3),
           gruende: Object.fromEntries(Object.entries(gruende).map(([k, g]) => [k, {n: g.n, gefunden: +(g.gefunden / g.n).toFixed(3), top1: +(g.top1 / g.n).toFixed(3)}])),
-          ms: Object.fromEntries(Object.entries(ms).map(([k, v]) => [k, {p50: q(v, .5), p95: q(v, .95)}])), fehler};
+          ms: Object.fromEntries(Object.entries(ms).map(([k, v]) => [k, {p50: q(v, .5), p95: q(v, .95)}])), fehler,
+          ...(folge ? {folge, zitter, folgen: Object.fromEntries(['rahmen', 'frei'].map(w => [w, {konsens: konsensMessen(folgen[w], server ? 'server' : 'lokal'),
+            msBild: {p50: q(msBild[w], .5), p95: q(msBild[w], .95)}, bilderJeSekunde: msBild[w].length ? +(1000 / (120 + msBild[w].reduce((x, y) => x + y, 0) / msBild[w].length)).toFixed(1) : null, folgen: folgen[w]}]))} : {})};
 }
