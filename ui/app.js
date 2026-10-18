@@ -150,6 +150,8 @@ const TIP = {
   bulkstack: 'Weitere Kopien unter dem Mindestpreis: gehen als Masse weg.',
   sold: 'Lädst du einen neuen Export hoch und Karten von der Verkaufsliste fehlen, bucht die App sie als verkauft.',
   hand: 'Wie sich das Deck auf die Hand verteilt, exakt gerechnet aus der Zahl der Länder und Ramp-Karten (keine Simulation). Gerechnet wird mit 7 Karten auf der Hand und einer weiteren je Zug ab Zug 2.',
+  rechner: 'Exakt gerechnet wie die Zahlen darüber: 7 Karten auf der Hand und eine je Zug ab Zug 2. In Commander mit mehreren Spielern zieht jeder schon im ersten Zug, dann „im ersten Zug ziehen“ anhaken. Mulligans zählen nicht mit. Die Gruppen sind dieselben wie oben bei den Karten.',
+  spieltisch: 'Zum Ausprobieren allein, nichts wird gespeichert. Karte antippen: Die App fragt, wohin sie soll. Auf dem Spielfeld tappt ein Tipp die Karte, das Menü öffnet der kleine Knopf darunter.',
   spielbar: 'Wie oft die ersten 7 Karten 2 bis 5 Länder enthalten. Mit weniger fehlt Mana, mit mehr fehlen Zauber.',
   land3: 'Wie oft du bis Zug 3 drei Länder gesehen hast (7 Karten plus 2 gezogen), also in jedem Zug ein Land spielen kannst.',
   ramp2: 'Wie oft bis Zug 2 mindestens eine Ramp-Karte dabei ist (7 Karten plus 1 gezogen).',
@@ -949,7 +951,7 @@ async function viewDecks(p) {
   const alle = [...dl.fertig, ...dl.items.map(d => ({...d, kind: 'gebaut'}))];
   const items = rankAll ? cm.items : cm.items.slice(0, 30), top = items.slice(0, 3), rest = items.slice(3), buy = cm.mode === 'guenstig';
   main.innerHTML = `${head('Decks', `Fertige Decks lädst du als Textliste hoch oder scannst sie ein, neue baut die App aus deinen freien Karten ${info('free', 'frei')}. Bestehende Decks werden dabei nie auseinandergenommen.`,
-    `<a class="btn" href="#/scan?modus=erfassen&deck=1">${icon('cards')}Deck einscannen</a>`)}
+    `<a class="btn" href="#/vergleich">Decks vergleichen</a><a class="btn" href="#/scan?modus=erfassen&deck=1">${icon('cards')}Deck einscannen</a>`)}
     <section class="sec" aria-label="Deine Decks"><h2>Deine Decks <small>${alle.length ? `${dl.fertig.length} fertig, ${dl.items.length} gebaut` : ''}</small></h2>
       ${alle.length ? `<div class="decks">${alle.map(deckTile).join('')}</div>` : '<p class="muted">Noch keine Decks. Lade ein fertiges Deck hoch (als Text, zum Beispiel aus ManaBox oder Moxfield) oder bau unten eins aus dem Ranking.</p>'}</section>
     <section class="sec" aria-label="Commander-Ranking"><h2>Welche Commander passen zu deiner Sammlung? ${cm.all ? `<small>${cm.total === cm.all ? `${num(cm.all)} Kandidaten` : `${num(cm.total)} von ${num(cm.all)} Kandidaten`}</small>` : ''}</h2>
@@ -1073,16 +1075,36 @@ const bilderHtml = gs => gs.map(g => `<div class="group"><h2>${esc(g.label)} <sm
 // Stapel wie auf dem Tisch: Karten überlappen, sichtbar bleibt die Titelzeile; Mehrfache liegen bis zu viermal übereinander
 const stapelHtml = gs => `<div class="piles">${gs.map(g => `<div class="pile"><h3>${esc(g.label)} <small>${g.count}</small></h3><div class="pcards">${g.cards.flatMap(x => Array(Math.min(x.qty, 4)).fill(x))
   .map(x => `<a class="pc" href="#" data-oid="${esc(x.oracle_id)}" aria-label="${esc(x.name)}${x.qty > 1 ? `, ${x.qty}×` : ''}"${deckPeek(x)}>${pic(x.image, x.name)}</a>`).join('')}</div></div>`).join('')}</div>`;
-const listeHtml = gs => `<div class="dlist">${gs.map(g => `<div class="group"><h3>${esc(g.label)} <small>${g.count}</small></h3><table class="tbl dl">${g.cards.map(x => `
+const listeHtml = (gs, weg) => `<div class="dlist">${gs.map(g => `<div class="group"><h3>${esc(g.label)} <small>${g.count}</small></h3><table class="tbl dl">${g.cards.map(x => `
   <tr data-oid="${esc(x.oracle_id)}"${deckPeek(x)}><td class="num">${x.qty}</td><td class="nm">${esc(x.name)}</td><td>${x.mana_cost ? mana(x.mana_cost) : ''}</td>
-  <td class="rt">${x.price != null && x.role !== 'basic' ? eur(x.price) : ''}</td></tr>`).join('')}</table></div>`).join('')}</div>`;
+  <td class="rt">${x.price != null && x.role !== 'basic' ? eur(x.price) : ''}</td>${weg ? `<td class="rt"><button class="btn small" type="button" data-raus="${esc(x.oracle_id)}" aria-label="${esc(x.name)}: eine Kopie herausnehmen">${icon('minus', 'sm')}</button></td>` : ''}</tr>`).join('')}</table></div>`).join('')}</div>`;
+// Bearbeiten (Phase 61): nur gespeicherte, gebaute Decks; im Bearbeiten zeigt die Liste ein Minus an jeder Karte, darüber „Karte hinzufügen“
+let deckEdit = null;
+const editHtml = d => `<form class="toolbar noprint" data-deckadd="${d.id}" role="search"><label class="inl" for="deck-add">Karte hinzufügen</label>
+  <input id="deck-add" name="q" autocomplete="off" minlength="2" required placeholder="Name einer Karte aus deiner Sammlung"><button class="btn" type="submit">${icon('search')}Suchen</button></form>
+  <div id="deck-add-res" aria-live="polite"></div><p class="note-line">Plus und Minus ändern das gespeicherte Deck sofort. Fertig? Noch einmal „Bearbeiten“.</p>`;
 function deckKarten(d) {
   aktDeck = d;
-  const view = merk('mtg-deckview', 'bilder', DVIEW), by = merk('mtg-deckgroup', 'rolle', DGROUP), gs = gruppen(d, by);
-  return `<section class="sec" aria-label="Karten im Deck" id="deckkarten"><div class="toolbar noprint">
-    <div class="seg" role="group" aria-label="Ansicht">${DVIEW.map(([k, l]) => `<button type="button" class="btn small" data-dview="${k}" aria-pressed="${view === k}">${l}</button>`).join('')}</div>
+  const edit = d.id != null && deckEdit === d.id;
+  const view = edit ? 'liste' : merk('mtg-deckview', 'bilder', DVIEW), by = merk('mtg-deckgroup', 'rolle', DGROUP), gs = gruppen(d, by);
+  return `<section class="sec" aria-label="Karten im Deck" id="deckkarten">${edit ? editHtml(d) : ''}<div class="toolbar noprint">
+    ${edit ? '' : `<div class="seg" role="group" aria-label="Ansicht">${DVIEW.map(([k, l]) => `<button type="button" class="btn small" data-dview="${k}" aria-pressed="${view === k}">${l}</button>`).join('')}</div>`}
     <label class="inl">Gruppiert nach <select id="dgroup">${DGROUP.map(([k, l]) => `<option value="${k}"${by === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
-    ${view === 'liste' ? listeHtml(gs) : view === 'stapel' ? stapelHtml(gs) : bilderHtml(gs)}</section>`;
+    ${view === 'liste' ? listeHtml(gs, edit) : view === 'stapel' ? stapelHtml(gs) : bilderHtml(gs)}</section>`;
+}
+async function deckAendern(rein, raus) {  // raus, rein oder beides (Tauschen aus „Verbessern“)
+  try { await post(`deck/${aktDeck.id}/aendern`, {rein, raus}); flash(rein && raus ? 'Getauscht' : rein ? 'Ins Deck gelegt' : 'Herausgenommen'); render(true); }
+  catch (e) { if (!(e instanceof LoginNoetig)) flash(e.message); }
+}
+async function deckSuche(f) {
+  const box = $('#deck-add-res');
+  try {
+    const r = await api(`deck/${f.dataset.deckadd}/suche?q=${encodeURIComponent(f.q.value)}`);
+    box.innerHTML = r.items.length ? `<div class="rows">${r.items.map(k => `<div class="row" data-oid="${esc(k.oracle_id)}"${peekAt(k.image, k.name, eur(k.price))}>${pic(small(k.image), '', 'thumb')}
+      <div class="min0"><div class="name">${esc(k.name)}</div><div class="sub2">${k.frei ? `${k.frei} frei` : 'keine freie Kopie, steckt schon in einem Deck'}</div></div>
+      <div class="price">${eur(k.price)}</div>${k.drin ? '<span class="muted">im Deck</span>' : `<button class="btn small" type="button" data-rein="${esc(k.oracle_id)}">${icon('plus', 'sm')}Ins Deck</button>`}</div>`).join('')}</div>`
+      : '<p class="muted">Nichts gefunden. Gesucht wird in deiner Sammlung unter Karten, die zur Farbe des Commanders passen und in Commander erlaubt sind.</p>';
+  } catch (e) { if (!(e instanceof LoginNoetig)) box.innerHTML = ladeFehler(e); }
 }
 const deckNeu = () => { const alt = $('#deckkarten'); if (alt && aktDeck) alt.outerHTML = deckKarten(aktDeck); };
 
@@ -1094,12 +1116,34 @@ function handHtml(d) {
   return `<section class="sec" aria-label="Starthand"><h2>Starthand ${info('hand', 'Starthand')} <small>${karten(h.n)}, davon ${h.lands} Länder</small></h2>
     ${facts([[pct(h.spielbar), 'spielbare Starthand', 'spielbar'], [pct(h.land3), 'drei Länder bis Zug 3', 'land3'], [h.ramp2 == null ? 'keine' : pct(h.ramp2), 'Ramp bis Zug 2', 'ramp2'], [fmt(h.lands_hand, 1), 'Länder auf der Hand im Schnitt']])}
     <div class="toolbar gap-top noprint"><button class="btn" type="button" id="h-neu">${icon('cards')}Starthand ziehen</button><button class="btn" type="button" id="h-mull" disabled>Mulligan</button>
-      <button class="btn" type="button" id="h-zieh" disabled>Nächste Karte</button><span class="muted" id="h-info" aria-live="polite"></span></div>
-    <div class="grid small hand" id="hand"></div></section>`;
+      <button class="btn" type="button" id="h-zieh" disabled>Nächste Karte</button><a class="btn" href="#/spieltisch?${d.id != null ? `id=${d.id}` : `binder=${encodeURIComponent(d.binder)}`}">${icon('layers')}Am Spieltisch ausprobieren</a>
+      <span class="muted" id="h-info" aria-live="polite"></span></div>
+    <div class="grid small hand" id="hand"></div>
+    <h3>Wie wahrscheinlich ist … ${info('rechner', 'Wahrscheinlichkeit')}</h3>
+    <div class="toolbar noprint"><label class="inl">mindestens <select id="w-k">${[1, 2, 3, 4].map(k => `<option>${k}</option>`).join('')}</select></label>
+      <label class="inl">aus <select id="w-gruppe">${rechnerGruppen(d).map(([t, l]) => `<optgroup label="${esc(t)}">${l.map(([k, n, z]) => `<option value="${esc(k)}" data-k="${z}">${esc(n)} (${z})</option>`).join('')}</optgroup>`).join('')}</select></label>
+      <label class="inl">bis Zug <select id="w-zug">${Array.from({length: 10}, (_, i) => `<option${i === 2 ? ' selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+      <label class="inl"><input type="checkbox" id="w-erst"> im ersten Zug ziehen</label></div>
+    <p class="lead" id="w-erg" aria-live="polite"></p></section>`;
+}
+// Rechner (Phase 63): Gruppen wie in der Kartenansicht und jede einzelne Karte; K = Karten der Gruppe im Deck ohne Commander
+const rechnerGruppen = d => [['Rolle', gruppen(d, 'rolle')], ['Kartentyp', gruppen(d, 'typ')], ['Manawert', gruppen(d, 'mv')]]
+  .map(([t, gs]) => [t, gs.map(g => [`${t}:${g.label}`, g.label, g.count])])
+  .concat([['Eine Karte', d.cards.filter(c => c.role !== 'commander').sort((a, b) => a.name.localeCompare(b.name)).map(c => [`karte:${c.oracle_id}`, c.name, c.qty])]]);
+function rechnerUi(d) {
+  const erg = $('#w-erg');
+  if (!erg) return;
+  const N = d.stats.hand.n, rechne = () => {
+    const opt = $('#w-gruppe').selectedOptions[0], K = +opt.dataset.k, k = +$('#w-k').value, zug = +$('#w-zug').value, n = 7 + zug - 1 + ($('#w-erst').checked ? 1 : 0);
+    erg.innerHTML = `<b>${pct(Deck.mindestens(N, K, n, k))}</b>: So oft hast du bis Zug ${zug} mindestens ${k} ${k === 1 ? 'Karte' : 'Karten'} aus „${esc(opt.textContent.replace(/ \(\d+\)$/, ''))}“ gesehen (${K} von ${N} Karten, ${n} gesehen).`;
+  };
+  ['#w-k', '#w-gruppe', '#w-zug', '#w-erst'].forEach(s => { $(s).onchange = rechne; });
+  rechne();
 }
 function handUi(d) {
   const neu = $('#h-neu');
   if (!neu) return;
+  rechnerUi(d);
   const stapel = d.cards.filter(c => c.role !== 'commander').flatMap(c => Array(c.qty).fill(c));
   let deck = [], pos = 0, mull = 0;
   const misch = () => { deck = stapel.slice(); for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; } pos = 7; };
@@ -1132,12 +1176,12 @@ async function improveUi() {
   const box = $('#improve');
   if (!box) return;
   try {
-    const r = await api('improve?' + box.dataset.q), voll = r.stufen.filter(st => st.items.length);
+    const r = await api('improve?' + box.dataset.q), voll = r.stufen.filter(st => st.items.length), tausch = box.dataset.q.startsWith('id=');
     box.innerHTML = `<h2>Verbessern ${info('improve', 'Verbessern')}</h2>${r.grund ? `<p class="muted">${esc(r.grund)}</p>` : !voll.length ? '<p class="muted">Nichts gefunden, was beliebter ist als die schwächsten Karten im Deck und frei oder bis 5 € zu haben ist.</p>'
       : `<p class="lead">Karten, die bei EDHREC für diesen Commander beliebter sind als die schwächste Karte derselben Rolle in deinem Deck.${proxyAn() ? ` <a href="#/proxy?karten=${encodeURIComponent(voll.filter(st => st.key !== 'frei').flatMap(st => st.items.map(u => u.rein.name)).join('\n'))}">Die zum Kaufen als Proxys ausprobieren</a>` : ''}</p>${voll.map(st => `<h3>${esc(st.label)}</h3><div class="rows">${st.items.map(u => `
         <div class="row swap"><span data-oid="${esc(u.rein.oracle_id)}"${peekAt(u.rein.image, u.rein.name, eur(u.rein.price))}>${pic(small(u.rein.image), '', 'thumb')}</span>
           <div class="min0"><div class="name" data-oid="${esc(u.rein.oracle_id)}">${esc(u.rein.name)}</div><div class="sub2">statt <span class="link" data-oid="${esc(u.raus.oracle_id)}">${esc(u.raus.name)}</span>, ${esc(u.label)}, in ${Math.round(u.rein.inc * 100)} % der Decks</div></div>
-          <div></div><div class="price">${st.key === 'frei' ? 'hast du' : eur(u.rein.price)}</div></div>`).join('')}</div>`).join('')}`}`;
+          <div>${tausch ? `<button class="btn small" type="button" data-rein="${esc(u.rein.oracle_id)}" data-raus="${esc(u.raus.oracle_id)}">Tauschen</button>` : ''}</div><div class="price">${st.key === 'frei' ? 'hast du' : eur(u.rein.price)}</div></div>`).join('')}</div>`).join('')}`}`;
   } catch (e) { if (!(e instanceof LoginNoetig)) box.innerHTML = `<h2>Verbessern</h2>${ladeFehler(e)}`; }
 }
 
@@ -1203,7 +1247,8 @@ function showDeck(d, buildId, themeSel = 'auto') {
           ${themeSelect(d, themeSel)}
           <button class="btn primary" type="button" id="save">Deck speichern</button>` : `<span class="tag">Bracket ${d.bracket}</span>`}
         <a class="btn" ${saved ? `href="/api/deck/${d.id}.txt" download="${esc(c.name)}.txt"` : 'href="#" id="txt"'}>${icon('text')}Textliste (Moxfield, Archidekt)</a>${bracketBtn}
-        ${saved ? `<a class="btn" href="#/decks?id=${d.id}&pick=1">${icon('layers')}Zusammensuchen</a><a class="btn" href="#/decks?id=${d.id}&zerlegen=1">Zerlegen: wohin?</a><button class="btn danger" type="button" id="del">${icon('trash')}Deck auflösen</button>` : ''}<a class="btn ghost" href="#/decks">${icon('left')}Alle Decks</a></div></div></section>
+        ${saved ? `<button class="btn" type="button" id="bearb" aria-pressed="${deckEdit === d.id}">${icon('cards')}Bearbeiten</button><button class="btn" type="button" id="deck-kopie">Kopieren</button><a class="btn" href="#/vergleich?a=id:${d.id}">Vergleichen</a>
+          <a class="btn" href="#/decks?id=${d.id}&pick=1">${icon('layers')}Zusammensuchen</a><a class="btn" href="#/decks?id=${d.id}&zerlegen=1">Zerlegen: wohin?</a><button class="btn danger" type="button" id="del">${icon('trash')}Deck auflösen</button>` : ''}<a class="btn ghost" href="#/decks">${icon('left')}Alle Decks</a></div></div></section>
     ${deckKarten(d)}
     ${manaHtml(d.stats)}
     ${handHtml(d)}
@@ -1222,6 +1267,13 @@ function showDeck(d, buildId, themeSel = 'auto') {
       catch (e) { flash('Fehler: ' + e.message); }
     };
     $('#txt').onclick = e => { e.currentTarget.href = URL.createObjectURL(new Blob([text], {type: 'text/plain'})); e.currentTarget.download = c.name + '.txt'; };
+  }
+  if (saved) {
+    $('#bearb').onclick = () => { deckEdit = deckEdit === d.id ? null : d.id; render(true); };
+    $('#deck-kopie').onclick = async () => {
+      try { const r = await post(`deck/${d.id}/kopie`); flash('Kopie angelegt, sie teilt sich die Karten mit dem Original'); location.hash = `#/decks?id=${r.id}`; }
+      catch (e) { if (!(e instanceof LoginNoetig)) flash(e.message); }
+    };
   }
   if (saved) $('#del').onclick = async () => {
     if (!confirm(`Deck „${c.name}“ auflösen? Die Karten werden wieder frei.`)) return;
@@ -1270,7 +1322,7 @@ function showBinderDeck(d) {
       ${facts([[d.count, 'Karten'], [eur(d.value), 'Wert'], [fmt(d.avg_cmc, 2), 'Ø Manawert', 'cmc'], [d.gc, 'Game Changer', 'gc']])}
       <div class="seg noprint gap-top">
         ${!c && kand.length ? `<label class="inl">Commander <select id="cmd"><option value="">wählen</option>${kand.map(x => `<option value="${esc(x.oracle_id)}">${esc(x.name)}</option>`).join('')}</select></label>` : ''}
-        <a class="btn" href="/api/binder-deck.txt?name=${encodeURIComponent(d.binder)}" download="${esc(d.name)}.txt">${icon('text')}Textliste</a>${bracketBtn}
+        <a class="btn" href="/api/binder-deck.txt?name=${encodeURIComponent(d.binder)}" download="${esc(d.name)}.txt">${icon('text')}Textliste</a>${bracketBtn}<a class="btn" href="#/vergleich?a=${encodeURIComponent('binder:' + d.binder)}">Vergleichen</a>
         <a class="btn" href="#/decks?binder=${encodeURIComponent(d.binder)}&zerlegen=1">Zerlegen: wohin?</a><button class="btn danger" type="button" id="del">${icon('trash')}Aus der Sammlung entfernen</button><a class="btn ghost" href="#/decks">${icon('left')}Alle Decks</a></div></div></section>
     ${deckKarten(d)}
     ${manaHtml(d.stats)}
@@ -1287,6 +1339,114 @@ function showBinderDeck(d) {
     await api('binder-deck?delete=1&name=' + encodeURIComponent(d.binder), {method: 'POST'});
     flash(`„${d.name}“ entfernt`); location.hash = '#/decks';
   };
+}
+
+// --- Spieltisch (Phase 62): ein Spiel allein, Zug für Zug; die Regeln stehen in ui/deck.js (Deck.Tisch), nichts geht an den Server ----------
+let tisch = null;
+const PZIEL = [['feld', 'Aufs Spielfeld'], ['hand', 'Auf die Hand'], ['friedhof', 'Auf den Friedhof'], ['exil', 'Ins Exil'], ['oben', 'Oben auf die Bibliothek'],
+  ['unten', 'Unter die Bibliothek'], ['kommando', 'In die Kommandozone']];
+async function viewSpieltisch(p) {
+  const d = await api(p.get('id') ? 'deck/' + p.get('id') : 'binder-deck?name=' + encodeURIComponent(p.get('binder') || ''));
+  const cmds = d.commanders?.length ? d.commanders : d.commander ? [d.commander] : [];
+  tisch = {cmds, karten: d.cards.filter(c => c.role !== 'commander')};
+  tisch.s = Deck.Tisch.neu(tisch.karten, cmds);
+  const zurueck = p.get('id') ? `#/decks?id=${p.get('id')}` : `#/decks?binder=${encodeURIComponent(d.binder)}`;
+  main.innerHTML = `${head(`Spieltisch: ${esc(d.name)}`, `Ein Spiel allein zum Ausprobieren, nichts wird gespeichert. ${info('spieltisch', 'Spieltisch')}`,
+    `<a class="btn ghost" href="${zurueck}">${icon('left')}Zum Deck</a>`)}<div id="probe"></div>`;
+  main.onclick = e => {
+    const b = e.target.closest('[data-pa], [data-pk], [data-pm]');
+    if (!b) return;
+    const s = tisch.s, T = Deck.Tisch, a = b.dataset.pa;
+    if (b.dataset.pk && s.feld.some(c => c.uid === +b.dataset.pk)) T.tappen(s, +b.dataset.pk);
+    else if (b.dataset.pk || b.dataset.pm) return tischMenue(+(b.dataset.pk || b.dataset.pm));
+    else if (a === 'zug') T.naechsterZug(s);
+    else if (a === 'ziehen') T.ziehen(s);
+    else if (a === 'mull') T.mulligan(s);
+    else if (a === 'mischen') { T.mischen(s); flash('Bibliothek gemischt'); }
+    else if (a === 'neu') tisch.s = T.neu(tisch.karten, tisch.cmds);
+    else if (a === 'suchen') return tischSuchen();
+    else if (a.startsWith('leben')) s.leben += +a.slice(5);
+    tischZeigen();
+  };
+  tischZeigen();
+}
+const tischKarte = (c, feld) => `<div class="probe-k${c.tapped ? ' tapped' : ''}"><button type="button" class="img" data-pk="${c.uid}"${peekAt(c.karte.image, c.karte.name, '')}
+  aria-label="${esc(c.karte.name)}${feld ? (c.tapped ? ', getappt. Enttappen' : '. Tappen') : '. Wohin?'}">${pic(c.karte.image, c.karte.name)}</button>
+  ${feld ? `<button type="button" class="link" data-pm="${c.uid}" aria-label="${esc(c.karte.name)}: wohin?">wohin?</button>` : ''}
+  ${c.commander && !feld ? `<span class="sub2">Steuer +${Deck.Tisch.steuer(tisch.s, c.uid)}</span>` : ''}</div>`;
+function tischZeigen() {
+  const s = tisch.s, land = c => /Land/.test(c.karte.type || '');
+  const zone = (titel, karten, feld, leer) => `<section class="sec probe-zone" aria-label="${titel}"><h2>${titel} <small>${karten.length}</small></h2>
+    ${karten.length ? `<div class="probe-reihe">${karten.map(c => tischKarte(c, feld)).join('')}</div>` : `<p class="muted">${leer}</p>`}</section>`;
+  const leben = [-5, -1, 1, 5].map(n => `<button class="btn small" type="button" data-pa="leben${n}" aria-label="Leben ${n > 0 ? '+' : ''}${n}">${n > 0 ? '+' : '−'}${Math.abs(n)}</button>`);
+  $('#probe').innerHTML = `<div class="toolbar probe-leiste" role="group" aria-label="Spiel">
+      <span>Zug <b>${s.zug}</b></span><span class="probe-leben">${leben.slice(0, 2).join('')}<span>Leben <b>${s.leben}</b></span>${leben.slice(2).join('')}</span>
+      <span>Bibliothek <b>${s.bib.length}</b></span>
+      <button class="btn primary" type="button" data-pa="zug">Nächster Zug</button><button class="btn" type="button" data-pa="ziehen">Karte ziehen</button>
+      <button class="btn" type="button" data-pa="mull">Mulligan</button><button class="btn" type="button" data-pa="suchen">${icon('search')}Bibliothek durchsuchen</button>
+      <button class="btn" type="button" data-pa="mischen">Mischen</button><button class="btn ghost" type="button" data-pa="neu">${icon('refresh')}Neues Spiel</button></div>
+    ${s.mull ? `<p class="note-line">${s.mull}. Mulligan: Lege ${Math.max(0, s.mull - 1)} ${s.mull === 2 ? 'Karte' : 'Karten'} von der Hand unter die Bibliothek (der erste Mulligan ist in Commander frei).</p>` : ''}
+    ${zone('Kommandozone', s.kommando, false, 'Leer.')}${zone('Spielfeld: Länder', s.feld.filter(land), true, 'Noch kein Land.')}
+    ${zone('Spielfeld', s.feld.filter(c => !land(c)), true, 'Noch nichts ausgespielt.')}${zone('Hand', s.hand, false, 'Keine Karten.')}
+    <div class="split even">${zone('Friedhof', s.friedhof, false, 'Leer.')}${zone('Exil', s.exil, false, 'Leer.')}</div>`;
+}
+function tischMenue(uid) {
+  const [von, i] = Deck.Tisch.finden(tisch.s, uid), c = tisch.s[von][i];
+  dlg.className = 'modal';
+  dlg.innerHTML = `<button class="x" data-close aria-label="Schließen">${icon('x')}</button><div class="box"><h2 id="dlg-title">${esc(c.karte.name)}: wohin?</h2>
+    <div class="actions probe-ziele">${PZIEL.filter(([z]) => z !== von && (z !== 'kommando' || c.commander)).map(([z, l]) => `<button class="btn" type="button" data-pz="${z}" data-uid="${uid}">${l}</button>`).join('')}</div></div>`;
+  showDlg();
+}
+function tischSuchen() {  // ponytail: eine Karte nehmen und danach mischen, wie beim Suchen im Spiel; mehr als eine heißt zweimal suchen
+  const karten = tisch.s.bib.slice().sort((a, b) => a.karte.name.localeCompare(b.karte.name));
+  dlg.className = 'modal';
+  dlg.innerHTML = `<button class="x" data-close aria-label="Schließen">${icon('x')}</button><div class="box"><h2 id="dlg-title">Bibliothek durchsuchen <small>${karten.length}</small></h2>
+    <p class="muted">Eine Karte antippen: Sie kommt auf die Hand, danach wird gemischt.</p>
+    <div class="rows">${karten.map(c => `<button type="button" class="row" data-pz="hand" data-uid="${c.uid}" data-mischen="1"${peekAt(c.karte.image, c.karte.name, '')}>${pic(small(c.karte.image), '', 'thumb')}
+      <span class="min0 name">${esc(c.karte.name)}</span><span></span><span></span></button>`).join('')}</div></div>`;
+  showDlg();
+}
+function tischZiel(b) {
+  Deck.Tisch.bewegen(tisch.s, +b.dataset.uid, b.dataset.pz);
+  if (b.dataset.mischen) Deck.Tisch.mischen(tisch.s);
+  dlg.close();
+  if ($('#probe')) tischZeigen();
+}
+
+// --- Decks vergleichen (Phase 64): zwei eigene Decks oder eins gegen eine eingefügte Liste; was fehlt, rechnet der Server (deckbuild.vergleich) ----
+async function viewVergleich(p) {
+  const dl = await api('decks');
+  const opts = [...dl.fertig.map(d => [`binder:${d.binder}`, d.name, 'fertig']), ...dl.items.map(d => [`id:${d.id}`, d.name, 'gebaut'])];
+  const a = p.get('a') || opts[0]?.[0] || 'text';
+  const seite = (s, vor) => `<div class="field"><label for="v-${s}">Deck ${s.toUpperCase()}</label><select id="v-${s}" name="${s}">
+      ${opts.map(([k, n, art]) => `<option value="${esc(k)}"${k === vor ? ' selected' : ''}>${esc(n)} (${art})</option>`).join('')}<option value="text"${vor === 'text' ? ' selected' : ''}>Liste einfügen …</option></select>
+    <textarea id="v-${s}text" name="${s}text" spellcheck="false" aria-label="Liste für Deck ${s.toUpperCase()}" placeholder="Commander&#10;1 Atraxa, Praetors' Voice&#10;&#10;Deck&#10;1 Sol Ring"${vor === 'text' ? '' : ' hidden'}></textarea></div>`;
+  main.innerHTML = `${head('Decks vergleichen', 'Zwei deiner Decks nebeneinander, oder eines gegen eine Liste aus dem Netz (zum Beispiel aus Moxfield oder Archidekt). Du siehst, was beide haben, was nur in einem steckt und was dir fehlt.',
+    `<a class="btn ghost" href="#/decks">${icon('left')}Decks</a>`)}
+    <form class="sec" data-vergleich="1"><div class="split even">${seite('a', a)}${seite('b', 'text')}</div>
+      <div class="actions gap-top"><span class="left muted">Eine Liste liest die App wie beim Hochladen. Namen, die sie nicht kennt, fragt sie bei Scryfall nach.</span><button class="btn primary" type="submit">Vergleichen</button></div></form>
+    <div id="v-erg" aria-live="polite"></div>`;
+  main.onchange = e => { if (e.target.matches('#v-a, #v-b')) $(`#${e.target.id}text`).hidden = e.target.value !== 'text'; };
+}
+async function vergleichForm(f) {
+  const seite = s => { const v = f[s].value; return v === 'text' ? {text: f[s + 'text'].value} : v.startsWith('id:') ? {id: +v.slice(3)} : {binder: v.slice(7)}; };
+  const box = $('#v-erg');
+  box.innerHTML = '<div class="progress busy"><span></span></div>';
+  try { box.innerHTML = vergleichHtml(await post('vergleich', {a: seite('a'), b: seite('b')})); }
+  catch (e) { if (!(e instanceof LoginNoetig)) box.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
+}
+const vZeile = k => `<div class="row" data-oid="${esc(k.oracle_id)}"${peekAt(k.image, k.name, k.preis ? eur(k.preis) : '')}>${pic(small(k.image), '', 'thumb')}
+  <div class="min0"><div class="name">${esc(k.name)}</div><div class="sub2">A ${k.a}, B ${k.b}, du hast ${k.besitz}${k.besitz ? `, davon frei ${k.frei}` : ''}</div></div>
+  <div>${k.fehlt_a || k.fehlt_b ? `<span class="chip warn">fehlt ${[k.fehlt_a && `A ${k.fehlt_a}`, k.fehlt_b && `B ${k.fehlt_b}`].filter(Boolean).join(', ')}</span>` : ''}</div>
+  <div class="price">${k.preis ? eur(k.preis) : ''}</div></div>`;
+function vergleichHtml(r) {
+  const A = esc(r.a.name), B = esc(r.b.name);
+  const fehlt = (s, n) => r.fehlt[s].karten ? `Für ${n} fehlen dir ${karten(r.fehlt[s].karten)}, zusammen etwa ${eur(r.fehlt[s].preis)}.` : `Für ${n} hast du alle Karten.`;
+  const teil = (t, l) => `<section class="sec" aria-label="${t}"><h2>${t} <small>${l.length}</small></h2>${l.length ? `<div class="rows">${l.map(vZeile).join('')}</div>` : '<p class="muted">Keine.</p>'}</section>`;
+  return `${facts([[`${karten(r.a.karten)}`, `A: ${A}`], [`${karten(r.b.karten)}`, `B: ${B}`], [r.beide.length, 'in beiden'], [r.nur_a.length, 'nur in A'], [r.nur_b.length, 'nur in B']])}
+    <p class="lead gap-top">${fehlt('a', `A (${A})`)} ${fehlt('b', `B (${B})`)} Standardländer zählen nie als fehlend.</p>
+    ${[r.a, r.b].map((x, i) => x.unbekannt.length ? `<p class="note-line">In ${i ? 'B' : 'A'} nicht erkannt: ${esc(x.unbekannt.join(', '))}</p>` : '').join('')}
+    ${teil('In beiden', r.beide)}${teil(`Nur in A: ${A}`, r.nur_a)}${teil(`Nur in B: ${B}`, r.nur_b)}`;
 }
 
 // --- Konten und Sicherung (Phase 13): Hauptkonto, Unterkonten mit eigener Sammlung, Anmeldung, Sicherung ----------------
@@ -1633,6 +1793,8 @@ document.addEventListener('submit', e => {
   else if (f.dataset.spiel) spielForm(f, e.submitter);
   else if (f.dataset.gruppe) gruppeForm(f);
   else if (f.dataset.tisch) tischForm(f);
+  else if (f.dataset.deckadd) deckSuche(f);
+  else if (f.dataset.vergleich) vergleichForm(f);
   else if (f.dataset.proxy) proxyForm(f);
   else if (f.dataset.erf) erfForm(f);
   else if (f.dataset.erfab) erfUebernehmen(f);
@@ -2109,6 +2271,10 @@ document.addEventListener('click', e => {
   if (sw) return switchTo(sw.dataset.open);
   const del = e.target.closest('[data-del]');
   if (del) return delKonto(del.dataset.del, del.dataset.label);
+  const pz = e.target.closest('[data-pz]');
+  if (pz) return tischZiel(pz);
+  const dk = e.target.closest('[data-rein], [data-raus]');
+  if (dk) return deckAendern(dk.dataset.rein, dk.dataset.raus);
   const a = e.target.closest('[data-oid]');
   if (a && !e.target.closest('input')) { e.preventDefault(); openCard(a.dataset.oid).catch(err => flash('Fehler: ' + err.message)); }
 });
@@ -3571,7 +3737,8 @@ async function viewMessbilder() {
 }
 
 const VIEWS = {'': ['Übersicht', viewHome], cards: ['Karten', viewCards], sets: ['Serien', viewSets], sort: ['Sortieren', viewSort], scan: ['Scannen', viewScan], sell: ['Verkaufen', viewSell], decks: ['Decks', viewDecks], wuensche: ['Wünsche', viewWuensche], spiele: ['Spiele', viewSpiele], help: ['Hilfe', viewHelp],
-  konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true]};  // true: nicht in der Navigation (Link im Fuß)
+  konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true],
+  spieltisch: ['Spieltisch', viewSpieltisch, true], vergleich: ['Decks vergleichen', viewVergleich, true]};  // true: nicht in der Navigation (Link im Fuß)
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
 let rendered = null, enterTimer, neueAnsicht = false;
 // Zahl läuft beim ersten Aufruf der Ansicht hoch (nicht beim Neuzeichnen, nicht bei reduzierter Bewegung)

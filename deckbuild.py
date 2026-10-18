@@ -707,6 +707,130 @@ def delete_deck(conn, did):
         return conn.execute("DELETE FROM decks WHERE id = ?", (did,)).rowcount
 
 
+VIELE = "a deck can have any number of cards named"  # Relentless Rats und Co. dürfen mehrfach ins Deck
+
+
+def deck_aendern(conn, did, rein=None, raus=None):
+    """Gespeichertes Deck von Hand ändern (Phase 61): eine Kopie von raus heraus, eine von rein hinein, Tauschen = beides, in einer Transaktion.
+    Der Commander bleibt; rein muss bekannt sein, für Commander erlaubt, in der Farbidentität und (außer Standardländern) neu im Deck."""
+    d = conn.execute("SELECT commander_oracle_id FROM decks WHERE id = ?", (did,)).fetchone()
+    if not d:
+        raise ValueError("Unbekanntes Deck")
+    if not (rein or raus):
+        raise ValueError("Keine Karte angegeben")
+    if d[0] and d[0] in (rein, raus):
+        raise ValueError("Der Commander bleibt im Deck")
+    karte = lambda oid: conn.execute("SELECT name, type_line, oracle_text, color_identity, legal_commander FROM cards WHERE oracle_id = ? "
+                                     "ORDER BY updated_at DESC LIMIT 1", (oid,)).fetchone()
+    with conn:  # eine Ausnahme nimmt auch das Herausnehmen zurück
+        if raus and not conn.execute("DELETE FROM deck_cards WHERE rowid = (SELECT MIN(rowid) FROM deck_cards WHERE deck_id = ? AND oracle_id = ?)",
+                                     (did, raus)).rowcount:
+            raise ValueError("Die Karte steckt nicht im Deck")
+        if rein:
+            c, cmd = karte(rein), karte(d[0])
+            if not c:
+                raise ValueError("Unbekannte Karte")
+            tl = c["type_line"] or ""
+            if not c["legal_commander"]:
+                raise ValueError(f"{c['name']} ist in Commander nicht erlaubt")
+            if cmd and not set(c["color_identity"] or "") <= set(cmd["color_identity"] or ""):
+                raise ValueError(f"{c['name']} passt nicht zur Farbidentität des Commanders")
+            if not tl.startswith("Basic") and VIELE not in (c["oracle_text"] or "").lower() and conn.execute(
+                    "SELECT 1 FROM deck_cards WHERE deck_id = ? AND oracle_id = ?", (did, rein)).fetchone():
+                raise ValueError(f"{c['name']} ist schon im Deck")
+            tags = {r[0] for r in conn.execute("SELECT tag FROM tags WHERE oracle_id = ?", (rein,))}
+            role = "basic" if tl.startswith("Basic") else "land" if is_land(tl) else next((ROLE[t] for t in TAGS if t in tags), "core")
+            conn.execute("INSERT INTO deck_cards VALUES (?,?,?)", (did, rein, role))
+    return deck_detail(conn, did)
+
+
+def deck_kopie(conn, did):
+    """Kopie eines gespeicherten Decks (Phase 61): gleicher Commander, gleiche Karten, Name mit „(Kopie)“. -> neue ID"""
+    d = deck_detail(conn, did)
+    if not d:
+        raise ValueError("Unbekanntes Deck")
+    meta = conn.execute("SELECT value FROM meta WHERE key = ?", (f"deck:{did}",)).fetchone()
+    with conn:
+        neu = conn.execute("INSERT INTO decks(name, commander_oracle_id, bracket, saved_at) SELECT name || ' (Kopie)', commander_oracle_id, bracket, ? "
+                           "FROM decks WHERE id = ?", (mtg.now_iso(), did)).lastrowid
+        conn.execute("INSERT INTO deck_cards SELECT ?, oracle_id, role FROM deck_cards WHERE deck_id = ? ORDER BY rowid", (neu, did))
+        if meta:
+            conn.execute("INSERT OR REPLACE INTO meta VALUES (?,?)", (f"deck:{neu}", meta[0]))
+    return neu
+
+
+def deck_suche(conn, did, q, limit=24):
+    """Karten im Besitz für „Karte hinzufügen“ (Phase 61): Name enthält q, passt zur Farbidentität, für Commander erlaubt; frei = Kopien,
+    die kein fertiges und kein gespeichertes Deck belegt; drin = schon in diesem Deck (außer Standardländern). Freie Karten zuerst."""
+    d = deck_detail(conn, did)
+    if not d or len(q.strip()) < 2:
+        return []
+    ci, frei = set((d["commander"] or {}).get("ci") or ""), free_copies(conn)
+    rows = conn.execute(
+        f"SELECT c.oracle_id, c.name, c.type_line, c.mana_cost, c.image_url image, c.color_identity ci, MIN({mtg.PRICE}) price "
+        f"FROM collection col JOIN cards c USING (scryfall_id) WHERE {mtg.OWNED} AND c.legal_commander AND c.name LIKE ? "
+        f"GROUP BY c.oracle_id ORDER BY c.name", (f"%{q.strip()}%",)).fetchall()
+    drin = {c["oracle_id"] for c in d["cards"] if c["role"] != "basic"} | ({d["commander"]["oracle_id"]} if d["commander"] else set())
+    out = [dict(r) | {"frei": frei.get(r["oracle_id"], 0), "drin": r["oracle_id"] in drin} for r in rows if set(r["ci"] or "") <= ci]
+    return sorted(out, key=lambda r: not r["frei"])[:limit]
+
+
+def _vergleich_seite(conn, x, lookup):
+    """Eine Seite des Vergleichs: {"id"} gespeichertes Deck, {"binder"} fertiges Deck, {"text"} eingefügte Liste (wie beim Import gelesen).
+    -> (Name, {oracle_id: Menge}, unbekannte Namen)"""
+    x = x if isinstance(x, dict) else {}
+    if x.get("id") is not None or x.get("binder"):
+        d = deck_detail(conn, int(x["id"])) if x.get("id") is not None else binder_deck(conn, str(x["binder"]))
+        if not d:
+            raise ValueError("Unbekanntes Deck")
+        menge = Counter()
+        for c in d["cards"] + (d.get("commanders") or ([d["commander"]] if d.get("commander") else [])):
+            menge[c["oracle_id"]] += c.get("qty") or 1
+        return d["name"], dict(menge), []
+    teil = mtg.parse_decklist(str(x.get("text") or ""))
+    if not teil["cards"]:
+        raise ValueError("In der Liste steht keine Karte")
+    ids = mtg.resolve(conn, teil["cards"], lookup)
+    oids = {r[0]: r[1] for r in conn.execute("SELECT scryfall_id, oracle_id FROM cards WHERE scryfall_id IN (SELECT value FROM json_each(?))",
+                                             (json.dumps([i for i in ids if i]),))}
+    menge, unbekannt = Counter(), []
+    for c, sid in zip(teil["cards"], ids):
+        if oids.get(sid):
+            menge[oids[sid]] += c["qty"]
+        else:
+            unbekannt.append(c["name"])
+    return teil["name"] or "Eingefügte Liste", dict(menge), unbekannt
+
+
+def vergleich(conn, a, b, lookup=None):
+    """Zwei Decks vergleichen (Phase 64): je Karte Menge in A und B, Kopien im Besitz und frei, Preis (billigster Druck); „fehlt“ = mehr nötig,
+    als du besitzt (Standardländer fehlen nie). -> {a, b, beide, nur_a, nur_b, fehlt: {a, b}}"""
+    seiten = [_vergleich_seite(conn, x, lookup or sources.scryfall_lookup) for x in (a, b)]
+    alle = sorted(set(seiten[0][1]) | set(seiten[1][1]))
+    info = {r["oracle_id"]: r for r in conn.execute(
+        "SELECT oracle_id, name, image_url image, type_line, MIN(COALESCE(price_eur, price_eur_foil)) preis FROM cards "
+        "WHERE oracle_id IN (SELECT value FROM json_each(?)) GROUP BY oracle_id", (json.dumps(alle),))}
+    besitz = {r[0]: r[1] for r in conn.execute(
+        f"SELECT c.oracle_id, SUM(col.qty) FROM collection col JOIN cards c USING (scryfall_id) WHERE {mtg.OWNED} "
+        f"AND c.oracle_id IN (SELECT value FROM json_each(?)) GROUP BY c.oracle_id", (json.dumps(alle),))}
+    frei, preis = free_copies(conn), cheapest(conn)
+    out = {"beide": [], "nur_a": [], "nur_b": []}
+    fehlt = {s: {"karten": 0, "preis": 0.0} for s in "ab"}
+    for oid in alle:
+        r = info.get(oid) or {"name": oid, "image": None, "type_line": "", "preis": None}  # Karte ohne Zeile in cards (wie in deck_detail)
+        basic = (r["type_line"] or "").startswith("Basic")
+        k = {"oracle_id": oid, "name": r["name"], "image": r["image"], "a": seiten[0][1].get(oid, 0), "b": seiten[1][1].get(oid, 0),
+             "besitz": besitz.get(oid, 0), "frei": frei.get(oid, 0), "preis": 0.0 if basic else preis.get(oid, r["preis"])}
+        for s in "ab":
+            k["fehlt_" + s] = 0 if basic else max(0, k[s] - k["besitz"])
+            fehlt[s]["karten"] += k["fehlt_" + s]
+            fehlt[s]["preis"] += k["fehlt_" + s] * (k["preis"] or 0)
+        out["beide" if k["a"] and k["b"] else "nur_a" if k["a"] else "nur_b"].append(k)
+    for lst in out.values():
+        lst.sort(key=lambda k: k["name"].lower())
+    return out | {s: {"name": n, "karten": sum(m.values()), "unbekannt": u} for s, (n, m, u) in zip("ab", seiten)} | {"fehlt": fehlt}
+
+
 def cheapest(conn):
     """oracle_id -> billigster Preis unter den Kopien im Besitz."""
     return {r[0]: r[1] for r in conn.execute(

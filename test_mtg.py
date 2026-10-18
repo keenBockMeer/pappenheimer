@@ -2167,6 +2167,48 @@ def test_verbessern_leiter(welt, conn):
     assert json.loads(server.dispatch(conn, "GET", "/api/improve", {"id": str(did)}, names=welt.names)[2])["stufen"][2]["items"][0]["rein"]["name"] == "Unbesitz B"
 
 
+def test_deck_bearbeiten(conn):
+    """Phase 61: rein, raus, tauschen; Commander, Farbidentität, Legalität und zweite Kopie werden abgelehnt (das Herausnehmen auch zurück),
+    Standardländer und „any number“ dürfen mehrfach; Kopie mit gleichen Karten, der Plan gibt jeder Kopie höchstens ein Deck; Suche mit freien Kopien"""
+    karte(conn, 1, "Chef", ci="BG", typ="Legendary Creature — Elf")
+    karte(conn, 2, "Grün", ci="G", qty=2)
+    karte(conn, 3, "Blau", ci="U")
+    karte(conn, 4, "Forest", typ="Basic Land — Forest", eur=0.1)
+    karte(conn, 5, "Ratten", ci="B", text="A deck can have any number of cards named Ratten.")
+    karte(conn, 6, "Verboten", ci="G", legal=False)
+    karte(conn, 7, "Grün Zwei", ci="G")
+    karte(conn, 8, "Grün Drei", ci="G")
+    conn.execute("INSERT INTO decks(id, name, commander_oracle_id, bracket, saved_at) VALUES (1, 'Chef', ?, 3, 'x')", (oid(1),))
+    conn.executemany("INSERT INTO deck_cards VALUES (1,?,?)", [(oid(1), "commander"), (oid(2), "core")])
+    conn.commit()
+    drin = lambda d: sorted((c["name"], c["qty"], c["role"]) for c in d["cards"])
+    assert drin(deckbuild.deck_aendern(conn, 1, rein=oid(7))) == [("Grün", 1, "core"), ("Grün Zwei", 1, "core")]
+    for rein, fehler in ((oid(3), "Farbidentität"), (oid(2), "schon im Deck"), (oid(6), "nicht erlaubt"), (oid(1), "Commander"), ("x", "Unbekannte")):
+        with pytest.raises(ValueError, match=fehler):
+            deckbuild.deck_aendern(conn, 1, rein=rein, raus=oid(7))
+    for raus, fehler in ((oid(3), "nicht im Deck"), (oid(1), "Commander")):
+        with pytest.raises(ValueError, match=fehler):
+            deckbuild.deck_aendern(conn, 1, raus=raus)
+    assert drin(deckbuild.deck_detail(conn, 1)) == [("Grün", 1, "core"), ("Grün Zwei", 1, "core")]  # nichts halb geändert
+    for n in (4, 4, 5, 5):
+        d = deckbuild.deck_aendern(conn, 1, rein=oid(n))
+    assert drin(d) == [("Forest", 2, "basic"), ("Grün", 1, "core"), ("Grün Zwei", 1, "core"), ("Ratten", 2, "core")]
+    d = deckbuild.deck_aendern(conn, 1, rein=oid(8), raus=oid(7))  # tauschen
+    assert {c["name"] for c in d["cards"]} == {"Forest", "Grün", "Grün Drei", "Ratten"} and d["commander"]["name"] == "Chef"
+    neu = deckbuild.deck_kopie(conn, 1)
+    k = deckbuild.deck_detail(conn, neu)
+    assert k["name"] == "Chef (Kopie)" and drin(k) == drin(d) and k["commander"]["name"] == "Chef"
+    assert {f["name"] for f in deckbuild.pick_list(conn, neu)["fehlt"]} == {"Chef", "Grün Drei", "Ratten"}  # je eine Kopie, die hat das erste Deck
+    assert [(r["name"], r["frei"], r["drin"]) for r in deckbuild.deck_suche(conn, 1, "grün")] == [("Grün Zwei", 1, False), ("Grün", 0, True), ("Grün Drei", 0, True)]
+    assert deckbuild.deck_suche(conn, 1, "g") == []
+    code, _, b = server.dispatch(conn, "POST", "/api/deck/1/aendern", {}, json.dumps({"raus": oid(8), "rein": oid(7)}).encode())
+    assert code == 200 and "Grün Zwei" in {c["name"] for c in json.loads(b)["cards"]}
+    code, _, b = server.dispatch(conn, "POST", "/api/deck/1/aendern", {}, json.dumps({"raus": oid(3)}).encode())
+    assert code == 400 and "nicht im Deck" in json.loads(b)["error"]
+    assert json.loads(server.dispatch(conn, "GET", "/api/deck/1/suche", {"q": "drei"})[2])["items"][0]["name"] == "Grün Drei"
+    assert json.loads(server.dispatch(conn, "POST", "/api/deck/1/kopie", {})[2])["id"] == neu + 1
+
+
 def test_zusammensuchen_pick_liste(welt, conn):
     d = deckbuild.build(conn, welt.CMD, 4, fetch=welt.fetch, fetch_names=welt.names)
     did = deckbuild.save_deck(conn, d)
@@ -6070,7 +6112,7 @@ def test_einrichtung_server_startet_und_antwortet_nur_auf_die_einrichtung(einric
     schliche = ["/", "/app.js/", "/./app.js", "/%61pp.js", "/APP.JS", "/app.js%00", "/../server.py", "/..%2fserver.py", "/fonts/",
                 "/fonts/../app.js", "/gibtsnicht", "/index.html/", "/konten.db", "/einrichtung.code", "/data/einrichtung.code"]
     offen = {pfad for pfad in dateien + schliche if anfrage("GET", pfad)[0] != 403}
-    assert offen == set(server.EINRICHTUNG_DATEIEN) == {"/", "/zaehler.js", "/app.js", "/style.css", "/favicon.svg", "/grain.svg", "/fonts/Geist-Variable.woff2"}
+    assert offen == set(server.EINRICHTUNG_DATEIEN) == {"/", "/zaehler.js", "/deck.js", "/app.js", "/style.css", "/favicon.svg", "/grain.svg", "/fonts/Geist-Variable.woff2"}
     seite = (ui / "index.html").read_text(encoding="utf-8")
     assert set(re.findall(r'(?:src|href)="(/[^"]*)"', seite)) - {"/manifest.webmanifest", "/icon-180.png"} <= offen  # was die Seite lädt, ist offen (Manifest und Symbol braucht erst die App)
     assert len(dateien) > 12 and all(anfrage("GET", pfad)[0] == 200 for pfad in offen) and anfrage("GET", "/app.js?v=1")[0] == 200
@@ -8208,8 +8250,9 @@ node_noetig = pytest.mark.skipif(not shutil.which("node"), reason="ui/zaehler.js
 
 
 def node_js(rumpf, daten):
-    """führt rumpf (Rumpf einer Funktion: Z = ui/zaehler.js, D = daten) in Node aus und gibt sein Ergebnis als JSON zurück"""
-    js = (f"const Z = require({json.dumps(str(WURZEL / 'ui' / 'zaehler.js'))}); const D = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
+    """führt rumpf (Rumpf einer Funktion: Z = ui/zaehler.js, Dk = ui/deck.js, D = daten) in Node aus und gibt sein Ergebnis als JSON zurück"""
+    js = (f"const Z = require({json.dumps(str(WURZEL / 'ui' / 'zaehler.js'))}), Dk = require({json.dumps(str(WURZEL / 'ui' / 'deck.js'))});"
+          f"const D = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
           f"process.stdout.write(JSON.stringify((() => {{ {rumpf} }})()));")
     r = subprocess.run(["node", "-e", js], input=json.dumps(daten), capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert r.returncode == 0, r.stderr
@@ -8425,3 +8468,86 @@ def test_blaettern_eingebunden_nur_beim_erfassen_mit_schnell_zaehlen():
     assert "erfZaehlen(b.id, b.wie);" in js and "'Weitere Kopie gelegt?' : `${n} weitere Kopien gelegt?`" in js and 'id="blaettern-frage">' in js
     assert "for (let i = 0; i < +kb.dataset.blaettern; i++) erfZaehlen(blaettern.id, blaettern.wie);" in js  # die Antwort zählt, so viele angeboten sind
     assert "blaettern = null;" in js.split("const scanStop = () =>")[1].split("\n")[0]  # Kamera aus: nichts mehr verfolgen
+
+
+# --- Ideen von Archidekt: Spieltisch und Wahrscheinlichkeit in ui/deck.js, mit Node geprüft (PLAN Phasen 62 und 63) -------------------------
+@node_noetig
+def test_wahrscheinlichkeit_wie_der_server():
+    """Abnahme Phase 63: Deck.mindestens rechnet im Browser genau wie deckbuild.mindestens (auch Randfälle: nichts gezogen, k = 0, K größer als n)"""
+    zufall = random.Random(63)
+    faelle = [[0, 0, 7, 1], [99, 10, 0, 0], [99, 10, 0, 1], [99, 37, 9, 3], [99, 1, 17, 1], [60, 24, 7, 2], [99, 99, 7, 7], [5, 3, 9, 3], [99, 10, 7, 0]]
+    faelle += [[n := zufall.randint(1, 100), zufall.randint(0, n), zufall.randint(1, 20), zufall.randint(0, 5)] for _ in range(300)]
+    js = node_js("return D.map(([N, K, n, k]) => Dk.mindestens(N, K, n, k));", faelle)
+    assert max(abs(a - deckbuild.mindestens(*f)) for a, f in zip(js, faelle)) < 1e-9
+
+
+@node_noetig
+def test_spieltisch_regeln():
+    """Abnahme Phase 62: neues Spiel mit 7 Karten und Commander in der Kommandozone, Mulligan, ziehen, nächster Zug enttappt und zieht,
+    Commander-Steuer, unter und oben auf die Bibliothek, durchsuchen und mischen; keine Karte geht verloren oder kommt doppelt"""
+    r = node_js("""
+      let x = 7; const rnd = () => { x = (x * 9301 + 49297) % 233280; return x / 233280; };
+      const T = Dk.Tisch, s = T.neu(D.karten, [D.cmd], rnd), uids = () => T.ZONEN.flatMap(z => s[z].map(c => c.uid)).sort((a, b) => a - b), out = {};
+      out.start = [s.hand.length, s.bib.length, s.kommando.length, s.zug, s.leben];
+      T.mulligan(s); out.mull = [s.hand.length, s.bib.length, s.mull];
+      const land = s.hand[0].uid; T.bewegen(s, land, 'feld'); T.tappen(s, land); out.tapped = s.feld[0].tapped;
+      T.naechsterZug(s); out.zug = [s.zug, s.feld[0].tapped, s.hand.length];
+      const c = s.kommando[0].uid; T.bewegen(s, c, 'feld'); out.steuer1 = T.steuer(s, c);
+      T.bewegen(s, c, 'friedhof'); T.bewegen(s, c, 'kommando'); T.bewegen(s, c, 'feld'); out.steuer2 = T.steuer(s, c);
+      const h = s.hand[0].uid; T.bewegen(s, h, 'kommando'); out.keinCmd = T.finden(s, h)[0];
+      T.bewegen(s, h, 'unten'); out.unten = s.bib[s.bib.length - 1].uid === h;
+      T.bewegen(s, h, 'oben'); T.ziehen(s); out.oben = s.hand[s.hand.length - 1].uid === h;
+      const b = s.bib[5].uid; T.bewegen(s, b, 'hand'); T.mischen(s); out.gesucht = T.finden(s, b)[0];
+      T.bewegen(s, 9999, 'feld');
+      out.alle = uids(); out.n = D.karten.reduce((n, k) => n + k.qty, 0) + 1;
+      while (s.bib.length) T.ziehen(s); T.ziehen(s); out.leer = [s.bib.length, s.hand.length];
+      return out;""", {"karten": [{"name": "Forest", "qty": 30}, *({"name": f"Karte {i}", "qty": 1} for i in range(69))], "cmd": {"name": "Chef"}})
+    assert r["start"] == [7, 92, 1, 1, 40] and r["mull"] == [7, 92, 1]
+    assert r["tapped"] is True and r["zug"] == [2, False, 7]  # 7 - Land + gezogene Karte
+    assert (r["steuer1"], r["steuer2"]) == (2, 4) and r["keinCmd"] == "hand" and r["unten"] and r["oben"] and r["gesucht"] == "hand"
+    assert r["alle"] == list(range(1, r["n"] + 1)) and r["leer"][0] == 0  # jede Karte genau einmal, ziehen aus leerer Bibliothek tut nichts
+
+
+def test_deck_js_eingebunden():
+    """Phasen 62 und 63: deck.js steht vor app.js (wie zaehler.js), kennt weder DOM noch Netz und gehört zur Seite der Einrichtung"""
+    seite, dk = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("index.html", "deck.js"))
+    assert seite.index('<script src="/deck.js"></script>') < seite.index('<script src="/app.js"></script>')
+    assert not re.search(r"\b(document|window|fetch|XMLHttpRequest|localStorage)\b", dk)
+    assert server.EINRICHTUNG_DATEIEN["/deck.js"] == "deck.js"
+
+
+def test_decks_vergleichen(conn):
+    """Abnahme Phase 64: ein gebautes gegen ein fertiges Deck, dann gegen eine eingefügte Liste (Namen aus der Datenbank, sonst Scryfall, Unbekanntes
+    genannt); was fehlt, samt Preis (billigste eigene Kopie, sonst der bekannte Druck); Standardländer fehlen nie"""
+    karte(conn, 1, "Chef", ci="G", typ="Legendary Creature — Elf", eur=2.0)
+    karte(conn, 2, "Grün", ci="G", eur=1.5)
+    karte(conn, 3, "Forest", typ="Basic Land — Forest", eur=0.1, qty=5)
+    karte(conn, 4, "Fertig Eins", ci="G", binder="Mein Deck", btyp="deck", eur=4.0)
+    karte(conn, 5, "Zweimal", ci="G", eur=1.0)
+    conn.execute("INSERT INTO decks(id, name, commander_oracle_id, bracket, saved_at) VALUES (1, 'Chef', ?, 3, 'x')", (oid(1),))
+    conn.executemany("INSERT INTO deck_cards VALUES (1,?,?)", [(oid(1), "commander"), (oid(2), "core"), (oid(3), "basic"), (oid(3), "basic"), (oid(5), "core")])
+    conn.commit()
+    fremd = {"id": uid(50), "oracle_id": oid(50), "name": "Fremd", "set": "tst", "collector_number": "50", "lang": "en", "type_line": "Artifact", "cmc": 1.0,
+             "color_identity": [], "rarity": "rare", "legalities": {"commander": "legal"}, "prices": {"eur": "3.5"}, "mana_cost": "", "oracle_text": "",
+             "image_uris": {"normal": "https://cards.scryfall.io/normal/front/test/50.jpg"}}
+    gefragt = []
+    def lookup(idents):
+        gefragt.extend(x.get("name") for x in idents)
+        return [fremd] if any(x.get("name") == "Fremd" for x in idents) else [], []
+    namen = lambda r, g: [(k["name"], k["a"], k["b"]) for k in r[g]]
+    r = deckbuild.vergleich(conn, {"id": 1}, {"binder": "Mein Deck"}, lookup)
+    assert (r["a"]["name"], r["a"]["karten"], r["b"]["karten"]) == ("Chef", 5, 1) and r["beide"] == [] and gefragt == []
+    assert namen(r, "nur_a") == [("Chef", 1, 0), ("Forest", 2, 0), ("Grün", 1, 0), ("Zweimal", 1, 0)] and namen(r, "nur_b") == [("Fertig Eins", 0, 1)]
+    assert r["fehlt"] == {"a": {"karten": 0, "preis": 0.0}, "b": {"karten": 0, "preis": 0.0}}
+    liste = "Deck\n1 Grün\n2 Zweimal\n1 Fremd\n1 Gibtsnicht\n10 Forest\n"
+    r = deckbuild.vergleich(conn, {"id": 1}, {"text": liste}, lookup)
+    assert namen(r, "beide") == [("Forest", 2, 10), ("Grün", 1, 1), ("Zweimal", 1, 2)] and namen(r, "nur_a") == [("Chef", 1, 0)]
+    assert namen(r, "nur_b") == [("Fremd", 0, 1)] and r["b"]["unbekannt"] == ["Gibtsnicht"] and "Grün" not in gefragt
+    assert r["fehlt"]["a"] == {"karten": 0, "preis": 0.0} and r["fehlt"]["b"]["karten"] == 2 and r["fehlt"]["b"]["preis"] == pytest.approx(4.5)
+    zweimal = next(k for k in r["beide"] if k["name"] == "Zweimal")
+    assert (zweimal["besitz"], zweimal["fehlt_b"], zweimal["preis"]) == (1, 1, 1.0)
+    for a, b, fehler in (({"id": 99}, {"id": 1}, "Unbekanntes Deck"), ({"id": 1}, {"text": "  "}, "keine Karte"), ({"id": 1}, None, "keine Karte")):
+        with pytest.raises(ValueError, match=fehler):
+            deckbuild.vergleich(conn, a, b, lookup)
+    code, _, body = server.dispatch(conn, "POST", "/api/vergleich", {}, json.dumps({"a": {"binder": "Mein Deck"}, "b": {"text": liste}}).encode(), lookup=lookup)
+    assert code == 200 and json.loads(body)["fehlt"]["a"]["karten"] == 0

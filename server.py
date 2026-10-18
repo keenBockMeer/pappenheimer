@@ -1178,12 +1178,23 @@ def dispatch(conn, method, path, q, body=b"", filename="", fetch=None, edhrec=No
             teil = path[len("/api/deck/"):]
             if method == "POST" and teil.endswith("/delete"):
                 return _json({"deleted": deckbuild.delete_deck(conn, int(teil[:-len("/delete")]))})
+            did, _, was = teil.partition("/")
+            if method == "POST" and was == "aendern":  # Phase 61: {rein, raus} je eine oracle_id
+                d = json.loads(body or b"{}")
+                return _json(deckbuild.deck_aendern(conn, int(did), d.get("rein"), d.get("raus")))
+            if method == "POST" and was == "kopie":
+                return _json({"id": deckbuild.deck_kopie(conn, int(did))})
+            if method == "GET" and was == "suche":
+                return _json({"items": deckbuild.deck_suche(conn, int(did), q.get("q", ""))})
             d = deckbuild.deck_detail(conn, int(teil[:-4] if teil.endswith(".txt") else teil))
             if not d:
                 return _json({"error": "unbekanntes Deck"}, 404)
             if teil.endswith(".txt"):
                 return 200, "text/plain; charset=utf-8", deckbuild.export_text(d).encode()
             return _json(d)
+        if method == "POST" and path == "/api/vergleich":  # Phase 64: {a, b} je {id}, {binder} oder {text}
+            d = json.loads(body or b"{}")
+            return _json(deckbuild.vergleich(conn, d.get("a"), d.get("b"), lookup or mtg._lookup))
         if method == "GET" and path == "/api/summary":
             return _json(api_summary(conn))
         if method == "GET" and path == "/api/cards":
@@ -1528,9 +1539,9 @@ def api_konto(method, path, body, token, sicher=False, adresse=""):
 # (Handler._einrichtung): die Seite mit ihren Dateien (EINRICHTUNG_DATEIEN) und EINRICHTUNG_API, alles andere 403. Wer den Code nicht kennt,
 # liest und schreibt nichts (E13); der Code steht einmal im Protokoll (serve) und kommt nur im Körper einer Anfrage, nie in der Adresse.
 
-EINRICHTUNG_DATEIEN = {"/": "index.html", "/zaehler.js": "zaehler.js", "/app.js": "app.js", "/style.css": "style.css", "/favicon.svg": "favicon.svg",
+EINRICHTUNG_DATEIEN = {"/": "index.html", "/zaehler.js": "zaehler.js", "/deck.js": "deck.js", "/app.js": "app.js", "/style.css": "style.css", "/favicon.svg": "favicon.svg",
                        "/grain.svg": "grain.svg", "/fonts/Geist-Variable.woff2": "fonts/Geist-Variable.woff2"}
-# genau was die Seite braucht: index.html lädt zaehler.js vor app.js (nur Rechenregeln des Scanners, Phase 56), favicon.svg ruft auch Docker ab
+# genau was die Seite braucht: index.html lädt zaehler.js und deck.js vor app.js (nur Rechenregeln des Scanners und der Deckansicht, Phasen 56, 62), favicon.svg ruft auch Docker ab
 EINRICHTUNG_API = ("/api/einrichtung", "/api/einrichtung/sicherung")
 EINRICHTUNG_JSON = 4096           # so viele Bytes höchstens hat eine Anfrage an /api/einrichtung (Code, Name, Passwort)
 VERWERFEN = 4096                  # so viele Bytes Körper liest der Server noch, bevor er eine Anfrage ablehnt (Handler._verwerfen)
