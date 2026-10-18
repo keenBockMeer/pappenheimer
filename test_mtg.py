@@ -257,6 +257,19 @@ def test_api_summary_leer(conn):
     assert (s["cards"], s["top"], s["recent"], s["last_import"]) == (0, [], [], None)
 
 
+def test_api_galaxie(voll):
+    """Hintergrund „Galaxie“ (E35): je Farbe und Preis die Zahl der Karten im Bestand (ohne Wunschliste), nur Zahlen und der Farb-Eimer der
+    Übersicht, keine Namen oder Kennungen; feste Reihenfolge, damit dieselbe Sammlung dieselbe Galaxie ergibt."""
+    k = server.api_galaxie(voll)["karten"]
+    assert sum(n for *_, n in k) == 46 and k == sorted(k) and all(len(z) == 3 and z[0] in "WUBRGMC" and not isinstance(z[1], str) for z in k)
+    wert = {}
+    for b, p, n in k:
+        wert[b] = wert.get(b, 0) + p * n
+    assert wert == pytest.approx({"U": 12.05, "G": 0.4, "M": 9.8, "C": 8.0})  # dieselben Farben wie in der Übersicht
+    status, _, body = server.dispatch(voll, "GET", "/api/galaxie", {})
+    assert status == 200 and json.loads(body) == {"karten": k}
+
+
 def test_api_card(voll):
     k = server.api_card(voll, oid(1))
     assert (k["name"], k["available"], k["legal"], k["price"]) == ("Sol Ring", 2, True, 1.5)
@@ -2088,16 +2101,26 @@ def test_bewegung_steht_bei_weniger_bewegung_still():
 
 
 def test_hintergrund_ruht_bei_weniger_bewegung_im_scanner_und_im_druck():
-    """E35: Schimmer und Funken lassen sich im Fuß wählen und ruhen bei „weniger Bewegung“, im Scanner (Vollbild) und im Druck; die Farbe bleibt schwach."""
+    """E35: Im Fuß Galaxie (Standard), Nur Schimmer oder Schlicht; ein alter gespeicherter Wert (karten, an) fällt auf den Standard. Die Galaxie
+    wird einmal gezeichnet und nur per CSS gedreht, sie ruht bei „weniger Bewegung“, im Scanner (Vollbild) und im Druck; der Schimmer bleibt schwach."""
     html, js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("index.html", "app.js", "style.css"))
-    assert '<canvas id="funken" aria-hidden="true">' in html and 'id="hintergrund"' in html
-    assert "if (calm.matches) fZeichnen(0);" in js and "if (calm.matches || hgPref() !== 'an')" in js
-    assert "body.vollbild::after, body.vollbild #funken { display: none; }" in css and "#funken, #karten-hg, body::after { display: none !important; }" in css and "body.vollbild #karten-hg { display: none; }" in css
+    assert '<div id="galaxie" aria-hidden="true"></div>' in html
+    assert '<select id="hintergrund"><option value="galaxie">Galaxie</option><option value="schimmer">Nur Schimmer</option><option value="aus">Schlicht</option></select>' in html
+    assert "['galaxie', 'schimmer', 'aus'].includes(v) ? v : 'galaxie'" in js and "beispielLeiste(); galaxie(); }" in js
+    assert not any(x in html + js + css for x in ("funken", "karten-hg", "kartenHg", "fZeichnen", "schweben"))  # Funken und Meine Karten sind weg
+    assert ":root:not([data-hg=galaxie]) #galaxie, body.vollbild #galaxie { display: none; }" in css and "#galaxie, body::after { display: none !important; }" in css
+    assert "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important;" in css  # dann steht die Galaxie still
+    zeichnen = js[js.index("const gZeichnen"):js.index("const galaxie =")]
+    assert "requestAnimationFrame" not in zeichnen and "gBox.replaceChildren(cv)" in zeichnen  # einmal zeichnen, kein Lauf je Bild
+    assert "galaxie-drehen 1200s linear" in css and "rotateZ(-360deg)" in css
     assert css.count("--aura-stark:") == 2 and "--aura-stark: 15%" in css  # nie stärker als 16 % (Regel im Kopf von style.css)
-    # Karten im Hintergrund: eigener Behälter, Standardwahl, und die Regeln für die Bilder kennen nur transform und opacity (Scryfall: kein Filter auf Kartenbildern)
-    assert 'id="karten-hg"' in html and '<option value="karten">' in html and "hgPref() !== 'karten'" in js and "|| 'karten'" in js and "beispielLeiste(); kartenHg(); }" in js
-    karten_css = css[css.index("\n#karten-hg {"):css.index("@keyframes schweben")] + css[css.index("@keyframes schweben"):][:400]
-    assert "filter" not in karten_css and "blur(" not in karten_css and "opacity: var(--o)" in karten_css
+
+
+def test_spiele_nicht_im_menue():
+    """Wunsch des Autors (2026-10-18): „Spiele“ steht nicht mehr im Menü und nicht mehr in der Hilfe. Die Seite bleibt unter #/spiele erreichbar,
+    eingetragene Spiele bleiben (Rückweg: das `true` im Eintrag von VIEWS streichen)."""
+    js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
+    assert "spiele: ['Spiele', viewSpiele, true]" in js and "<b>Spiele.</b>" not in js
 
 
 def test_klassen_des_sortier_modus_kollidieren_nicht():

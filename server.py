@@ -153,6 +153,14 @@ def api_sets(conn, q):
     return {"items": items, "total": len(items), "copies": sum(i["copies"] for i in items)}
 
 
+def api_galaxie(conn):
+    """Hintergrund „Galaxie“ (E35): je Farbe (Eimer wie in der Übersicht) und Preis die Zahl der Karten im Bestand, ohne Namen und Kennungen.
+    Feste Reihenfolge: Mit demselben Bestand sieht die Galaxie bei jedem Start gleich aus."""
+    return {"karten": [list(r) for r in conn.execute(
+        f"SELECT {BUCKET} AS b, ROUND({mtg.PRICE}, 2) AS p, SUM(col.qty) FROM collection col JOIN cards c USING (scryfall_id) "
+        f"WHERE {mtg.OWNED} GROUP BY b, p ORDER BY b, p")]}
+
+
 def set_meta(conn):
     """Kürzel -> (Serienname, Erscheinungsdatum)."""
     return {r["set_code"]: (r["set_name"], r["released"]) for r in conn.execute(SET_META)}
@@ -1058,6 +1066,8 @@ def dispatch(conn, method, path, q, body=b"", filename="", fetch=None, edhrec=No
             return _json(api_commanders(conn, q, names))
         if path == "/api/prices" and method == "GET":
             return _json(api_prices(conn, q))
+        if path == "/api/galaxie" and method == "GET":
+            return _json(api_galaxie(conn))
         if path == "/api/gaps" and method == "GET":
             return _json(api_gaps(conn, names))
         if path == "/api/bracket" and method == "POST":

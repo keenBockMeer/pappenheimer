@@ -1748,7 +1748,6 @@ function viewHelp() {
       <p><b>Verkauft je Jahr.</b> ${TIP.meldegrenze}</p>
       <p><b>Recherche.</b> Mit Claude Code auf dem Desktop (Skill mtg-recherche) entstehen Dossiers zu deinen Commandern und ein Markt-Radar aus Foren und Preisseiten. Das Dossier steht dann beim Deck, Treffer aus dem Radar bei deinen Karten unter Neuigkeiten. Beides sind Hinweise mit Quelle, keine Anlageberatung.</p>
       <p><b>Drucken.</b> Unter „Drucken“ (Link im Fuß) gibt es Trennkarten in Kartenbreite (63 × 95 mm, neun je Seite) und Etiketten (70 × 37 mm, 24 je Bogen) für Serien, Binder und Decks. ${proxyAn() ? 'Das Proxy-Blatt druckt Karten zum Ausprobieren in Originalgröße, jede mit „Playtest“, erreichbar auch aus den Upgrade-Vorschlägen eines Decks und aus den Wünschen. ' : 'Das Proxy-Blatt ist aus; das Hauptkonto kann es unter „Konten und Sicherung“ einschalten. '}Beim Drucken die Skalierung auf 100 % lassen. Zu jedem Deck zeigt „Zerlegen: wohin?“, auf welchen Stapel jede Karte zurückgeht.</p>
-      <p><b>Spiele.</b> Nach jeder Runde Deck wählen und Gewonnen oder Nicht gewonnen klicken, mehr braucht es nicht (Tisch, Züge und Notiz sind freiwillig). Die Siegquote steht ab fünf Spielen, Decks, die seit zwei Monaten ruhen, nennt die App als Kandidaten zum Zerlegen. In der Spielgruppe trägst du die Decks deiner Mitspieler mit Bracket ein und lässt dir zeigen, welches deiner Decks heute passt. Salt zeigt, wie viele der von EDHREC als besonders ärgerlich gewählten Karten in einem Deck stecken.</p>
       <p><b>Sammler.</b> Im Kartendetail bekommt jede Kopie einen Ort (Kiste, Binder), „verliehen an“ und eine Notiz. Das steht getrennt vom importierten Bestand und bleibt bei jedem neuen Import erhalten. Suche danach mit <code>ort:kiste</code> oder <code>is:verliehen</code>. Unter Serien siehst du, wie viel von jedem Set dir fehlt, ein Klick zeigt das Set als Binder mit neun Karten je Seite. Dazu gibt es den Rückblick auf dein Sammeljahr und einen Wert-Bericht zum Drucken (für Versicherung oder Nachlass), beide über die Übersicht.</p>
       <p><b>Wächter.</b> Bei jeder Preis-Aktualisierung vergleicht die App, ob eine deiner Karten gebannt, wieder erlaubt oder zum Game Changer wurde, und meldet das auf der Übersicht mit den betroffenen Decks. Einmal am Tag schaut sie in neue und angekündigte Sets: Erscheint eine deiner Karten ab 5 € neu, steht „Reprint“ in der Verkaufsliste. Im Kartendetail stehen die offiziellen Rulings.</p>
       <p><b>Gefragte Karten.</b> ${TIP.want} In der Verkaufsliste sind sie markiert, „Abwählen“ nimmt alle auf einmal aus der Liste.</p></section>
@@ -3570,8 +3569,8 @@ async function viewMessbilder() {
   };
 }
 
-const VIEWS = {'': ['Übersicht', viewHome], cards: ['Karten', viewCards], sets: ['Serien', viewSets], sort: ['Sortieren', viewSort], scan: ['Scannen', viewScan], sell: ['Verkaufen', viewSell], decks: ['Decks', viewDecks], wuensche: ['Wünsche', viewWuensche], spiele: ['Spiele', viewSpiele], help: ['Hilfe', viewHelp],
-  konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true]};  // true: nicht in der Navigation (Link im Fuß)
+const VIEWS = {'': ['Übersicht', viewHome], cards: ['Karten', viewCards], sets: ['Serien', viewSets], sort: ['Sortieren', viewSort], scan: ['Scannen', viewScan], sell: ['Verkaufen', viewSell], decks: ['Decks', viewDecks], wuensche: ['Wünsche', viewWuensche], help: ['Hilfe', viewHelp],
+  spiele: ['Spiele', viewSpiele, true], konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true]};  // true: nicht in der Navigation (Link im Fuß)
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
 let rendered = null, enterTimer, neueAnsicht = false;
 // Zahl läuft beim ersten Aufruf der Ansicht hoch (nicht beim Neuzeichnen, nicht bei reduzierter Bewegung)
@@ -3599,87 +3598,60 @@ document.addEventListener('pointermove', e => {
 }, {passive: true});
 document.documentElement.addEventListener('pointerleave', aufrichten);
 
-// --- Hintergrund (E35): „Meine Karten“ (kartenHg, Standard), Funken oder nur der Schimmer aus CSS. Funken in den fünf Mana-Farben treiben hinter der Seite, verbinden sich zu Sternbildern und weichen der Maus aus; beim Öffnen stieben sie aus der Mitte.
-// Der Schimmer dahinter ist reines CSS. Bei „weniger Bewegung“ steht ein ruhiges Bild, im Scanner (Vollbild) und im Druck ruht alles; im Fuß lässt sich der Hintergrund wählen.
-const hgSel = $('#hintergrund'), cv = $('#funken'), cx = cv.getContext('2d');
-const hgPref = () => { try { return localStorage.getItem('mtg-hg') || 'karten'; } catch { return 'karten'; } };
-let fPts = [], fFarben = [], fA = .85, fLaeuft = false, fN = 0;
-const fMaus = {x: -1e4, y: -1e4};
-const fLesen = () => { const s = getComputedStyle(document.documentElement); fFarben = ['w', 'u', 'b', 'r', 'g'].map(k => s.getPropertyValue('--aura-' + k).trim()); fA = +s.getPropertyValue('--funken-a') || .85; };
-const fGroesse = () => { const d = Math.min(devicePixelRatio || 1, 1.5); cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); };
-const fNeu = burst => {
-  const n = Math.max(28, Math.min(90, Math.round(innerWidth * innerHeight / 17000)));
-  fPts = Array.from({length: n}, (_, i) => {
-    const w = Math.random() * 6.283, v = burst ? 4 + Math.random() * 12 : 0;
-    return {x: burst ? innerWidth / 2 : Math.random() * innerWidth, y: burst ? innerHeight * .4 : Math.random() * innerHeight, vx: Math.cos(w) * v, vy: Math.sin(w) * v,
-      bx: (Math.random() - .5) * .35, by: (Math.random() - .5) * .35, r: .9 + Math.random() * 1.6, c: i % 5, ph: Math.random() * 6.283};
-  });
-};
-const fZeichnen = t => {
-  cx.clearRect(0, 0, innerWidth, innerHeight);
-  for (const p of fPts) { cx.globalAlpha = (.45 + .4 * Math.sin(t / 900 + p.ph)) * fA; cx.fillStyle = fFarben[p.c]; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 6.283); cx.fill(); }
-  cx.lineWidth = .6;
-  for (let i = 0; i < fPts.length; i++) for (let k = i + 1; k < fPts.length; k++) {
-    const a = fPts[i], b = fPts[k], d = Math.hypot(a.x - b.x, a.y - b.y);
-    if (d < 130) { cx.globalAlpha = (1 - d / 130) * .32 * fA; cx.strokeStyle = fFarben[a.c]; cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y); cx.stroke(); }
-  }
-};
-const fLauf = t => {
-  if (calm.matches || hgPref() !== 'an') { fLaeuft = false; return; }
-  if (cv.getClientRects().length) {  // nicht im Scanner (Vollbild): dort ist das Canvas ausgeblendet
-    if (++fN % 120 === 0) fLesen();  // Darstellung (dunkel oder hell) kann sich geändert haben
-    for (const p of fPts) {
-      p.vx += (p.bx - p.vx) * .03; p.vy += (p.by - p.vy) * .03;
-      const dx = p.x - fMaus.x, dy = p.y - fMaus.y, d = Math.hypot(dx, dy);
-      if (d < 140 && d > 0) { p.vx += dx / d * (1 - d / 140) * .06; p.vy += dy / d * (1 - d / 140) * .06; }
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < -10) p.x = innerWidth + 10; else if (p.x > innerWidth + 10) p.x = -10;
-      if (p.y < -10) p.y = innerHeight + 10; else if (p.y > innerHeight + 10) p.y = -10;
+// --- Hintergrund (E35): Standard „Galaxie“, dazu „Nur Schimmer“ (reines CSS) und „Schlicht“. Die Galaxie ist die Sammlung: jede Karte ein Stern, fünf Spiralarme
+// nach Farbe in der Reihenfolge des Mana-Rads aus dem Logo, mehrfarbige im Kern, farblose (mit Ländern und Spielsteinen) als Schleier, je teurer, desto heller.
+// Einmal auf ein Canvas gezeichnet, gedreht wird nur per CSS (transform). Bei „weniger Bewegung“ steht sie still, im Scanner (Vollbild) und im Druck ist sie aus.
+// Die Daten (Farbe, Preis, Anzahl, keine Namen) kommen einmal je Start nach der ersten Ansicht; solange die Sammlung leer ist, fragt jede neue Ansicht wieder.
+const hgSel = $('#hintergrund'), gBox = $('#galaxie');
+const hgPref = () => { try { const v = localStorage.getItem('mtg-hg'); return ['galaxie', 'schimmer', 'aus'].includes(v) ? v : 'galaxie'; } catch { return 'galaxie'; } };  // alte Werte (karten, an) fallen auf den Standard
+const G_DICHTE = .006;  // höchstens so viele Sterne je Quadratpixel der Galaxie (am Rechner nachgesehen): Eine große Sammlung auf einem kleinen Bildschirm wird gleichmäßig ausgedünnt
+let gDaten = null, gBusy = false;
+const gZufall = s => () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };  // mulberry32: gleicher Bestand, gleiche Galaxie
+const gZeichnen = () => {
+  if (!gDaten || hgPref() !== 'galaxie' || !innerWidth) return;  // ohne Fenstergröße (noch nicht sichtbar) später beim resize
+  const s = getComputedStyle(document.documentElement), farbe = {};
+  for (const [k, v] of [['W', 'stern-w'], ['U', 'aura-u'], ['B', 'aura-b'], ['R', 'aura-r'], ['G', 'aura-g'], ['M', 'stern-m'], ['C', 'stern-c']]) farbe[k] = s.getPropertyValue('--' + v).trim();
+  const D = Math.round(Math.max(innerWidth, innerHeight * 1.25)), px = Math.min(2048, Math.round(D * Math.min(devicePixelRatio || 1, 1.5))), M = px / 2, R = px * .46, k = px / D;
+  const cv = document.createElement('canvas'), cx = cv.getContext('2d'), rnd = gZufall(7), ga = () => Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(6.283 * rnd());
+  cv.width = cv.height = px; cv.style.cssText = `width:${D}px;height:${D}px;margin:${-D / 2}px`;
+  const kern = cx.createRadialGradient(M, M, 0, M, M, R * .3);
+  kern.addColorStop(0, farbe.M); kern.addColorStop(1, 'transparent'); cx.globalAlpha = .22; cx.fillStyle = kern; cx.fillRect(0, 0, px, px);
+  const dichte = Math.min(1, D * D * G_DICHTE / gDaten.reduce((a, z) => a + z[2], 0)), hell = document.documentElement.dataset.theme === 'light';
+  for (const [b, p, n] of gDaten) {
+    const arm = 'WUBRG'.indexOf(b), h = Math.min(1, Math.log10(1 + p * 8) / 2.4), r0 = (.8 + h * 2) * k;  // h: 10 Cent 0,1, 1 € 0,4, 10 € 0,8, ab 30 € 1
+    for (let i = 0; i < n; i++) {
+      if (rnd() > dichte) continue;
+      let w, r, a = .4 + .6 * h;
+      if (arm >= 0) { const t = rnd() ** .75; r = R * (.1 + .88 * t); w = arm * 1.2566 - 1.5708 + t * 3.2 + ga() * .17 * (1 - .4 * t); }  // Arm ab oben (Weiß) im Uhrzeigersinn, nach außen aufgedreht
+      else if (b === 'M') { r = Math.abs(ga()) * R * .13; w = rnd() * 6.283; }
+      else { r = R * (.5 + rnd() * .6); w = rnd() * 6.283; a *= .4; }
+      const x = M + Math.cos(w) * r + ga() * R * .015, y = M + Math.sin(w) * r + ga() * R * .015;
+      cx.fillStyle = farbe[b];
+      if (rnd() < .3) { cx.globalCompositeOperation = hell ? 'source-over' : 'lighter'; cx.globalAlpha = .03; cx.beginPath(); cx.arc(x, y, (5 + rnd() * 9) * k, 0, 6.283); cx.fill(); cx.globalCompositeOperation = 'source-over'; }  // Nebel: dichte Arme leuchten
+      cx.globalAlpha = a; cx.beginPath(); cx.arc(x, y, r0, 0, 6.283); cx.fill();
+      if (p >= 10) {  // teure Karten strahlen
+        const g = cx.createRadialGradient(x, y, 0, x, y, r0 * 7);
+        g.addColorStop(0, farbe[b]); g.addColorStop(1, 'transparent'); cx.globalAlpha = .35; cx.fillStyle = g; cx.fillRect(x - r0 * 7, y - r0 * 7, r0 * 14, r0 * 14);
+      }
     }
-    fZeichnen(t);
   }
-  requestAnimationFrame(fLauf);
+  gBox.replaceChildren(cv);  // ein neues Canvas: Das Aufwirbeln (CSS) beginnt von vorn
 };
-// „Meine Karten“: zufällige der zuletzt gescannten Karten schweben und drehen sich sehr langsam hinter der Seite. Kleine Bilder (146 px), nur transform und opacity, nie ein Filter
-// (Scryfall verbietet Weichzeichnen, Schärfen, Entsättigen, Umfärben und Verzerren). Geladen wird erst nach der ersten Ansicht, höchstens einmal je Start.
-let kFertig = false, kBusy = false;
-const kBox = $('#karten-hg');
-const kartenHg = async () => {
-  if (kFertig || kBusy || hgPref() !== 'karten') return;
-  kBusy = true;
-  try {
-    let r = await api(`cards?sort=added&per_page=120&page=${1 + Math.floor(Math.random() * 3)}`);
-    if (!r.items.length) r = await api('cards?sort=added&per_page=120');
-    const schmal = innerWidth < 700, n = schmal ? 9 : 18, spalten = schmal ? 3 : 6, rnd = (a, b) => a + Math.random() * (b - a);
-    const wahl = r.items.filter(c => c.image).sort(() => Math.random() - .5).slice(0, n), zeilen = Math.ceil(wahl.length / spalten);
-    kBox.innerHTML = wahl.map((c, i) => {
-      const f = schmal ? .7 : 1, w = rnd(90, 160) * f, nah = (w / f - 90) / 70, t = rnd(70, 130);  // größer heißt näher: deckender, bewegt sich mehr mit der Maus
-      const v = {px: ((i % spalten + .5) / spalten * 100 + rnd(-5, 5)).toFixed(1) + '%', py: ((Math.floor(i / spalten) + .5) / zeilen * 100 + rnd(-7, 7)).toFixed(1) + '%', w: w.toFixed(0) + 'px',
-        o: (.24 + nah * .2).toFixed(2), d: Math.round(8 + nah * 26), t: t.toFixed(0) + 's', s: '-' + rnd(0, t).toFixed(0) + 's', dx: rnd(-60, 60).toFixed(0) + 'px', dy: rnd(-50, 50).toFixed(0) + 'px',
-        z0: rnd(-18, 18).toFixed(0) + 'deg', z1: rnd(-18, 18).toFixed(0) + 'deg', y0: rnd(-50, 50).toFixed(0) + 'deg', y1: rnd(-50, 50).toFixed(0) + 'deg', x0: rnd(-14, 14).toFixed(0) + 'deg', x1: rnd(-14, 14).toFixed(0) + 'deg'};
-      return `<span class="bk" style="${Object.entries(v).map(([k, x]) => `--${k}:${x}`).join(';')}"><img alt="" src="${esc(small(c.image))}"></span>`;
-    }).join('');
-    kFertig = true;
-  } catch { /* ohne Karten oder ohne Anmeldung bleibt der Schimmer allein; render() versucht es nach der Anmeldung noch einmal */ }
-  kBusy = false;
+const galaxie = async () => {
+  if (gDaten || gBusy || hgPref() !== 'galaxie') return;
+  gBusy = true;
+  try { const k = (await api('galaxie')).karten; if (k.length) { gDaten = k; gZeichnen(); } } catch { /* ohne Anmeldung bleibt der Schimmer allein; render() versucht es danach noch einmal */ }
+  gBusy = false;
 };
-const hgAnwenden = burst => {
-  const m = hgPref();
-  document.documentElement.dataset.hg = m;
-  if (m !== 'an') return;
-  fLesen(); fGroesse(); fNeu(burst && !calm.matches);
-  if (calm.matches) fZeichnen(0);  // ein ruhiges Bild statt Bewegung
-  else if (!fLaeuft) { fLaeuft = true; requestAnimationFrame(fLauf); }
-};
+const hgAnwenden = () => { document.documentElement.dataset.hg = hgPref(); };
 hgSel.value = hgPref();
-hgSel.onchange = () => { try { localStorage.setItem('mtg-hg', hgSel.value); } catch { /* privates Fenster: gilt bis zum Neuladen */ } hgAnwenden(true); kartenHg(); };
-addEventListener('pointermove', e => {
-  fMaus.x = e.clientX; fMaus.y = e.clientY;
-  if (kBox.firstChild) { kBox.style.setProperty('--mx', (.5 - e.clientX / innerWidth) * 2); kBox.style.setProperty('--my', (.5 - e.clientY / innerHeight) * 2); }  // die Karten wandern gegen die Maus, die nahen mehr
+hgSel.onchange = () => { try { localStorage.setItem('mtg-hg', hgSel.value); } catch { /* privates Fenster: gilt bis zum Neuladen */ } hgAnwenden(); gZeichnen(); galaxie(); };
+addEventListener('pointermove', e => {  // die Galaxie wandert leicht gegen die Maus
+  if (e.pointerType === 'mouse' && !calm.matches) { gBox.style.setProperty('--mx', (.5 - e.clientX / innerWidth) * 2); gBox.style.setProperty('--my', (.5 - e.clientY / innerHeight) * 2); }
 }, {passive: true});
-document.documentElement.addEventListener('pointerleave', () => { fMaus.x = -1e4; });
-addEventListener('resize', () => { if (hgPref() === 'an') { fGroesse(); fNeu(false); if (calm.matches) fZeichnen(0); } });
-hgAnwenden(true);
+addEventListener('resize', () => { if (!gBox.firstChild) gZeichnen(); });
+new MutationObserver(gZeichnen).observe(document.documentElement, {attributeFilter: ['data-theme']});  // Hell oder Dunkel: andere Sternfarben
+hgAnwenden();
 // neue Ansicht: Abschnitte blenden gestaffelt ein (nicht bei Neuzeichnen derselben Ansicht, das soll ruhig bleiben)
 const animateIn = () => {
   if (calm.matches) return;
@@ -3700,7 +3672,7 @@ async function render(force) {
   hidePeek(); hideTip(); scanStop(); main.onclick = main.onchange = main.onkeydown = null;
   const vorher = main.firstElementChild;  // Skelett nur, solange die neue Ansicht noch nichts geschrieben hat (viewCards schreibt vor dem Laden)
   const slow = setTimeout(() => { if (rendered === hash && main.firstElementChild === vorher) main.innerHTML = skeleton(); }, 160);
-  try { await view(new URLSearchParams(qs || '')); if (neu) { scrollTo(0, 0); animateIn(); } beispielLeiste(); kartenHg(); }
+  try { await view(new URLSearchParams(qs || '')); if (neu) { scrollTo(0, 0); animateIn(); } beispielLeiste(); galaxie(); }
   catch (e) { if (e instanceof LoginNoetig) return; main.innerHTML = `<section class="panel error"><h2>${icon('alert')}Das hat nicht geklappt</h2><p class="muted">${esc(e.message)}</p><button class="btn" type="button" data-retry>${icon('refresh')}Nochmal versuchen</button></section>`; }
   finally { clearTimeout(slow); }
 }
