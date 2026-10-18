@@ -2199,7 +2199,7 @@ def test_deck_bearbeiten(conn):
     k = deckbuild.deck_detail(conn, neu)
     assert k["name"] == "Chef (Kopie)" and drin(k) == drin(d) and k["commander"]["name"] == "Chef"
     assert {f["name"] for f in deckbuild.pick_list(conn, neu)["fehlt"]} == {"Chef", "Grün Drei", "Ratten"}  # je eine Kopie, die hat das erste Deck
-    assert [(r["name"], r["frei"]) for r in deckbuild.deck_suche(conn, 1, "grün")] == [("Grün Zwei", 1), ("Grün", 0), ("Grün Drei", 0)]
+    assert [(r["name"], r["frei"], r["drin"]) for r in deckbuild.deck_suche(conn, 1, "grün")] == [("Grün Zwei", 1, False), ("Grün", 0, True), ("Grün Drei", 0, True)]
     assert deckbuild.deck_suche(conn, 1, "g") == []
     code, _, b = server.dispatch(conn, "POST", "/api/deck/1/aendern", {}, json.dumps({"raus": oid(8), "rein": oid(7)}).encode())
     assert code == 200 and "Grün Zwei" in {c["name"] for c in json.loads(b)["cards"]}

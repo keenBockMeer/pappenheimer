@@ -594,6 +594,7 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .tbl.dl tr { cursor: pointer; }
 .tbl.dl tr:hover td { background: var(--color-surface-alt); }
 .tbl.dl .nm { width: 100%; font-weight: var(--weight-medium); }
+.tbl.dl .rt { white-space: nowrap; padding-left: var(--space-2); }
 .hand { margin-top: var(--space-4); }
 .row.swap .link { text-decoration: underline; }
 .log { display: grid; gap: var(--space-4); }

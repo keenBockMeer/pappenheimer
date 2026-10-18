@@ -77,10 +77,10 @@ Wunsch des Autors (2026-10-18):
 - [ ] Phase 60 – Deck einscannen und jeder Druck wählbar (alle Drucke einer Karte auf der Scan-Liste, Druckwahl mit eigenen Drucken, Übernehmen als fertiges Deck) – gebaut, Tests grün; offen: am Handy mit echten Karten
 
 Ideen von Archidekt (Wunsch des Autors, 2026-10-18; nur Ideen, alles neu geschrieben wie E36; der Autor wählte die Punkte 1 bis 4 der Vergleichsliste, auf seinen Wunsch in einer Session):
-- [ ] Phase 61 – Decks bearbeiten (Karte rein, Karte raus, Vorschlag aus „Verbessern“ tauschen, Deck kopieren)
-- [ ] Phase 62 – Spieltisch zum Ausprobieren (Zug für Zug: ziehen, ausspielen, tappen, Friedhof, Exil, Kommandozone, Leben, Bibliothek durchsuchen)
-- [ ] Phase 63 – Wahrscheinlichkeitsrechner (mindestens k Karten einer Gruppe oder einer Karte bis Zug N)
-- [ ] Phase 64 – Decks vergleichen (zwei eigene Decks oder ein eigenes mit einer eingefügten Liste, mit dem, was fehlt)
+- [x] Phase 61 – Decks bearbeiten (Karte rein, Karte raus, Vorschlag aus „Verbessern“ tauschen, Deck kopieren)
+- [x] Phase 62 – Spieltisch zum Ausprobieren (Zug für Zug: ziehen, ausspielen, tappen, Friedhof, Exil, Kommandozone, Leben, Bibliothek durchsuchen)
+- [x] Phase 63 – Wahrscheinlichkeitsrechner (mindestens k Karten einer Gruppe oder einer Karte bis Zug N)
+- [x] Phase 64 – Decks vergleichen (zwei eigene Decks oder ein eigenes mit einer eingefügten Liste, mit dem, was fehlt)
 
 ## Ziel
 Alles lokal auf dem Desktop, im Browser unter `http://127.0.0.1:8765`:
@@ -1670,20 +1670,28 @@ Gespeicherte, gebaute Decks (`decks`, `deck_cards`) waren nur anzusehen oder auf
 
 **Abnahme:** Test `test_deck_bearbeiten` (rein, raus, tauschen, Commander bleibt, Farbidentität, zweite Kopie, Standardland, Kopie, Suche mit freien Kopien).
 
+**Ergebnis (2026-10-18):** Gebaut, Tests grün. An der Probe-Instanz (`tests/lade_messung.py --serve`, Beispielsammlung, ein Deck von Hand in die Probe-Datenbank gelegt) gesehen: Bearbeiten, Suchen, „Ins Deck“, Minus. Dabei dazugekommen: Die Suche nennt Karten, die schon im Deck stecken („im Deck“, Feld `drin`), statt erst beim Klick abzulehnen. Eine Kopie teilt sich die Karten mit dem Original; was nur einmal da ist, zeigt „Zusammensuchen“ der Kopie unter „Ohne Kopie“.
+
 ### Phase 62 – Spieltisch zum Ausprobieren
 Bisher gab es Starthand, Mulligan und „Nächste Karte“. Neu die Ansicht `#/spieltisch?id=` bzw. `?binder=` (nicht im Menü, Knopf „Spieltisch“ unter der Starthand): Bibliothek, Hand, Spielfeld (Länder und übrige getrennt), Friedhof, Exil, Kommandozone mit Commander-Steuer, Lebenspunkte (40), Zug. Knöpfe: Neues Spiel, Mulligan, Karte ziehen, Nächster Zug (enttappen, ziehen), Bibliothek durchsuchen, Mischen. Eine Karte antippen öffnet die Ziele (Feld, Hand, Friedhof, Exil, oben oder unter die Bibliothek, Kommandozone für den Commander); auf dem Feld tappt sie. Die Regeln des Tischs stehen ohne DOM in `ui/deck.js` (`Deck.Tisch`, wie `ui/zaehler.js`, vor app.js geladen, in `EINRICHTUNG_DATEIEN`); kein Server, nichts gespeichert. Gegner, Spielsteine und Zähler auf Karten: nicht jetzt.
 
 **Abnahme:** Test `test_spieltisch_regeln` (Node: neues Spiel 7 Karten, Mulligan, ziehen, Zug enttappt und zieht, Commander-Steuer, durchsuchen und mischen, keine Karte geht verloren).
+
+**Ergebnis (2026-10-18):** Gebaut, Tests grün, an der Probe-Instanz gesehen (Karte aufs Feld, tappen, Menü der Ziele). Der Mulligan legt sieben neue Karten auf die Hand; was unter die Bibliothek gehört (der erste Mulligan ist in Commander frei), legt man selbst über das Menü dorthin, ein Satz unter der Leiste sagt wie viele.
 
 ### Phase 63 – Wahrscheinlichkeitsrechner
 Bisher nur feste Zahlen (spielbare Starthand, drei Länder bis Zug 3, Ramp bis Zug 2). Neu unter der Starthand: Gruppe wählen (Rollen, Kartentypen, Manawert, eine einzelne Karte), „mindestens“ 1 bis 4, „bis Zug“ 1 bis 10, „im ersten Zug ziehen“ (Mehrspieler) an oder aus. Gerechnet exakt hypergeometrisch wie `deckbuild.mindestens`, im Browser über `Deck.mindestens` aus `ui/deck.js`.
 
 **Abnahme:** Test `test_wahrscheinlichkeit_wie_der_server` (Node gegen `deckbuild.mindestens` für viele Fälle, Abweichung unter 1e-9).
 
+**Ergebnis (2026-10-18):** Gebaut, Test grün (309 Fälle), an der Probe-Instanz gesehen. Standard „im ersten Zug ziehen“ aus, damit die Zahl zu den festen Zahlen darüber passt.
+
 ### Phase 64 – Decks vergleichen
 Neu die Ansicht `#/vergleich` (Knopf „Vergleichen“ in jedem Deck und unter Decks): Deck A und Deck B, je ein eigenes (gebaut oder fertig) oder eine eingefügte Liste (wie beim Import gelesen, `mtg.parse_decklist`, Namen erst aus der eigenen Datenbank, dann Scryfall über `mtg.resolve`). `deckbuild.vergleich(conn, a, b)` → je Karte Menge in A und in B, Kopien im Besitz und frei, Preis; Gruppen „in beiden“, „nur in A“, „nur in B“; für jede Seite, was dir fehlt, und was es kostet. `POST /api/vergleich` `{a, b}` mit je `{id}`, `{binder}` oder `{text}`.
 
 **Abnahme:** Test `test_decks_vergleichen` (zwei eigene Decks, eigenes gegen Liste, unbekannter Name, was fehlt samt Preis).
+
+**Ergebnis (2026-10-18):** Gebaut, Test grün, an der Probe-Instanz mit einer eingefügten Liste gesehen. Nicht gebaut: die fehlenden Karten als Liste kopieren oder auf die Wunschliste setzen.
 
 ## Nicht jetzt
 Neuigkeiten von der App per Telegram oder Hermes verschicken (Fragen an den Hermes-Agenten gehen seit E19) · Partner-/Background-Commander beim Deckbau (fertige Decks dürfen zwei haben) · Mana-Kurven-**Optimierung** (Analyse und Karsten-Sollwerte kommen in Phase 15) · Rück-Import aus Moxfield (Textlisten-Import gibt es) · Direkt-Upload zu Cardmarket oder KEEPSEVEN (Cardmarket nimmt keine neuen API-Nutzer an; Listen-Export: Phase 17) · eigenes Bestandsbuch für ManaBox-Binder (E7; für Scan-Binder gilt E18) · Laya als Anfrage-Router · LLM als Deckbauer oder Regel-Auskunft (E15)

@@ -1077,7 +1077,7 @@ const stapelHtml = gs => `<div class="piles">${gs.map(g => `<div class="pile"><h
   .map(x => `<a class="pc" href="#" data-oid="${esc(x.oracle_id)}" aria-label="${esc(x.name)}${x.qty > 1 ? `, ${x.qty}×` : ''}"${deckPeek(x)}>${pic(x.image, x.name)}</a>`).join('')}</div></div>`).join('')}</div>`;
 const listeHtml = (gs, weg) => `<div class="dlist">${gs.map(g => `<div class="group"><h3>${esc(g.label)} <small>${g.count}</small></h3><table class="tbl dl">${g.cards.map(x => `
   <tr data-oid="${esc(x.oracle_id)}"${deckPeek(x)}><td class="num">${x.qty}</td><td class="nm">${esc(x.name)}</td><td>${x.mana_cost ? mana(x.mana_cost) : ''}</td>
-  <td class="rt">${x.price != null && x.role !== 'basic' ? eur(x.price) : ''}</td>${weg ? `<td class="rt"><button class="btn small ghost" type="button" data-raus="${esc(x.oracle_id)}" aria-label="Eine ${esc(x.name)} herausnehmen">${icon('minus', 'sm')}</button></td>` : ''}</tr>`).join('')}</table></div>`).join('')}</div>`;
+  <td class="rt">${x.price != null && x.role !== 'basic' ? eur(x.price) : ''}</td>${weg ? `<td class="rt"><button class="btn small" type="button" data-raus="${esc(x.oracle_id)}" aria-label="${esc(x.name)}: eine Kopie herausnehmen">${icon('minus', 'sm')}</button></td>` : ''}</tr>`).join('')}</table></div>`).join('')}</div>`;
 // Bearbeiten (Phase 61): nur gespeicherte, gebaute Decks; im Bearbeiten zeigt die Liste ein Minus an jeder Karte, darüber „Karte hinzufügen“
 let deckEdit = null;
 const editHtml = d => `<form class="toolbar noprint" data-deckadd="${d.id}" role="search"><label class="inl" for="deck-add">Karte hinzufügen</label>
@@ -1102,7 +1102,7 @@ async function deckSuche(f) {
     const r = await api(`deck/${f.dataset.deckadd}/suche?q=${encodeURIComponent(f.q.value)}`);
     box.innerHTML = r.items.length ? `<div class="rows">${r.items.map(k => `<div class="row" data-oid="${esc(k.oracle_id)}"${peekAt(k.image, k.name, eur(k.price))}>${pic(small(k.image), '', 'thumb')}
       <div class="min0"><div class="name">${esc(k.name)}</div><div class="sub2">${k.frei ? `${k.frei} frei` : 'keine freie Kopie, steckt schon in einem Deck'}</div></div>
-      <div class="price">${eur(k.price)}</div><button class="btn small" type="button" data-rein="${esc(k.oracle_id)}">${icon('plus', 'sm')}Ins Deck</button></div>`).join('')}</div>`
+      <div class="price">${eur(k.price)}</div>${k.drin ? '<span class="muted">im Deck</span>' : `<button class="btn small" type="button" data-rein="${esc(k.oracle_id)}">${icon('plus', 'sm')}Ins Deck</button>`}</div>`).join('')}</div>`
       : '<p class="muted">Nichts gefunden. Gesucht wird in deiner Sammlung unter Karten, die zur Farbe des Commanders passen und in Commander erlaubt sind.</p>';
   } catch (e) { if (!(e instanceof LoginNoetig)) box.innerHTML = ladeFehler(e); }
 }

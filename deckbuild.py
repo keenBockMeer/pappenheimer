@@ -761,7 +761,7 @@ def deck_kopie(conn, did):
 
 def deck_suche(conn, did, q, limit=24):
     """Karten im Besitz für „Karte hinzufügen“ (Phase 61): Name enthält q, passt zur Farbidentität, für Commander erlaubt; frei = Kopien,
-    die kein fertiges und kein gespeichertes Deck belegt. Freie Karten zuerst."""
+    die kein fertiges und kein gespeichertes Deck belegt; drin = schon in diesem Deck (außer Standardländern). Freie Karten zuerst."""
     d = deck_detail(conn, did)
     if not d or len(q.strip()) < 2:
         return []
@@ -770,7 +770,8 @@ def deck_suche(conn, did, q, limit=24):
         f"SELECT c.oracle_id, c.name, c.type_line, c.mana_cost, c.image_url image, c.color_identity ci, MIN({mtg.PRICE}) price "
         f"FROM collection col JOIN cards c USING (scryfall_id) WHERE {mtg.OWNED} AND c.legal_commander AND c.name LIKE ? "
         f"GROUP BY c.oracle_id ORDER BY c.name", (f"%{q.strip()}%",)).fetchall()
-    out = [dict(r) | {"frei": frei.get(r["oracle_id"], 0)} for r in rows if set(r["ci"] or "") <= ci]
+    drin = {c["oracle_id"] for c in d["cards"] if c["role"] != "basic"} | ({d["commander"]["oracle_id"]} if d["commander"] else set())
+    out = [dict(r) | {"frei": frei.get(r["oracle_id"], 0), "drin": r["oracle_id"] in drin} for r in rows if set(r["ci"] or "") <= ci]
     return sorted(out, key=lambda r: not r["frei"])[:limit]
 
 
