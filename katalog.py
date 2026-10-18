@@ -304,21 +304,23 @@ def index(pfad, v):
         return _index[pfad]
 
 
-def druckwahl(drucke, sets=(), kontext=()):
+def druckwahl(drucke, sets=(), kontext=(), eigen=()):
     """Welcher Druck eines Aussehens es ist, sieht die Kamera nicht, das entscheidet der Zusammenhang (E20): genau einer in den bevorzugten Sets,
-    dann der; sonst genau einer im Set der zuletzt gezählten Karten (kontext, jüngstes zuerst), dann der; sonst der neueste (drucke kommt so
-    sortiert). -> (Druck, prüfen): prüfen heißt, es blieben mehrere und der Druck ist geraten."""
+    dann der; sonst genau einer im Set der zuletzt gezählten Karten (kontext, jüngstes zuerst), dann der; sonst einer, den die Sammlung schon hat
+    oder der auf der Scan-Liste liegt (eigen: Kennungen; dort hat ihn jemand gewählt oder korrigiert, Phase 60); sonst der neueste (drucke kommt
+    so sortiert). -> (Druck, prüfen): prüfen heißt, nach Vorliebe und Zusammenhang blieben mehrere und der Druck ist geraten (auch aus eigen)."""
     for menge in (set(sets), *({k} for k in kontext)):
         da = [d for d in drucke if d["set_code"] in menge]
         if len(da) == 1:
             return da[0], False
         drucke = da or drucke
-    return drucke[0], len(drucke) > 1
+    return next((d for d in drucke if d.get("id") in eigen), drucke[0]), len(drucke) > 1
 
 
-def suche(pfad, v, lagen, sets=(), kontext=(), pruef=None, karten=None, sicher=None):
+def suche(pfad, v, lagen, sets=(), kontext=(), pruef=None, karten=None, sicher=None, eigen=()):
     """Welche Karte zeigen diese Fingerabdrücke (lagen: Bytes je Lage)? Die besten drei Bilder: je Treffer das beste Aussehen, sein Wert
-    (Kosinus), der Abstand zum nächsten Bild, der gewählte Druck (druckwahl), ob er zu prüfen ist, und bis zu WAHL andere Drucke zum Tauschen.
+    (Kosinus), der Abstand zum nächsten Bild, der gewählte Druck (druckwahl, eigen wie dort), ob er zu prüfen ist, und bis zu WAHL andere Drucke zum
+    Tauschen.
     Dasselbe Bild in mehreren Rahmenarten ist ein Treffer: Liegen ihre Werte näher als SUCHE_ABSTAND beieinander, stehen ihre Drucke alle zur
     Wahl. urteil: sicher, unsicher (die App fragt) oder nichts. pruef (nur Messung): ein Aussehen, grob nennt seinen Platz in der Grobsuche.
     Mit gelesenem Namen (Phase 35, PLAN E21; Kennungen der Karten aus namen_suche): karten = alle Karten, deren Name passte, sicher = die Karte
@@ -377,7 +379,7 @@ def suche(pfad, v, lagen, sets=(), kontext=(), pruef=None, karten=None, sicher=N
                 pool = [d for d in pool if d["oid"] in genannt] or pool
                 if not pool:
                     continue
-                druck, pruefen = druckwahl(pool, sets, kontext)
+                druck, pruefen = druckwahl(pool, sets, kontext, eigen)
                 treffer.append({"aussehen": glieder[0][1], "wert": round(wert, 4), "abstand": round(wert - (gruppen[i + 1][1][0][0] if i + 1 < len(gruppen) else 0), 4),
                                 "druck": druck, "pruefen": pruefen,
                                 "drucke": ([d for d in pool if d is not druck] + [d for d in drucke if d not in pool])[:WAHL]})

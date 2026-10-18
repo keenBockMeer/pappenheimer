@@ -4196,6 +4196,77 @@ def test_erkennung_ohne_set_wahl(daten, monkeypatch):
 import sys  # noqa: E402
 
 
+def test_jeder_druck_waehlbar_und_deck_einscannen(daten, monkeypatch):
+    """Abnahme Phase 60: Unter gleich aussehenden Drucken wählt die Erkennung einen, den die Sammlung hat oder der auf der Scan-Liste liegt (nach
+    Vorliebe und Zusammenhang, vor dem neuesten; geraten bleibt geraten); die Scan-Liste nennt alle Drucke einer Karte, auch mit anderem Bild;
+    „Übernehmen“ als fertiges Deck legt einen Scan-Binder an, der ein Deck ist (nie verfügbar, unter Decks), und bleibt es beim nächsten
+    Übernehmen und beim Umbenennen, samt Commander."""
+    # Druckwahl: eigen nach Vorliebe und Zusammenhang, vor dem neuesten
+    a, b, c = ({"id": i, "set_code": k} for i, k in (("a", "NEU"), ("b", "ALT"), ("c", "ALT")))
+    assert katalog.druckwahl([a, b, c]) == (a, True) and katalog.druckwahl([a, b, c], eigen={"c"}) == (c, True)
+    assert katalog.druckwahl([a, b, c], kontext=["NEU"], eigen={"c"}) == (a, False) and katalog.druckwahl([a, b, c], ["ALT"], eigen={"b"}) == (b, True)
+    assert katalog.druckwahl([{"set_code": "A"}, {"set_code": "B"}], eigen={"x"})[0] == {"set_code": "A"}  # Drucke ohne Kennung: wie vorher
+
+    # dieselbe Wahl in der Suche auf dem Server: C21 #263 und CMM #400 haben dasselbe Bild im selben Rahmen
+    rng, kat = random.Random(60), mtg.katalog_pfad()
+    katalog.bauen(iter(KATALOG), kat, tag="2026-10-01")
+    conn = mtg.connect()
+    post = lambda pfad, d: json.loads(server.dispatch(conn, "POST", pfad, {}, json.dumps(d).encode())[2])
+    b64 = lambda fp: base64.b64encode(fp).decode()
+    bild, T = "22222222-0000-4000-8000-000000000001", bytes(rng.randrange(256) for _ in range(672))
+    fps = {f"{bild}:2015": T, f"{bild}:1993": bytes(rng.randrange(256) for _ in range(672)),
+           "22222222-0000-4000-8000-000000000008:2003": bytes(rng.randrange(256) for _ in range(672))}
+    assert post("/api/scan/katalog", {"v": 2, "fp": {k: b64(fp) for k, fp in fps.items()}}) == {"ok": 3}
+    druck = lambda **kw: (lambda t: (t["druck"]["id"], t["pruefen"]))(post("/api/scan/suche", {"v": 2, "fp": [b64(T)]} | kw)["treffer"][0])
+    ohne = lambda ids: pytest.fail("keine Anfrage an Scryfall")
+    assert druck() == (uid(902), True)  # ohne Zusammenhang der neueste
+    mtg.liste_add(conn, uid(901), fetch=ohne)  # auf der Scan-Liste gewählt oder korrigiert: die nächste Kopie desselben Bilds folgt
+    assert druck() == (uid(901), True) and druck(kontext=["CMM"]) == (uid(902), False)
+    mtg.liste_leeren(conn)
+    assert druck() == (uid(902), True)
+    karte(conn, 901, "Sol Ring", oracle=900, serie="c21", nr=263, binder="Ordner")  # in der Sammlung
+    assert druck() == (uid(901), True)
+
+    # alle Drucke einer Karte, neueste zuerst, auch mit anderem Bild; dahinter bekannte Karten, die der Katalog nicht kennt
+    karte(conn, 5, "Sol Ring", oracle=900, binder="Ordner")
+    alle = json.loads(server.dispatch(conn, "GET", "/api/erfassen", {"drucke": oid(900)})[2])["items"]
+    assert [(d["set_code"], d["number"]) for d in alle] == [("CMM", "400"), ("CMM", "700"), ("SLD", "1011"), ("C21", "263"), ("3ED", "274"), ("TST", "5")]
+    assert set(alle[0]) == set(mtg.DRUCK) and {d["oid"] for d in alle} == {oid(900)} and mtg.drucke_karte(conn, oid(12345)) == []
+    assert {d["oid"] for d in mtg.drucke_suchen(conn, "sol ring")} == {oid(900)}  # die Suche nennt die Karte: der Dialog zeigt dann deren Drucke
+
+    # Übernehmen als fertiges Deck
+    voll = {k["id"]: k for k in KATALOG}
+    holen = lambda ids: ([voll[i] for i in ids], [])
+    uebernehmen = lambda **d: json.loads(json.dumps(server.api_erfassen(conn, {}, json.dumps({"aktion": "uebernehmen"} | d).encode(), fetch=holen)))
+    mtg.liste_add(conn, uid(902), fetch=ohne)
+    mtg.liste_add(conn, uid(908), fetch=ohne)
+    frei = sum(mtg.available(conn).values())
+    assert uebernehmen(binder="Mein Precon", deck=True)["sitzung"]["karten"] == 2
+    assert "Mein Precon" in mtg.deck_binders(conn) & mtg.scan_binders(conn) and sum(mtg.available(conn).values()) == frei  # nie verfügbar
+    assert {r["stack"] for r in mtg.plan(conn) if r["binder"] == "Mein Precon"} == {"deck"}
+    assert [(d["name"], d["cards"]) for d in deckbuild.binder_decks(conn)] == [("Mein Precon", 2)]
+    assert [(b["name"], b["deck"]) for b in mtg.scan_binder_liste(conn)] == [("Mein Precon", True)]
+    server.api_binder_deck(conn, "Mein Precon", json.dumps({"commander": oid(900)}).encode())
+    mtg.liste_add(conn, uid(904), fetch=ohne)
+    uebernehmen(binder="Mein Precon")  # ein Deck bleibt ein Deck, auch ohne den Haken
+    assert mtg.fertige_decks(conn) == ["Mein Precon"] and deckbuild.binder_deck(conn, "Mein Precon")["count"] == 3
+    assert mtg.binder_umbenennen(conn, "Mein Precon", "Precon") == "Precon"  # umbenennen: Deck und Commander ziehen mit
+    assert mtg.fertige_decks(conn) == ["Precon"] and deckbuild.binder_deck(conn, "Precon")["commander"]["name"] == "Sol Ring"
+    assert not conn.execute("SELECT 1 FROM meta WHERE key = 'deckbinder:Mein Precon'").fetchone()
+    # ein Name auf der Liste der fertigen Decks ohne Karten ist für ein Deck aus ManaBox gedacht: als Scan-Binder nur, wenn er ein Deck wird
+    mtg.set_fertige_decks(conn, ["Precon", "Aus ManaBox"])
+    with pytest.raises(ValueError, match="gibt es schon"):
+        mtg.scan_binder_name(conn, "Aus ManaBox")
+    assert mtg.scan_binder_name(conn, "Aus ManaBox", deck=True) == "Aus ManaBox" and mtg.scan_binder_name(conn, "Precon") == "Precon"
+    conn.close()
+
+    js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
+    for teil in ("href=\"#/scan?modus=erfassen&deck=1\"", "viewErfassen(p.get('deck') === '1')", "{aktion: 'uebernehmen', binder: b, deck}",
+                 "api('erfassen?drucke=' + encodeURIComponent(oid))", "if (z.set_code && !body.pruefen) kontextDazu(z.set_code);"):
+        assert teil in js, teil
+    assert "–" not in js[js.index("  scandeck: '"):js.index("  titel: '")]
+
+
 def test_namen_lesen(daten, fetch, monkeypatch):
     """Abnahme Phase 35: deutsche Namen aus all_cards (nur Papier, je Seite; ein neuer Katalog nimmt sie mit, der tägliche Lauf lädt sie nur, wo
     der Server lesen kann), die Namenssuche trotz Lesefehlern (deutscher Name führt zur englischen Karte, ähnliche Namen, beide Seiten von
@@ -7327,7 +7398,7 @@ def test_exporte_nach_der_migration_byte_fuer_byte_gleich(daten, fetch, monkeypa
 
 def test_fertige_decks_einstellung_wirkt_auf_verfuegbar(daten, fetch):
     """Abnahme Phase 46 (E33): Die Liste der fertigen Decks lässt sich über die Schnittstelle ändern und wirkt sofort auf „verfügbar“, den
-    Sortier-Plan und die Binder-Liste; sie gilt je Sammlung; Scan-Binder und Unsinn werden abgelehnt."""
+    Sortier-Plan und die Binder-Liste; sie gilt je Sammlung; Unsinn wird abgelehnt, ein Scan-Binder darf seit Phase 60 ein Deck sein."""
     api = lambda c, d=None: json.loads(server.dispatch(c, "POST" if d is not None else "GET", "/api/fertige-decks", {}, json.dumps(d).encode() if d is not None else b"")[2])
     db = sammlung_mit_decknamen(daten / "eins", fetch)
     anderes = daten / "zwei" / "mtg.db"
@@ -7345,11 +7416,13 @@ def test_fertige_decks_einstellung_wirkt_auf_verfuegbar(daten, fetch):
         assert api(z)["namen"] == [] and {r["stack"] for r in mtg.plan(z) if r["binder"] == "Handelsordner"} != {"deck"}  # je Sammlung
         assert api(c, {"namen": []})["namen"] == [] and sum(mtg.available(c).values()) == frei0  # leer: wie neu
         s = mtg.scan_add(c, "Scan-Binder", uid(1), fetch=fetch)
-        for schlecht, muster in (({"namen": "Otter Limits"}, "Liste"), ({"namen": [1]}, "Liste"), ({}, "Liste"), ({"namen": ["Scan-Binder"]}, "Scan-Binder"),
+        for schlecht, muster in (({"namen": "Otter Limits"}, "Liste"), ({"namen": [1]}, "Liste"), ({}, "Liste"),
                                  ({"namen": ["x" * 81]}, "höchstens"), ({"namen": [str(i) for i in range(mtg.FERTIGE_DECKS_MAX + 1)]}, "höchstens")):
             code, _, body = server.dispatch(c, "POST", "/api/fertige-decks", {}, json.dumps(schlecht).encode())
             assert code == 400 and muster in json.loads(body)["error"], schlecht
         assert api(c)["namen"] == [] and s["id"]
+        assert api(c, {"namen": ["Scan-Binder"]})["namen"] == ["Scan-Binder"] and "Scan-Binder" in mtg.deck_binders(c)  # ein eingescanntes Deck
+        api(c, {"namen": []})
         c.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (mtg.FERTIGE_DECKS, "kaputt"))  # eine beschädigte Einstellung gilt als leer
         assert mtg.fertige_decks(c) == [] and mtg.deck_binders(c) == {"Testdeck"}
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")

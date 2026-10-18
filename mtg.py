@@ -474,16 +474,13 @@ def fertige_decks(conn):
 
 
 def set_fertige_decks(conn, namen):
-    """Die Namen der fertigen Decks ersetzen (nur Text, ohne Leerraum am Rand, ohne Doppelte). Ein Scan-Binder gehört nie dazu: Den führt die App
-    selbst. Ändert den Sortier-Plan und „verfügbar“ sofort, die Karten selbst bleiben unberührt. -> Liste"""
+    """Die Namen der fertigen Decks ersetzen (nur Text, ohne Leerraum am Rand, ohne Doppelte). Ein Scan-Binder darf dazugehören (Phase 60: ein
+    eingescanntes Deck). Ändert den Sortier-Plan und „verfügbar“ sofort, die Karten selbst bleiben unberührt. -> Liste"""
     if not isinstance(namen, (list, tuple)) or any(not isinstance(n, str) for n in namen):
         raise ValueError("Erwartet: eine Liste von Binder-Namen")
     neu = list(dict.fromkeys(n.strip() for n in namen if n.strip()))
     if len(neu) > FERTIGE_DECKS_MAX or any(len(n) > 80 for n in neu):
         raise ValueError(f"Höchstens {FERTIGE_DECKS_MAX} Namen mit je höchstens 80 Zeichen")
-    scan = scan_binders(conn) & set(neu)
-    if scan:
-        raise ValueError(f"„{sorted(scan)[0]}“ ist ein Scan-Binder. Den führt die App selbst, er kann kein fertiges Deck sein.")
     with conn:
         conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (FERTIGE_DECKS, json.dumps(neu, ensure_ascii=False)))
     return fertige_decks(conn)
@@ -1903,20 +1900,23 @@ def set_drucke(conn, codes, suche=None, neu=False, now=None):
     return out
 
 
-def scan_binder_name(conn, name):
-    """Name für einen Scan-Binder: nicht leer, kein Binder aus ManaBox, kein fertiges Deck. -> Name"""
+def scan_binder_name(conn, name, deck=False):
+    """Name für einen Scan-Binder: nicht leer, kein Binder aus ManaBox, keine hochgeladene Deckliste. Auf der Liste der fertigen Decks nur, wenn er
+    schon ein Scan-Binder ist (ein eingescanntes Deck, Phase 60) oder als Deck angelegt wird (deck); sonst ist der Name für ein Deck aus ManaBox
+    vorgesehen. -> Name"""
     name = (name or "").strip()
     if not name or name == "*" or len(name) > 80:
         raise ValueError("Bitte einen Namen für den Binder angeben (höchstens 80 Zeichen)")
     r = conn.execute("SELECT binder_type FROM collection WHERE binder = ? LIMIT 1", (name,)).fetchone()
-    if (r and r[0] != "scan") or name in fertige_decks(conn) or name in list_decks(conn):
+    if (r and r[0] != "scan") or name in list_decks(conn) or (name in fertige_decks(conn) and not r and not deck):
         raise ValueError(f"„{name}“ gibt es schon als Binder aus ManaBox oder als Deck. Bitte einen anderen Namen wählen.")
     return name
 
 
 def scan_binder_liste(conn):
-    """Scan-Binder mit Karten, Wert und letzter Erfassung, zuletzt benutzte zuerst."""
-    return [dict(r) for r in conn.execute(
+    """Scan-Binder mit Karten, Wert, letzter Erfassung und ob er ein fertiges Deck ist (deck, Phase 60), zuletzt benutzte zuerst."""
+    fest = set(fertige_decks(conn))
+    return [dict(r) | {"deck": r["name"] in fest} for r in conn.execute(
         f"SELECT col.binder name, SUM(col.qty) karten, SUM(col.qty * {PRICE}) wert, MAX(col.added) zuletzt FROM collection col JOIN cards c USING (scryfall_id) "
         f"WHERE col.binder_type = 'scan' GROUP BY col.binder ORDER BY zuletzt DESC, col.binder")]
 
@@ -2248,13 +2248,14 @@ def liste_leeren(conn):
     return liste(conn)
 
 
-def liste_uebernehmen(conn, binder, now=None, fetch=None):
-    """„Übernehmen“: die geprüfte Scan-Liste in einen Scan-Binder legen, ganz oder gar nicht. Daraus wird eine Erfassen-Sitzung wie in Phase 25
+def liste_uebernehmen(conn, binder, now=None, fetch=None, deck=False):
+    """„Übernehmen“: die geprüfte Scan-Liste in einen Scan-Binder legen, ganz oder gar nicht. deck (Phase 60): Der Binder ist ein fertiges Deck
+    (kommt auf die Liste fertige_decks: nie verfügbar, nie im Verkauf, unter Decks zu sehen); ein Deck bleibt ein Deck, auch ohne deck. Daraus wird eine Erfassen-Sitzung wie in Phase 25
     (imports „Kamera“, scan_log, Kaufpreis = Marktpreis jetzt, „Zuletzt hinzugefügt“, Neuigkeiten, Wertverlauf); die Liste ist danach leer.
     Preise, die älter als PRICE_MAX_AGE_H sind (etwa vom Laden des Sets vor Wochen), holt sie vorher neu; ohne Netz gilt der zuletzt bekannte.
     Drucke, die bisher nur der Katalog kennt (Phase 31), bekommen hier ihre vollen Kartendaten, alle auf einmal (75 je Anfrage); das braucht
     Netz. -> scan_sitzung"""
-    binder = scan_binder_name(conn, binder)
+    binder = scan_binder_name(conn, binder, deck)
     ereignisse = conn.execute("SELECT * FROM scan_liste ORDER BY id").fetchall()
     if not ereignisse:
         raise ValueError("Die Scan-Liste ist leer")
@@ -2273,6 +2274,8 @@ def liste_uebernehmen(conn, binder, now=None, fetch=None):
             store_cards(conn, (fetch or sources.scryfall_cards)(alt)[0], ts)
         except (urllib.error.URLError, TimeoutError):
             pass
+    if deck and binder not in fertige_decks(conn):
+        set_fertige_decks(conn, fertige_decks(conn) + [binder])
     with conn:
         s = conn.execute("INSERT INTO imports(file, sha256, scope, added, removed, at) VALUES (?,?,?,?,?,?)", (SCAN_DATEI, "", binder, 0, 0, ts)).lastrowid
         for e in ereignisse:
@@ -2325,24 +2328,44 @@ def sitzung_zuruecknehmen(conn, sitzung=None):
     return liste(conn)
 
 
+DRUCK = ("id", "oid", "name", "set_code", "number", "image")  # ein Druck zum Tauschen auf der Scan-Liste
+
+
+def drucke_karte(conn, oid):
+    """Alle Papier-Drucke einer Karte (oracle_id) zum Tauschen auf der Scan-Liste (Phase 60), auch die mit anderem Bild: aus dem Katalog (neueste
+    zuerst), dahinter bekannte Karten und geladene Sets, die er nicht kennt (ohne Katalog nur die). -> [{id, oid, name, set_code, number, image}]"""
+    out = {}
+    k = _katalog(conn)
+    if k:
+        with closing(k):
+            for r in k.execute("SELECT scryfall_id, oracle_id, name, set_code, number, image FROM drucke WHERE oracle_id = ? "
+                               "ORDER BY released DESC, set_code, CAST(number AS INTEGER), number", (oid,)):
+                out[r[0]] = dict(zip(DRUCK, r))
+    for r in conn.execute("SELECT scryfall_id, oracle_id, name, set_code, number, image_url FROM cards WHERE oracle_id = ?1 "
+                          "AND COALESCE(json_extract(json, '$.digital'), 0) = 0 UNION SELECT scryfall_id, oracle_id, name, set_code, number, image_url "
+                          "FROM set_prints WHERE oracle_id = ?1 AND digital = 0 ORDER BY 4, 5", (oid,)):
+        out.setdefault(r[0], dict(zip(DRUCK, r)))
+    return list(out.values())
+
+
 def drucke_suchen(conn, q, limit=24):
     """Andere Karte für eine Zeile der Scan-Liste: Drucke, deren Name den Text enthält. Je Name zuerst die aus den geladenen Sets und den
     bekannten Karten (nach Set und Nummer), dann alle übrigen Papier-Drucke aus dem Katalog (Phase 31, neueste zuerst); Scryfall wird nicht
-    mehr gefragt. -> [{id, name, set_code, number, image}]"""
+    mehr gefragt. -> [{id, oid, name, set_code, number, image}]"""
     q = (q or "").strip()
     if len(q) < 2:
         raise ValueError("Mindestens zwei Buchstaben")
     muster = f"%{q}%"
-    out = {r[0]: {"id": r[0], "name": r[1], "set_code": r[2], "number": r[3], "image": r[4]} for r in conn.execute(
-        "SELECT scryfall_id, name, set_code, number, image_url FROM set_prints WHERE name LIKE ? AND digital = 0 UNION "
-        "SELECT scryfall_id, name, set_code, number, image_url FROM cards WHERE name LIKE ? AND COALESCE(json_extract(json, '$.digital'), 0) = 0 "
-        "ORDER BY 2, 3, 4 LIMIT ?", (muster, muster, limit * 4))}
+    out = {r[0]: dict(zip(DRUCK, r)) for r in conn.execute(
+        "SELECT scryfall_id, oracle_id, name, set_code, number, image_url FROM set_prints WHERE name LIKE ? AND digital = 0 UNION "
+        "SELECT scryfall_id, oracle_id, name, set_code, number, image_url FROM cards WHERE name LIKE ? AND COALESCE(json_extract(json, '$.digital'), 0) = 0 "
+        "ORDER BY 3, 4, 5 LIMIT ?", (muster, muster, limit * 4))}
     k = _katalog(conn)
     if k:
         with closing(k):  # genaue Namen und Anfänge zuerst, damit die Grenze nicht die gesuchte Karte abschneidet
-            for r in k.execute("SELECT scryfall_id, name, set_code, number, image FROM drucke WHERE name LIKE ?1 ORDER BY lower(name) != lower(?2), "
+            for r in k.execute("SELECT scryfall_id, oracle_id, name, set_code, number, image FROM drucke WHERE name LIKE ?1 ORDER BY lower(name) != lower(?2), "
                                "name NOT LIKE ?2 || '%', name, released DESC, set_code, number LIMIT ?3", (muster, q, limit)):
-                out.setdefault(r[0], {"id": r[0], "name": r[1], "set_code": r[2], "number": r[3], "image": r[4]})
+                out.setdefault(r[0], dict(zip(DRUCK, r)))
     genau = q.casefold()
     return sorted(out.values(), key=lambda d: (d["name"].casefold() != genau, not d["name"].casefold().startswith(genau), d["name"]))[:limit]
 
@@ -2507,7 +2530,8 @@ def kopie_aendern(conn, key, qty=None, binder=None, foil=None, condition=None, l
 
 
 def binder_umbenennen(conn, alt, neu):
-    """Scan-Binder umbenennen (Phase 26): Kopien, Orte und Notizen, Erfassen-Sitzungen und gebuchte Verkäufe ziehen mit. -> neuer Name"""
+    """Scan-Binder umbenennen (Phase 26): Kopien, Orte und Notizen, Erfassen-Sitzungen und gebuchte Verkäufe ziehen mit, bei einem eingescannten
+    Deck auch der Eintrag unter den fertigen Decks und sein Commander. -> neuer Name"""
     if alt not in scan_binders(conn):
         raise ValueError(f"„{alt}“ ist kein Scan-Binder")
     neu = scan_binder_name(conn, neu)
@@ -2520,6 +2544,10 @@ def binder_umbenennen(conn, alt, neu):
         for tabelle in ("collection", "notizen", "sales"):
             conn.execute(f"UPDATE {tabelle} SET binder = ? WHERE binder = ?", (neu, alt))
         conn.execute("UPDATE imports SET scope = ? WHERE scope = ? AND file IN (?, ?)", (neu, alt, SCAN_DATEI, VERKAUF_DATEI))
+        fest = fertige_decks(conn)
+        if alt in fest:  # ein eingescanntes Deck (Phase 60) bleibt eins, mit seinem Commander
+            conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (FERTIGE_DECKS, json.dumps([neu if n == alt else n for n in fest], ensure_ascii=False)))
+            conn.execute("UPDATE OR REPLACE meta SET key = ? WHERE key = ?", ("deckbinder:" + neu, "deckbinder:" + alt))
     return neu
 
 

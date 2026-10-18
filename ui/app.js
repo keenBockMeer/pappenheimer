@@ -83,14 +83,16 @@ const TIP = {
   erfassen: 'Ganze Karte ruhig und aufrecht vor die Kamera, gleichmäßiges Licht, möglichst ohne Spiegelung. Erkannt werden die Drucke der gewählten Sets. Jede erkannte Karte kommt auf die Scan-Liste; nimm sie aus dem Bild, die nächste zählt, sobald kurz keine Karte zu sehen war. Das Kamerabild bleibt auf diesem Gerät, solange „Messbilder speichern“ aus ist.',
   messbilder: 'Zum Messen der Erkennung: Ist der Schalter an, geht zu jeder gezählten Karte das Kamerabild an deinen Server und nur dorthin, mit der Karte als Etikett. Korrigierst du die Karte auf der Scan-Liste, zieht das Etikett nach; nimmst du sie von der Liste, steht das Bild unter „noch zuordnen“. Messbilder sind Testdaten: Sie stehen nicht in der Sicherung, und du löschst sie einzeln oder alle.',
   messausloeser: '„Bild aufnehmen“ speichert das Kamerabild ohne Erkennung, die Karte ordnest du danach zu. Für Karten außerhalb der gewählten Sets, für schwere Fälle und für Karten frei im Bild: schräg, klein, am Rand, in der Hand.',
-  scanliste: 'Erkannte Karten landen zuerst hier, noch nicht in deiner Sammlung. Prüf die Liste: doppelt gescannte mit Minus wegnehmen, eine falsch erkannte antippen und die richtige wählen (die anderen Kandidaten der Kamera stehen schon da, sonst suchen), Foil, Sprache, Zustand oder Menge ändern. Erst „übernehmen“ legt alles in den Binder. Die Liste liegt auf dem Server und bleibt, auch wenn du die Seite schließt oder später am Rechner weitermachst. Steht „Druck prüfen“ an einer Zeile, gibt es ihr Bild in mehreren Drucken und die App hat einen gewählt: antippen und den richtigen nehmen.',
+  scanliste: 'Erkannte Karten landen zuerst hier, noch nicht in deiner Sammlung. Prüf die Liste: doppelt gescannte mit Minus wegnehmen, eine falsch erkannte antippen und die richtige wählen (die Kandidaten der Kamera und alle Drucke dieser Karte stehen da, sonst suchen), Foil, Sprache, Zustand oder Menge ändern. Erst „übernehmen“ legt alles in den Binder. Die Liste liegt auf dem Server und bleibt, auch wenn du die Seite schließt oder später am Rechner weitermachst. Steht „Druck prüfen“ an einer Zeile, gibt es ihr Bild in mehreren Drucken und die App hat einen gewählt: antippen und den richtigen nehmen.',
   erfassenAlle: 'Ganze Karte ruhig und aufrecht vor die Kamera, gleichmäßiges Licht, möglichst ohne Spiegelung. Die App vergleicht mit allen Karten, ein Set musst du nicht wählen. Jede erkannte Karte kommt auf die Scan-Liste; nimm sie aus dem Bild, die nächste zählt, sobald kurz keine Karte zu sehen war. Das Kamerabild bleibt auf diesem Gerät, solange „Messbilder speichern“ aus ist: An den Server geht nur ein Fingerabdruck der Karte, ein paar Kilobyte.',
   ohneset: '„Nur gewählte Sets“: Der Vergleich läuft auf diesem Gerät und kennt nur die Drucke der gewählten Sets. „Alle Karten, ohne Set“: Du wählst kein Set, die App vergleicht mit allen Kartenbildern. Dafür rechnet dein Gerät einen Fingerabdruck der Karte, und der Server sucht ihn unter allen Karten; die Kartenbilder bereitest du einmal vor. Unter so vielen Karten ist die App seltener sicher und fragt öfter nach.',
-  vorliebe: 'Welches Bild eine Karte zeigt, sieht die Kamera. Welcher Druck es ist, oft nicht: Viele Bilder gibt es in mehreren Sets. Liegt genau ein Druck in einem bevorzugten Set, nimmt die App den, sonst den aus dem Set deiner letzten Karten, sonst den neuesten. Wo sie raten musste, steht auf der Scan-Liste „Druck prüfen“. Scannst du ein Display oder einen Precon, wähl hier dessen Sets, sonst lass es leer.',
+  vorliebe: 'Welches Bild eine Karte zeigt, sieht die Kamera. Welcher Druck es ist, oft nicht: Viele Bilder gibt es in mehreren Sets. Liegt genau ein Druck in einem bevorzugten Set, nimmt die App den, sonst den aus dem Set deiner letzten sicher erkannten Karten, sonst einen, den du schon hast oder auf der Scan-Liste gewählt hast, sonst den neuesten. Wo sie raten musste, steht auf der Scan-Liste „Druck prüfen“. Scannst du ein Display oder einen Precon, wähl hier dessen Sets, sonst lass es leer.',
   katfehlt: 'Der Katalog aller Karten ist noch nicht geladen. Er kommt von Scryfall (rund 75 MB, einmal je Installation) und wird geladen, sobald jemand „Erfassen“ öffnet; sofort geht es im Terminal mit „mtg katalog --neu“. Bis dahin erkennt die App mit „Nur gewählte Sets“.',
   katjob: 'Dein Gerät lädt die fehlenden Kartenbilder von Scryfall (die kleine Größe), rechnet daraus Fingerabdrücke und schickt sie an den Server. Das ist je Installation einmal nötig, nicht je Gerät: Jedes weitere Gerät und Konto nutzt das Ergebnis mit. Am Rechner dauert es rund eine Viertelstunde, die Seite muss so lange offen bleiben. Erkannt wird, was schon vorbereitet ist. Anhalten und später weitermachen geht.',
   namen: 'Die deutschen Namen, wie sie auf deutschen Karten gedruckt sind, braucht „Namen der Karte lesen“, um deutsche Karten am Namen zu erkennen. Scryfall liefert sie nur in den Gesamtdaten mit allen Sprachen (rund 378 MB), die der Server dann alle 30 Tage neu lädt. Ohne sie liest die App englische Namen, und deutsche Karten erkennt sie nur am Bild. Der Schalter gilt für die ganze Installation und wird vom Hauptkonto gestellt. Laden kann der Server sie nur dort, wo er Namen lesen kann (Tesseract, im Docker-Image dabei).',
-  druckpruefen: 'Die Karte ist erkannt. Ihr Bild gibt es aber in mehreren Drucken, und die App hat einen davon genommen. Tipp den richtigen an und speichere. Stimmt er schon, speichere einfach.',
+  druckpruefen: 'Die Karte ist erkannt. Ihr Bild gibt es aber in mehreren Drucken, und die App hat einen davon genommen. Welcher es ist, steht unten links auf deiner Karte: Set-Kürzel und Nummer. Tipp den passenden Druck an und speichere. Stimmt er schon, speichere einfach.',
+  scandeck: 'Ein fertiges Deck: Seine Karten zählen nie als verfügbar, kommen nie in die Verkaufsliste und stehen unter Decks, dort wählst du auch den Commander. Übernimmst du später weitere Karten unter diesem Namen, kommen sie dazu.',
+  deckscan: 'Deck einscannen: Scann alle Karten des Decks nacheinander. Sie kommen auf die Scan-Liste. Dort prüfst du sie, gibst dem Deck unten einen Namen und übernimmst es. Am besten mit „Alle Karten, ohne Set“, ist es ein Precon, wähl dessen Set als bevorzugtes.',
   titel: 'Die App liest zuerst den Namen oben auf der Karte und wählt dann unter den Drucken dieses Namens das passende Bild. So erkennt sie mehr Karten von selbst und verwechselt ähnliche Bilder seltener. Dafür gehen je Karte zwei schmale Streifen mit der Namenszeile an deinen Server. Sie werden dort gelesen und nicht gespeichert, das übrige Kamerabild bleibt auf dem Gerät. Ist der Name nicht lesbar (Spiegelung auf Foil oder Hülle, sehr alte Karten, Name quer), vergleicht die App wie bisher nur das Bild.',
   schnell: 'Die App zählt eine Karte, sobald sie sich sicher genug ist: bei einem sehr klaren Bild nach einem Blick, sonst nach zwei oder drei. Ein unscharfes Bild zwischendurch wirft die Zählung nicht mehr um. Beim Erfassen merkt sie auch Kopien beim Durchblättern: Schnippst du die gezählte Karte weg und liegt darunter eine gleiche, fragt sie „Weitere Kopie gelegt?“; schnippst du weiter, sammelt die Frage mit („3 weitere Kopien?“), ein Tipp auf das Plus zählt sie alle. Ohne den Haken zählt sie wie bisher erst, wenn zwei Bilder nacheinander sicher sind, und weitere Kopien nur über +1.',
   frei: 'Die App sucht die Karte im ganzen Kamerabild: Sie muss nicht im Rahmen liegen, nur ganz zu sehen sein und ungefähr aufrecht stehen. Am besten geht es auf einem ruhigen Untergrund, von dem sich die Karte abhebt. Findet die App keine Karte, gilt der Rahmen in der Mitte. Fertige Karten legst du außerhalb des Bilds ab, sonst zählt die App sie noch einmal. Ohne den Haken zählt nur der Rahmen.',
@@ -946,7 +948,8 @@ async function viewDecks(p) {
   const [dl, cm] = await Promise.all([api('decks'), api('commanders?' + new URLSearchParams({mode: rankMode, ...(rankMin != null ? {min_decks: rankMin} : {})}))]);
   const alle = [...dl.fertig, ...dl.items.map(d => ({...d, kind: 'gebaut'}))];
   const items = rankAll ? cm.items : cm.items.slice(0, 30), top = items.slice(0, 3), rest = items.slice(3), buy = cm.mode === 'guenstig';
-  main.innerHTML = `${head('Decks', `Fertige Decks lädst du als Textliste hoch, neue baut die App aus deinen freien Karten ${info('free', 'frei')}. Bestehende Decks werden dabei nie auseinandergenommen.`)}
+  main.innerHTML = `${head('Decks', `Fertige Decks lädst du als Textliste hoch oder scannst sie ein, neue baut die App aus deinen freien Karten ${info('free', 'frei')}. Bestehende Decks werden dabei nie auseinandergenommen.`,
+    `<a class="btn" href="#/scan?modus=erfassen&deck=1">${icon('cards')}Deck einscannen</a>`)}
     <section class="sec" aria-label="Deine Decks"><h2>Deine Decks <small>${alle.length ? `${dl.fertig.length} fertig, ${dl.items.length} gebaut` : ''}</small></h2>
       ${alle.length ? `<div class="decks">${alle.map(deckTile).join('')}</div>` : '<p class="muted">Noch keine Decks. Lade ein fertiges Deck hoch (als Text, zum Beispiel aus ManaBox oder Moxfield) oder bau unten eins aus dem Ranking.</p>'}</section>
     <section class="sec" aria-label="Commander-Ranking"><h2>Welche Commander passen zu deiner Sammlung? ${cm.all ? `<small>${cm.total === cm.all ? `${num(cm.all)} Kandidaten` : `${num(cm.total)} von ${num(cm.all)} Kandidaten`}</small>` : ''}</h2>
@@ -2492,7 +2495,7 @@ async function viewScan(p) {
   scanStand = ''; scanKons = null;
   scanModus = merk('mtg-scan-modus', 'pruefen', SCAN_MODI);
   if (p.get('modus')) scanModus = p.get('modus') === 'erfassen' ? 'erfassen' : 'pruefen';
-  if (scanModus === 'erfassen') return viewErfassen();
+  if (scanModus === 'erfassen') return viewErfassen(p.get('deck') === '1');
   const r = await api('scan?v=' + FP_V);
   scanIx = r.ids.length ? fpIndex(r) : null;
   main.innerHTML = `${scanKopf('pruefen')}
@@ -2853,12 +2856,12 @@ const erfOffenMerken = () => merke(erfOffenKey(), JSON.stringify(erf.offen));
 const uhr = iso => new Date(iso).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
 const erfSetName = c => erfSetsAlle?.find(x => x.code === c)?.name || c;
 
-async function viewErfassen() {
+async function viewErfassen(deck = false) {  // deck (Phase 60): aus „Deck einscannen“, die Liste wird ein fertiges Deck
   let alt = {}, offen = [];
   try { alt = JSON.parse(localStorage.getItem('mtg-erfassen') || '{}'); offen = JSON.parse(localStorage.getItem(erfOffenKey()) || '[]'); } catch { /* privates Fenster: Standard */ }
   const [ei, kat] = await Promise.all([api('erfassen'), api('scan/katalog?v=' + FP_V)]), heute = ei.vorschlag;
-  const binder = !alt.binder || (/^Scan \d{4}-\d\d-\d\d$/.test(alt.binder) && alt.binder !== heute) ? heute : alt.binder;  // gestriger Standardname: heute ein neuer
-  erf = {sets: alt.sets || [], binder, lang: alt.lang || 'en', cond: alt.cond || 'near_mint', foil: alt.foil || 'normal', liste: ei.liste, zuletzt: ei.zuletzt, offen, letzte: null,
+  const binder = deck ? '' : !alt.binder || (/^Scan \d{4}-\d\d-\d\d$/.test(alt.binder) && alt.binder !== heute) ? heute : alt.binder;  // gestriger Standardname: heute ein neuer
+  erf = {sets: alt.sets || [], binder, deck, decks: new Set(ei.binder.filter(b => b.deck).map(b => b.name)), lang: alt.lang || 'en', cond: alt.cond || 'near_mint', foil: alt.foil || 'normal', liste: ei.liste, zuletzt: ei.zuletzt, offen, letzte: null,
          mess: !!alt.mess, huelle: !!alt.huelle, messStand: null, alle: alt.alle === true, titel: alt.titel !== false, kat, kontext: []};
   erfZug = {frei: true, wahl: false, oids: [], fremd: 0, anders: 0}; erfBest = []; scanKons = null; erfTitel = null; erfDa = false;
   const bereit = erfKann();
@@ -2893,6 +2896,7 @@ async function viewErfassen() {
       <div id="erf-prep"></div>
     </details>
     <datalist id="erf-binderliste"></datalist>
+    ${deck ? `<p class="note-line">${esc(TIP.deckscan)}</p>` : ''}
     ${camBox(bereit, erfStart())}
     <div class="nur-voll" id="voll-schleier" hidden><button class="btn" type="button">${icon('x')}Schließen</button></div>
     <section class="sec" aria-label="Scan-Liste" id="erf-liste"></section>
@@ -2926,11 +2930,12 @@ async function viewErfassen() {
 
 function erfBinderUi(ei) {  // Scan-Binder mit Karten und Wert (Klick zeigt ihre Karten), CSV und Umbenennen; ManaBox-Binder übernehmen (Phase 26)
   const box = $('#erf-binder-sec'), vor = $('#erf-binderliste');
+  if (erf) erf.decks = new Set(ei.binder.filter(b => b.deck).map(b => b.name));
   if (vor) vor.innerHTML = ei.binder.map(b => `<option value="${esc(b.name)}">`).join('');
   if (!box) return;
   const csvName = n => n.replace(/[\\/:*?"<>|]+/g, '_') + '.csv';
   box.innerHTML = `<h2>Deine Scan-Binder ${info('scanbinder', 'Scan-Binder')}${ei.binder.length ? `<a class="more" href="/api/bestand.csv" download="bestand-${new Date().toISOString().slice(0, 10)}.csv" title="${esc(TIP.csv)}">${icon('download', 'sm')}Alles als CSV</a>` : ''}</h2>${ei.binder.length
-    ? `<div class="rows">${ei.binder.map(b => `<div class="row binder"><a class="min0 binderlink" href="#/cards?binder=${encodeURIComponent(b.name)}"><div class="name">${esc(b.name)}</div><div class="sub2">${karten(b.karten)}, ${eur(b.wert)}, zuletzt ${day(b.zuletzt)}</div></a>
+    ? `<div class="rows">${ei.binder.map(b => `<div class="row binder"><a class="min0 binderlink" href="${b.deck ? '#/decks?binder=' : '#/cards?binder='}${encodeURIComponent(b.name)}"><div class="name">${esc(b.name)}</div><div class="sub2">${b.deck ? 'Fertiges Deck, ' : ''}${karten(b.karten)}, ${eur(b.wert)}, zuletzt ${day(b.zuletzt)}</div></a>
         <div class="seg"><a class="btn small" href="/api/bestand.csv?binder=${encodeURIComponent(b.name)}" download="${esc(csvName(b.name))}">${icon('csv', 'sm')}CSV</a><button class="btn small" type="button" data-binderneu="${esc(b.name)}">Umbenennen</button></div></div>`).join('')}</div>`
     : '<p class="muted">Noch keiner. Der erste entsteht, wenn du die erste Scan-Liste übernimmst.</p>'}
     ${ei.manabox?.length ? `<form class="filters gap-top" data-uebernehmen="1"><label class="inl">ManaBox-Binder übernehmen ${info('uebernehmen', 'Übernehmen')}
@@ -3236,8 +3241,8 @@ async function erfSenden(body, bild) {
     erf.offen = erf.offen.filter(x => x.zug !== body.zug); erfOffenMerken();
     erf.liste = l; erfListe();
     const z = l.zeilen.find(x => x.scryfall_id === body.id) || l.zeilen[0];  // jüngster Scan zuerst
-    erf.letzte = {id: body.id, foil: z.foil, condition: z.condition, language: z.language};
-    if (z.set_code) erf.kontext = [z.set_code, ...erf.kontext.filter(c => c !== z.set_code)].slice(0, 3);  // Zusammenhang für die Druckwahl
+    erf.letzte = {id: body.id, foil: z.foil, condition: z.condition, language: z.language, pruefen: body.pruefen};  // „+1“ einer geratenen bleibt geraten
+    if (z.set_code && !body.pruefen) kontextDazu(z.set_code);  // Zusammenhang für die Druckwahl, nur aus Drucken, die nicht geraten sind
     erfHit(z);
   } catch (e) {
     if (e instanceof LoginNoetig) return;
@@ -3246,6 +3251,9 @@ async function erfSenden(body, bild) {
     erfListe(e.message);
   }
 }
+
+// Sets der letzten Karten, jüngstes zuerst: ein geratener Druck käme sonst als Zusammenhang zurück und zöge die nächsten mit (Phase 60)
+const kontextDazu = c => { erf.kontext = [c, ...erf.kontext.filter(x => x !== c)].slice(0, 3); };
 
 function erfHit(z) {
   const box = $('#scan-hit');
@@ -3266,14 +3274,20 @@ function erfListe(fehler) {  // die Scan-Liste zum Prüfen; erst „übernehmen�
       ${n ? `<span class="seg h2r"><button class="btn small" type="button" data-erfzurueck>${icon('left', 'sm')}Letzte zurück</button></span>` : ''}</h2>
     ${erf.offen.length ? `<div class="note warn"><span class="ic">${icon('alert')}</span><div><b>${karten(erf.offen.length)} nicht gespeichert</b><div class="muted">${esc(fehler || 'Keine Verbindung zum Server.')} Die App merkt sie sich, bis du sie erneut sendest.</div></div><button class="btn small" type="button" id="erf-nochmal">Erneut senden</button></div>` : ''}
     ${n ? `<div class="rows">${l.zeilen.map(erfRow).join('')}</div>
-      <form class="erf-ab" data-erfab="1"><label class="field"><span>In den Scan-Binder ${info('scanbinder', 'Scan-Binder')}</span>
-          <input name="binder" list="erf-binderliste" maxlength="80" required value="${esc(erf.binder)}" autocomplete="off"></label>
+      <form class="erf-ab" data-erfab="1"><label class="field"><span>${erf.deck ? 'In das Deck' : `In den Scan-Binder ${info('scanbinder', 'Scan-Binder')}`}</span>
+          <input name="binder" list="erf-binderliste" maxlength="80" required value="${esc(erf.binder)}" autocomplete="off"${erf.deck ? ' placeholder="Name des Decks"' : ''}></label>
+        <label class="inl"><input type="checkbox" name="deck"> Fertiges Deck ${info('scandeck', 'Fertiges Deck')}</label>
         <button class="btn primary" type="submit">${icon('check')}${karten(n)} übernehmen</button></form>
       <div class="toolbar gap-top"><button class="btn ghost" type="button" id="erf-verwerfen">${icon('trash', 'sm')}Liste verwerfen</button></div>`
     : `<p class="muted">${esc(TIP.scanliste)}</p>`}
     ${frisch ? `<p class="note-line">${icon('check', 'sm')} Zuletzt übernommen: ${karten(z.karten)} in „${esc(z.binder)}“, ${day(z.at)} um ${uhr(z.at)}.
       ${z.zuruecknehmbar ? `<button class="link" type="button" id="erf-zurueckholen">${icon('left', 'sm')}zurück auf die Liste</button>` : ''}</p>` : ''}`;
   if (n > vorher) bump($('h2 small', box));
+  const f = $('[data-erfab]', box), haken = () => {  // ein eingescanntes Deck bleibt eins; sonst entscheidet der Haken (aus „Deck einscannen“ gesetzt)
+    const ist = erf.decks.has(f.elements.binder.value.trim());
+    Object.assign(f.elements.deck, {checked: ist || erf.deck, disabled: ist});
+  };
+  if (f) { f.elements.binder.oninput = haken; haken(); }
 }
 
 const erfRow = (z, i) => `<div class="row erf"><a href="#" data-oid="${esc(z.oracle_id)}"${peekAt(z.image, z.name, eur(z.price))} aria-label="${esc(z.name)} ansehen">${pic(small(z.image), '', 'thumb')}</a>
@@ -3287,7 +3301,7 @@ async function erfAendern(z, neu) {
 }
 
 // Zeile prüfen: welche Karte es ist (Kandidaten der Erkennung oder Suche), Foil, Sprache, Zustand, Menge
-const erfKachel = (d, an) => `<button type="button" class="kandb" data-ewahl="${esc(d.id)}" aria-pressed="${an}" title="${esc(`${d.name}, ${d.set_code} #${d.number}`)}">${pic(small(d.image), d.name)}<span>${esc(d.set_code)} #${esc(d.number)}</span></button>`;
+const erfKachel = (d, an) => `<button type="button" class="kandb" data-ewahl="${esc(d.id)}"${d.oid ? ` data-oid2="${esc(d.oid)}"` : ''} aria-pressed="${an}" title="${esc(`${d.name}, ${d.set_code} #${d.number}`)}">${pic(small(d.image), d.name)}<span>${esc(d.set_code)} #${esc(d.number)}</span></button>`;
 // „Welche Karte ist es?“ im Dialog: Kacheln (Kandidaten der Erkennung, an = gewählte Id) und die Suche; die Wahl steht im Feld id des Formulars
 const wahlHtml = (kand, an, frage = 'Welche Karte ist es?') => `<div class="field"><span>${frage}</span><div class="kand umbruch" id="e-kand">${kand.map(d => erfKachel(d, d.id === an)).join('')}</div>
         <div class="toolbar gap-top"><span class="search grow">${icon('search', 'sm')}<input type="search" id="e-q" placeholder="Andere Karte suchen" aria-label="Andere Karte suchen (Name)" autocomplete="off" spellcheck="false"></span>
@@ -3298,7 +3312,8 @@ function wahlUi(f) {
     const b = e.target.closest('[data-ewahl]');
     if (!b) return;
     f.elements.id.value = b.dataset.ewahl;
-    $$('[data-ewahl]', dlg).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    $$('[data-ewahl]', dlg).forEach(x => x.setAttribute('aria-pressed', String(x.dataset.ewahl === b.dataset.ewahl)));
+    if (b.dataset.oid2) druckeLaden(b.dataset.oid2, f);  // eine andere Karte gewählt (Suche): deren Drucke zeigen
   };
   const suchen = async () => {
     const q = $('#e-q').value.trim(), box = $('#e-treffer');
@@ -3312,6 +3327,20 @@ function wahlUi(f) {
   $('#e-suchen').onclick = suchen;
   $('#e-q').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); suchen(); } };
 }
+// Alle Drucke einer Karte (Phase 60), auch mit anderem Bild: Die Kamera unterscheidet Drucke mit demselben Bild nicht, die Kandidaten der
+// Erkennung nennen davon höchstens sechs. Nur im Dialog der Scan-Liste (#e-drucke), neu geladen, wenn eine andere Karte gewählt wird.
+async function druckeLaden(oid, f) {
+  const box = $('#e-drucke', dlg);
+  if (!box || box.dataset.oid === oid) return;
+  box.dataset.oid = oid;
+  box.innerHTML = '<p class="muted">Lädt …</p>';
+  try {
+    const {items} = await api('erfassen?drucke=' + encodeURIComponent(oid));
+    if (box.dataset.oid !== oid) return;  // inzwischen eine andere Karte gewählt
+    $('#e-drucke-t', dlg).textContent = items.length > 1 ? `Alle ${num(items.length)} Drucke von ${items[0].name}` : 'Drucke dieser Karte';
+    box.innerHTML = items.map(d => erfKachel({...d, oid: null}, d.id === f.elements.id.value)).join('') || '<p class="muted">Keine weiteren Drucke bekannt.</p>';
+  } catch (e) { if (!(e instanceof LoginNoetig)) box.innerHTML = `<p class="say bad">${esc(e.message)}</p>`; }
+}
 function erfEdit(i) {
   const z = erf.liste.zeilen[i];
   dlg.className = 'modal';
@@ -3320,6 +3349,7 @@ function erfEdit(i) {
     ${z.pruefen ? `<p class="note-line">${esc(TIP.druckpruefen)}</p>` : ''}
     <form class="kform" data-erf="${i}"><input type="hidden" name="id" value="${esc(z.scryfall_id)}">
       ${wahlHtml([{...z, id: z.scryfall_id}, ...z.wahl], z.scryfall_id, z.pruefen ? 'Welcher Druck ist es?' : undefined)}
+      <div class="field"><span id="e-drucke-t">Drucke dieser Karte</span><div class="kand umbruch" id="e-drucke"></div></div>
       <div class="field"><label for="e-foil">Foil</label><select id="e-foil" name="foil">${optionen(FOIL, z.foil)}</select></div>
       <div class="field"><label for="e-lang">Sprache</label><select id="e-lang" name="language">${optionen(LANG, z.language)}</select></div>
       <div class="field"><label for="e-cond">Zustand</label><select id="e-cond" name="condition">${optionen(COND, z.condition)}</select></div>
@@ -3327,6 +3357,7 @@ function erfEdit(i) {
       <div class="actions"><button class="btn ghost" type="button" id="e-weg">${icon('trash', 'sm')}Von der Liste</button><button class="btn ghost" type="button" data-close>Abbrechen</button><button class="btn primary" type="submit">Speichern</button></div></form></div>`;
   showDlg();
   wahlUi($('form', dlg));
+  if (z.oracle_id) druckeLaden(z.oracle_id, $('form', dlg));
   $('#e-weg').onclick = async () => { if (await erfAendern(z, {qty: 0})) { dlg.close(); flash(`${z.name}: von der Liste genommen`); } };
 }
 
@@ -3334,20 +3365,23 @@ async function erfForm(f) {
   const z = erf.liste.zeilen[+f.dataset.erf], d = Object.fromEntries(new FormData(f));
   if (+d.qty === 0 && !confirm(`${z.name} von der Liste nehmen?`)) return;
   const neu = {foil: d.foil, condition: d.condition, language: d.language, qty: +d.qty, ...(d.id !== z.scryfall_id || z.pruefen ? {id: d.id} : {})};  // mit id gilt der Druck als geprüft
-  if (await erfAendern(z, neu)) { dlg.close(); flash(+d.qty === 0 ? `${z.name}: von der Liste genommen` : 'Gespeichert'); }
+  if (!await erfAendern(z, neu)) return;
+  const g = neu.id && erf.liste.zeilen.find(x => x.scryfall_id === neu.id);  // von dir gewählt: gilt als Zusammenhang
+  if (g?.set_code) kontextDazu(g.set_code);
+  dlg.close(); flash(+d.qty === 0 ? `${z.name}: von der Liste genommen` : 'Gespeichert');
 }
 
 async function erfUebernehmen(f) {  // die geprüfte Liste in den Binder
-  const b = f.elements.binder.value.trim();
+  const b = f.elements.binder.value.trim(), deck = f.elements.deck.checked;
   await erfKette;  // erst die laufenden Scans
   if (erf.offen.length && !confirm(`${karten(erf.offen.length)} sind noch nicht beim Server angekommen. Sie kommen nicht mit in den Binder, bleiben aber zum erneuten Senden stehen. Trotzdem übernehmen?`)) return;
   try {
-    const r = await post('erfassen', {aktion: 'uebernehmen', binder: b});
+    const r = await post('erfassen', {aktion: 'uebernehmen', binder: b, deck});
     erf.binder = b; erf.liste = r.liste; erf.zuletzt = r.zuletzt; erf.letzte = null; erfMerken();
     if ($('#scan-hit')) $('#scan-hit').innerHTML = '';
     erfListe(); erfBinderNeu();
     if (vollbild()) blatt();  // die Runde ist fertig: zurück zur Kamera, ohne das Blatt eigens zu schließen
-    flash(`Übernommen: ${karten(r.sitzung.karten)} in „${b}“`);
+    flash(`Übernommen: ${karten(r.sitzung.karten)} in ${deck ? 'das Deck ' : ''}„${b}“`);
   } catch (e) { if (!(e instanceof LoginNoetig)) flash('Fehler: ' + e.message); }
 }
 

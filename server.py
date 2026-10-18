@@ -558,7 +558,8 @@ def api_scan_katalog(conn, q=None, body=None):
 def api_scan_suche(conn, body):
     """Erkennung ohne Set-Wahl (Phase 32): {v, fp: [base64 je Lage, höchstens katalog.SUCHE_LAGEN], sets: [bevorzugte Kürzel], kontext: [Sets der
     zuletzt gezählten Karten, jüngstes zuerst], karten und sicher: [Kennungen aus api_scan_titel (Phase 35): alle Karten, deren Name gelesen
-    wurde, und die Karte des sicher gelesenen Namens; dann stehen nur ihre Bilder zur Wahl]}
+    wurde, und die Karte des sicher gelesenen Namens; dann stehen nur ihre Bilder zur Wahl]}. Unter gleich aussehenden Drucken gehen die vor, die
+    die Sammlung hat oder die auf der Scan-Liste liegen (Phase 60, katalog.druckwahl).
     -> katalog.suche: die besten drei Bilder mit Wert, Abstand, gewähltem Druck und anderen Drucken."""
     d = json.loads(body or b"{}")
     v, fps = d.get("v"), d.get("fp")
@@ -570,7 +571,8 @@ def api_scan_suche(conn, body):
     for k in (karten, sicher):
         if k is not None and not (isinstance(k, list) and len(k) <= SUCHE_KARTEN and all(isinstance(x, str) for x in k)):
             raise ValueError(f"Suche: karten und sicher sind Listen von höchstens {SUCHE_KARTEN} Kennungen")
-    return katalog.suche(mtg.katalog_von(conn), v, lagen, kuerzel(d.get("sets")), kuerzel(d.get("kontext")), d.get("pruef"), karten, sicher)
+    eigen = {r[0] for r in conn.execute("SELECT scryfall_id FROM collection UNION SELECT scryfall_id FROM scan_liste")}  # Phase 60: rund 4 ms
+    return katalog.suche(mtg.katalog_von(conn), v, lagen, kuerzel(d.get("sets")), kuerzel(d.get("kontext")), d.get("pruef"), karten, sicher, eigen)
 
 
 # --- Namen lesen (Phase 35, PLAN E21) ---------------------------------------------------------------------------------------------------------
@@ -716,14 +718,17 @@ def bestand_export(conn, binder=None):
 
 def api_erfassen(conn, q, body=None, fetch=None):
     """Erfassen (Phase 25, mit Scan-Liste aus Phase 29): GET mit sitzung=ID die Sitzung, mit suche=TEXT Drucke zum Tauschen (auch aus dem Katalog,
-    Phase 31), ohne beides Scan-Binder, Namensvorschlag, ManaBox-Binder, die Scan-Liste und die zuletzt übernommene Sitzung. POST {aktion: liste (id, foil,
-    condition, language, qty, zug, wahl, pruefen) | liste-aendern (key, id, foil, condition, language, qty) | liste-zurueck | liste-leeren | uebernehmen
-    (binder) | sitzung-zurueck (sitzung)}; direkt in den Binder (Phase 25): add | zurueck | aendern."""
+    Phase 31), mit drucke=ORACLE_ID alle Drucke dieser Karte (Phase 60), ohne all das Scan-Binder, Namensvorschlag, ManaBox-Binder, die Scan-Liste und
+    die zuletzt übernommene Sitzung. POST {aktion: liste (id, foil, condition, language, qty, zug, wahl, pruefen) | liste-aendern (key, id, foil,
+    condition, language, qty) | liste-zurueck | liste-leeren | uebernehmen (binder, deck: als fertiges Deck, Phase 60) | sitzung-zurueck (sitzung)};
+    direkt in den Binder (Phase 25): add | zurueck | aendern."""
     if body is None:
         if q.get("sitzung"):
             return mtg.scan_sitzung(conn, q["sitzung"])
         if q.get("suche") is not None:
             return {"items": mtg.drucke_suchen(conn, q["suche"])}
+        if q.get("drucke"):
+            return {"items": mtg.drucke_karte(conn, q["drucke"])}
         fest = mtg.deck_binders(conn)  # ManaBox-Binder, die sich übernehmen lassen (Phase 26)
         manabox = [{"name": b, "karten": n} for b, n in conn.execute("SELECT binder, SUM(qty) FROM collection WHERE binder_type = 'binder' GROUP BY binder "
                                                                        "ORDER BY binder COLLATE NOCASE") if b not in fest]
@@ -741,7 +746,7 @@ def api_erfassen(conn, q, body=None, fetch=None):
     if a == "liste-leeren":
         return mtg.liste_leeren(conn)
     if a == "uebernehmen":
-        s = mtg.liste_uebernehmen(conn, d.get("binder"), fetch=fetch)
+        s = mtg.liste_uebernehmen(conn, d.get("binder"), fetch=fetch, deck=bool(d.get("deck")))
         return {"sitzung": s, "liste": mtg.liste(conn), "zuletzt": mtg.letzte_sitzung(conn)}
     if a == "sitzung-zurueck":
         return {"liste": mtg.sitzung_zuruecknehmen(conn, d.get("sitzung")), "zuletzt": mtg.letzte_sitzung(conn)}
