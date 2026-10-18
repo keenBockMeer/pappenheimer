@@ -6112,7 +6112,7 @@ def test_einrichtung_server_startet_und_antwortet_nur_auf_die_einrichtung(einric
     schliche = ["/", "/app.js/", "/./app.js", "/%61pp.js", "/APP.JS", "/app.js%00", "/../server.py", "/..%2fserver.py", "/fonts/",
                 "/fonts/../app.js", "/gibtsnicht", "/index.html/", "/konten.db", "/einrichtung.code", "/data/einrichtung.code"]
     offen = {pfad for pfad in dateien + schliche if anfrage("GET", pfad)[0] != 403}
-    assert offen == set(server.EINRICHTUNG_DATEIEN) == {"/", "/zaehler.js", "/app.js", "/style.css", "/favicon.svg", "/grain.svg", "/fonts/Geist-Variable.woff2"}
+    assert offen == set(server.EINRICHTUNG_DATEIEN) == {"/", "/zaehler.js", "/deck.js", "/app.js", "/style.css", "/favicon.svg", "/grain.svg", "/fonts/Geist-Variable.woff2"}
     seite = (ui / "index.html").read_text(encoding="utf-8")
     assert set(re.findall(r'(?:src|href)="(/[^"]*)"', seite)) - {"/manifest.webmanifest", "/icon-180.png"} <= offen  # was die Seite lädt, ist offen (Manifest und Symbol braucht erst die App)
     assert len(dateien) > 12 and all(anfrage("GET", pfad)[0] == 200 for pfad in offen) and anfrage("GET", "/app.js?v=1")[0] == 200
@@ -8250,8 +8250,9 @@ node_noetig = pytest.mark.skipif(not shutil.which("node"), reason="ui/zaehler.js
 
 
 def node_js(rumpf, daten):
-    """führt rumpf (Rumpf einer Funktion: Z = ui/zaehler.js, D = daten) in Node aus und gibt sein Ergebnis als JSON zurück"""
-    js = (f"const Z = require({json.dumps(str(WURZEL / 'ui' / 'zaehler.js'))}); const D = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
+    """führt rumpf (Rumpf einer Funktion: Z = ui/zaehler.js, Dk = ui/deck.js, D = daten) in Node aus und gibt sein Ergebnis als JSON zurück"""
+    js = (f"const Z = require({json.dumps(str(WURZEL / 'ui' / 'zaehler.js'))}), Dk = require({json.dumps(str(WURZEL / 'ui' / 'deck.js'))});"
+          f"const D = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
           f"process.stdout.write(JSON.stringify((() => {{ {rumpf} }})()));")
     r = subprocess.run(["node", "-e", js], input=json.dumps(daten), capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert r.returncode == 0, r.stderr
@@ -8467,3 +8468,49 @@ def test_blaettern_eingebunden_nur_beim_erfassen_mit_schnell_zaehlen():
     assert "erfZaehlen(b.id, b.wie);" in js and "'Weitere Kopie gelegt?' : `${n} weitere Kopien gelegt?`" in js and 'id="blaettern-frage">' in js
     assert "for (let i = 0; i < +kb.dataset.blaettern; i++) erfZaehlen(blaettern.id, blaettern.wie);" in js  # die Antwort zählt, so viele angeboten sind
     assert "blaettern = null;" in js.split("const scanStop = () =>")[1].split("\n")[0]  # Kamera aus: nichts mehr verfolgen
+
+
+# --- Ideen von Archidekt: Spieltisch und Wahrscheinlichkeit in ui/deck.js, mit Node geprüft (PLAN Phasen 62 und 63) -------------------------
+@node_noetig
+def test_wahrscheinlichkeit_wie_der_server():
+    """Abnahme Phase 63: Deck.mindestens rechnet im Browser genau wie deckbuild.mindestens (auch Randfälle: nichts gezogen, k = 0, K größer als n)"""
+    zufall = random.Random(63)
+    faelle = [[0, 0, 7, 1], [99, 10, 0, 0], [99, 10, 0, 1], [99, 37, 9, 3], [99, 1, 17, 1], [60, 24, 7, 2], [99, 99, 7, 7], [5, 3, 9, 3], [99, 10, 7, 0]]
+    faelle += [[n := zufall.randint(1, 100), zufall.randint(0, n), zufall.randint(1, 20), zufall.randint(0, 5)] for _ in range(300)]
+    js = node_js("return D.map(([N, K, n, k]) => Dk.mindestens(N, K, n, k));", faelle)
+    assert max(abs(a - deckbuild.mindestens(*f)) for a, f in zip(js, faelle)) < 1e-9
+
+
+@node_noetig
+def test_spieltisch_regeln():
+    """Abnahme Phase 62: neues Spiel mit 7 Karten und Commander in der Kommandozone, Mulligan, ziehen, nächster Zug enttappt und zieht,
+    Commander-Steuer, unter und oben auf die Bibliothek, durchsuchen und mischen; keine Karte geht verloren oder kommt doppelt"""
+    r = node_js("""
+      let x = 7; const rnd = () => { x = (x * 9301 + 49297) % 233280; return x / 233280; };
+      const T = Dk.Tisch, s = T.neu(D.karten, [D.cmd], rnd), uids = () => T.ZONEN.flatMap(z => s[z].map(c => c.uid)).sort((a, b) => a - b), out = {};
+      out.start = [s.hand.length, s.bib.length, s.kommando.length, s.zug, s.leben];
+      T.mulligan(s); out.mull = [s.hand.length, s.bib.length, s.mull];
+      const land = s.hand[0].uid; T.bewegen(s, land, 'feld'); T.tappen(s, land); out.tapped = s.feld[0].tapped;
+      T.naechsterZug(s); out.zug = [s.zug, s.feld[0].tapped, s.hand.length];
+      const c = s.kommando[0].uid; T.bewegen(s, c, 'feld'); out.steuer1 = T.steuer(s, c);
+      T.bewegen(s, c, 'friedhof'); T.bewegen(s, c, 'kommando'); T.bewegen(s, c, 'feld'); out.steuer2 = T.steuer(s, c);
+      const h = s.hand[0].uid; T.bewegen(s, h, 'kommando'); out.keinCmd = T.finden(s, h)[0];
+      T.bewegen(s, h, 'unten'); out.unten = s.bib[s.bib.length - 1].uid === h;
+      T.bewegen(s, h, 'oben'); T.ziehen(s); out.oben = s.hand[s.hand.length - 1].uid === h;
+      const b = s.bib[5].uid; T.bewegen(s, b, 'hand'); T.mischen(s); out.gesucht = T.finden(s, b)[0];
+      T.bewegen(s, 9999, 'feld');
+      out.alle = uids(); out.n = D.karten.reduce((n, k) => n + k.qty, 0) + 1;
+      while (s.bib.length) T.ziehen(s); T.ziehen(s); out.leer = [s.bib.length, s.hand.length];
+      return out;""", {"karten": [{"name": "Forest", "qty": 30}, *({"name": f"Karte {i}", "qty": 1} for i in range(69))], "cmd": {"name": "Chef"}})
+    assert r["start"] == [7, 92, 1, 1, 40] and r["mull"] == [7, 92, 1]
+    assert r["tapped"] is True and r["zug"] == [2, False, 7]  # 7 - Land + gezogene Karte
+    assert (r["steuer1"], r["steuer2"]) == (2, 4) and r["keinCmd"] == "hand" and r["unten"] and r["oben"] and r["gesucht"] == "hand"
+    assert r["alle"] == list(range(1, r["n"] + 1)) and r["leer"][0] == 0  # jede Karte genau einmal, ziehen aus leerer Bibliothek tut nichts
+
+
+def test_deck_js_eingebunden():
+    """Phasen 62 und 63: deck.js steht vor app.js (wie zaehler.js), kennt weder DOM noch Netz und gehört zur Seite der Einrichtung"""
+    seite, dk = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("index.html", "deck.js"))
+    assert seite.index('<script src="/deck.js"></script>') < seite.index('<script src="/app.js"></script>')
+    assert not re.search(r"\b(document|window|fetch|XMLHttpRequest|localStorage)\b", dk)
+    assert server.EINRICHTUNG_DATEIEN["/deck.js"] == "deck.js"

@@ -1536,9 +1536,9 @@ def api_konto(method, path, body, token, sicher=False, adresse=""):
 # (Handler._einrichtung): die Seite mit ihren Dateien (EINRICHTUNG_DATEIEN) und EINRICHTUNG_API, alles andere 403. Wer den Code nicht kennt,
 # liest und schreibt nichts (E13); der Code steht einmal im Protokoll (serve) und kommt nur im Körper einer Anfrage, nie in der Adresse.
 
-EINRICHTUNG_DATEIEN = {"/": "index.html", "/zaehler.js": "zaehler.js", "/app.js": "app.js", "/style.css": "style.css", "/favicon.svg": "favicon.svg",
+EINRICHTUNG_DATEIEN = {"/": "index.html", "/zaehler.js": "zaehler.js", "/deck.js": "deck.js", "/app.js": "app.js", "/style.css": "style.css", "/favicon.svg": "favicon.svg",
                        "/grain.svg": "grain.svg", "/fonts/Geist-Variable.woff2": "fonts/Geist-Variable.woff2"}
-# genau was die Seite braucht: index.html lädt zaehler.js vor app.js (nur Rechenregeln des Scanners, Phase 56), favicon.svg ruft auch Docker ab
+# genau was die Seite braucht: index.html lädt zaehler.js und deck.js vor app.js (nur Rechenregeln des Scanners und der Deckansicht, Phasen 56, 62), favicon.svg ruft auch Docker ab
 EINRICHTUNG_API = ("/api/einrichtung", "/api/einrichtung/sicherung")
 EINRICHTUNG_JSON = 4096           # so viele Bytes höchstens hat eine Anfrage an /api/einrichtung (Code, Name, Passwort)
 VERWERFEN = 4096                  # so viele Bytes Körper liest der Server noch, bevor er eine Anfrage ablehnt (Handler._verwerfen)

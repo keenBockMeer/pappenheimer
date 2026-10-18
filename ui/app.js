@@ -150,6 +150,8 @@ const TIP = {
   bulkstack: 'Weitere Kopien unter dem Mindestpreis: gehen als Masse weg.',
   sold: 'Lädst du einen neuen Export hoch und Karten von der Verkaufsliste fehlen, bucht die App sie als verkauft.',
   hand: 'Wie sich das Deck auf die Hand verteilt, exakt gerechnet aus der Zahl der Länder und Ramp-Karten (keine Simulation). Gerechnet wird mit 7 Karten auf der Hand und einer weiteren je Zug ab Zug 2.',
+  rechner: 'Exakt gerechnet wie die Zahlen darüber: 7 Karten auf der Hand und eine je Zug ab Zug 2. In Commander mit mehreren Spielern zieht jeder schon im ersten Zug, dann „im ersten Zug ziehen“ anhaken. Mulligans zählen nicht mit. Die Gruppen sind dieselben wie oben bei den Karten.',
+  spieltisch: 'Zum Ausprobieren allein, nichts wird gespeichert. Karte antippen: Die App fragt, wohin sie soll. Auf dem Spielfeld tappt ein Tipp die Karte, das Menü öffnet der kleine Knopf darunter.',
   spielbar: 'Wie oft die ersten 7 Karten 2 bis 5 Länder enthalten. Mit weniger fehlt Mana, mit mehr fehlen Zauber.',
   land3: 'Wie oft du bis Zug 3 drei Länder gesehen hast (7 Karten plus 2 gezogen), also in jedem Zug ein Land spielen kannst.',
   ramp2: 'Wie oft bis Zug 2 mindestens eine Ramp-Karte dabei ist (7 Karten plus 1 gezogen).',
@@ -1114,12 +1116,34 @@ function handHtml(d) {
   return `<section class="sec" aria-label="Starthand"><h2>Starthand ${info('hand', 'Starthand')} <small>${karten(h.n)}, davon ${h.lands} Länder</small></h2>
     ${facts([[pct(h.spielbar), 'spielbare Starthand', 'spielbar'], [pct(h.land3), 'drei Länder bis Zug 3', 'land3'], [h.ramp2 == null ? 'keine' : pct(h.ramp2), 'Ramp bis Zug 2', 'ramp2'], [fmt(h.lands_hand, 1), 'Länder auf der Hand im Schnitt']])}
     <div class="toolbar gap-top noprint"><button class="btn" type="button" id="h-neu">${icon('cards')}Starthand ziehen</button><button class="btn" type="button" id="h-mull" disabled>Mulligan</button>
-      <button class="btn" type="button" id="h-zieh" disabled>Nächste Karte</button><span class="muted" id="h-info" aria-live="polite"></span></div>
-    <div class="grid small hand" id="hand"></div></section>`;
+      <button class="btn" type="button" id="h-zieh" disabled>Nächste Karte</button><a class="btn" href="#/spieltisch?${d.id != null ? `id=${d.id}` : `binder=${encodeURIComponent(d.binder)}`}">${icon('layers')}Am Spieltisch ausprobieren</a>
+      <span class="muted" id="h-info" aria-live="polite"></span></div>
+    <div class="grid small hand" id="hand"></div>
+    <h3>Wie wahrscheinlich ist … ${info('rechner', 'Wahrscheinlichkeit')}</h3>
+    <div class="toolbar noprint"><label class="inl">mindestens <select id="w-k">${[1, 2, 3, 4].map(k => `<option>${k}</option>`).join('')}</select></label>
+      <label class="inl">aus <select id="w-gruppe">${rechnerGruppen(d).map(([t, l]) => `<optgroup label="${esc(t)}">${l.map(([k, n, z]) => `<option value="${esc(k)}" data-k="${z}">${esc(n)} (${z})</option>`).join('')}</optgroup>`).join('')}</select></label>
+      <label class="inl">bis Zug <select id="w-zug">${Array.from({length: 10}, (_, i) => `<option${i === 2 ? ' selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+      <label class="inl"><input type="checkbox" id="w-erst"> im ersten Zug ziehen</label></div>
+    <p class="lead" id="w-erg" aria-live="polite"></p></section>`;
+}
+// Rechner (Phase 63): Gruppen wie in der Kartenansicht und jede einzelne Karte; K = Karten der Gruppe im Deck ohne Commander
+const rechnerGruppen = d => [['Rolle', gruppen(d, 'rolle')], ['Kartentyp', gruppen(d, 'typ')], ['Manawert', gruppen(d, 'mv')]]
+  .map(([t, gs]) => [t, gs.map(g => [`${t}:${g.label}`, g.label, g.count])])
+  .concat([['Eine Karte', d.cards.filter(c => c.role !== 'commander').sort((a, b) => a.name.localeCompare(b.name)).map(c => [`karte:${c.oracle_id}`, c.name, c.qty])]]);
+function rechnerUi(d) {
+  const erg = $('#w-erg');
+  if (!erg) return;
+  const N = d.stats.hand.n, rechne = () => {
+    const opt = $('#w-gruppe').selectedOptions[0], K = +opt.dataset.k, k = +$('#w-k').value, zug = +$('#w-zug').value, n = 7 + zug - 1 + ($('#w-erst').checked ? 1 : 0);
+    erg.innerHTML = `<b>${pct(Deck.mindestens(N, K, n, k))}</b>: So oft hast du bis Zug ${zug} mindestens ${k} ${k === 1 ? 'Karte' : 'Karten'} aus „${esc(opt.textContent.replace(/ \(\d+\)$/, ''))}“ gesehen (${K} von ${N} Karten, ${n} gesehen).`;
+  };
+  ['#w-k', '#w-gruppe', '#w-zug', '#w-erst'].forEach(s => { $(s).onchange = rechne; });
+  rechne();
 }
 function handUi(d) {
   const neu = $('#h-neu');
   if (!neu) return;
+  rechnerUi(d);
   const stapel = d.cards.filter(c => c.role !== 'commander').flatMap(c => Array(c.qty).fill(c));
   let deck = [], pos = 0, mull = 0;
   const misch = () => { deck = stapel.slice(); for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; } pos = 7; };
@@ -1315,6 +1339,78 @@ function showBinderDeck(d) {
     await api('binder-deck?delete=1&name=' + encodeURIComponent(d.binder), {method: 'POST'});
     flash(`„${d.name}“ entfernt`); location.hash = '#/decks';
   };
+}
+
+// --- Spieltisch (Phase 62): ein Spiel allein, Zug für Zug; die Regeln stehen in ui/deck.js (Deck.Tisch), nichts geht an den Server ----------
+let tisch = null;
+const PZIEL = [['feld', 'Aufs Spielfeld'], ['hand', 'Auf die Hand'], ['friedhof', 'Auf den Friedhof'], ['exil', 'Ins Exil'], ['oben', 'Oben auf die Bibliothek'],
+  ['unten', 'Unter die Bibliothek'], ['kommando', 'In die Kommandozone']];
+async function viewSpieltisch(p) {
+  const d = await api(p.get('id') ? 'deck/' + p.get('id') : 'binder-deck?name=' + encodeURIComponent(p.get('binder') || ''));
+  const cmds = d.commanders?.length ? d.commanders : d.commander ? [d.commander] : [];
+  tisch = {cmds, karten: d.cards.filter(c => c.role !== 'commander')};
+  tisch.s = Deck.Tisch.neu(tisch.karten, cmds);
+  const zurueck = p.get('id') ? `#/decks?id=${p.get('id')}` : `#/decks?binder=${encodeURIComponent(d.binder)}`;
+  main.innerHTML = `${head(`Spieltisch: ${esc(d.name)}`, `Ein Spiel allein zum Ausprobieren, nichts wird gespeichert. ${info('spieltisch', 'Spieltisch')}`,
+    `<a class="btn ghost" href="${zurueck}">${icon('left')}Zum Deck</a>`)}<div id="probe"></div>`;
+  main.onclick = e => {
+    const b = e.target.closest('[data-pa], [data-pk], [data-pm]');
+    if (!b) return;
+    const s = tisch.s, T = Deck.Tisch, a = b.dataset.pa;
+    if (b.dataset.pk && s.feld.some(c => c.uid === +b.dataset.pk)) T.tappen(s, +b.dataset.pk);
+    else if (b.dataset.pk || b.dataset.pm) return tischMenue(+(b.dataset.pk || b.dataset.pm));
+    else if (a === 'zug') T.naechsterZug(s);
+    else if (a === 'ziehen') T.ziehen(s);
+    else if (a === 'mull') T.mulligan(s);
+    else if (a === 'mischen') { T.mischen(s); flash('Bibliothek gemischt'); }
+    else if (a === 'neu') tisch.s = T.neu(tisch.karten, tisch.cmds);
+    else if (a === 'suchen') return tischSuchen();
+    else if (a.startsWith('leben')) s.leben += +a.slice(5);
+    tischZeigen();
+  };
+  tischZeigen();
+}
+const tischKarte = (c, feld) => `<div class="probe-k${c.tapped ? ' tapped' : ''}"><button type="button" class="img" data-pk="${c.uid}"${peekAt(c.karte.image, c.karte.name, '')}
+  aria-label="${esc(c.karte.name)}${feld ? (c.tapped ? ', getappt. Enttappen' : '. Tappen') : '. Wohin?'}">${pic(c.karte.image, c.karte.name)}</button>
+  ${feld ? `<button type="button" class="link" data-pm="${c.uid}" aria-label="${esc(c.karte.name)}: wohin?">wohin?</button>` : ''}
+  ${c.commander && !feld ? `<span class="sub2">Steuer +${Deck.Tisch.steuer(tisch.s, c.uid)}</span>` : ''}</div>`;
+function tischZeigen() {
+  const s = tisch.s, land = c => /Land/.test(c.karte.type || '');
+  const zone = (titel, karten, feld, leer) => `<section class="sec probe-zone" aria-label="${titel}"><h2>${titel} <small>${karten.length}</small></h2>
+    ${karten.length ? `<div class="probe-reihe">${karten.map(c => tischKarte(c, feld)).join('')}</div>` : `<p class="muted">${leer}</p>`}</section>`;
+  const leben = [-5, -1, 1, 5].map(n => `<button class="btn small" type="button" data-pa="leben${n}" aria-label="Leben ${n > 0 ? '+' : ''}${n}">${n > 0 ? '+' : '−'}${Math.abs(n)}</button>`);
+  $('#probe').innerHTML = `<div class="toolbar probe-leiste" role="group" aria-label="Spiel">
+      <span>Zug <b>${s.zug}</b></span><span class="probe-leben">${leben.slice(0, 2).join('')}<span>Leben <b>${s.leben}</b></span>${leben.slice(2).join('')}</span>
+      <span>Bibliothek <b>${s.bib.length}</b></span>
+      <button class="btn primary" type="button" data-pa="zug">Nächster Zug</button><button class="btn" type="button" data-pa="ziehen">Karte ziehen</button>
+      <button class="btn" type="button" data-pa="mull">Mulligan</button><button class="btn" type="button" data-pa="suchen">${icon('search')}Bibliothek durchsuchen</button>
+      <button class="btn" type="button" data-pa="mischen">Mischen</button><button class="btn ghost" type="button" data-pa="neu">${icon('refresh')}Neues Spiel</button></div>
+    ${s.mull ? `<p class="note-line">${s.mull}. Mulligan: Lege ${Math.max(0, s.mull - 1)} ${s.mull === 2 ? 'Karte' : 'Karten'} von der Hand unter die Bibliothek (der erste Mulligan ist in Commander frei).</p>` : ''}
+    ${zone('Kommandozone', s.kommando, false, 'Leer.')}${zone('Spielfeld: Länder', s.feld.filter(land), true, 'Noch kein Land.')}
+    ${zone('Spielfeld', s.feld.filter(c => !land(c)), true, 'Noch nichts ausgespielt.')}${zone('Hand', s.hand, false, 'Keine Karten.')}
+    <div class="split even">${zone('Friedhof', s.friedhof, false, 'Leer.')}${zone('Exil', s.exil, false, 'Leer.')}</div>`;
+}
+function tischMenue(uid) {
+  const [von, i] = Deck.Tisch.finden(tisch.s, uid), c = tisch.s[von][i];
+  dlg.className = 'modal';
+  dlg.innerHTML = `<button class="x" data-close aria-label="Schließen">${icon('x')}</button><div class="box"><h2 id="dlg-title">${esc(c.karte.name)}: wohin?</h2>
+    <div class="actions probe-ziele">${PZIEL.filter(([z]) => z !== von && (z !== 'kommando' || c.commander)).map(([z, l]) => `<button class="btn" type="button" data-pz="${z}" data-uid="${uid}">${l}</button>`).join('')}</div></div>`;
+  showDlg();
+}
+function tischSuchen() {  // ponytail: eine Karte nehmen und danach mischen, wie beim Suchen im Spiel; mehr als eine heißt zweimal suchen
+  const karten = tisch.s.bib.slice().sort((a, b) => a.karte.name.localeCompare(b.karte.name));
+  dlg.className = 'modal';
+  dlg.innerHTML = `<button class="x" data-close aria-label="Schließen">${icon('x')}</button><div class="box"><h2 id="dlg-title">Bibliothek durchsuchen <small>${karten.length}</small></h2>
+    <p class="muted">Eine Karte antippen: Sie kommt auf die Hand, danach wird gemischt.</p>
+    <div class="rows">${karten.map(c => `<button type="button" class="row" data-pz="hand" data-uid="${c.uid}" data-mischen="1"${peekAt(c.karte.image, c.karte.name, '')}>${pic(small(c.karte.image), '', 'thumb')}
+      <span class="min0 name">${esc(c.karte.name)}</span><span></span><span></span></button>`).join('')}</div></div>`;
+  showDlg();
+}
+function tischZiel(b) {
+  Deck.Tisch.bewegen(tisch.s, +b.dataset.uid, b.dataset.pz);
+  if (b.dataset.mischen) Deck.Tisch.mischen(tisch.s);
+  dlg.close();
+  if ($('#probe')) tischZeigen();
 }
 
 // --- Konten und Sicherung (Phase 13): Hauptkonto, Unterkonten mit eigener Sammlung, Anmeldung, Sicherung ----------------
@@ -2138,6 +2234,8 @@ document.addEventListener('click', e => {
   if (sw) return switchTo(sw.dataset.open);
   const del = e.target.closest('[data-del]');
   if (del) return delKonto(del.dataset.del, del.dataset.label);
+  const pz = e.target.closest('[data-pz]');
+  if (pz) return tischZiel(pz);
   const dk = e.target.closest('[data-rein], [data-raus]');
   if (dk) return deckAendern(dk.dataset.rein, dk.dataset.raus);
   const a = e.target.closest('[data-oid]');
@@ -3602,7 +3700,8 @@ async function viewMessbilder() {
 }
 
 const VIEWS = {'': ['Übersicht', viewHome], cards: ['Karten', viewCards], sets: ['Serien', viewSets], sort: ['Sortieren', viewSort], scan: ['Scannen', viewScan], sell: ['Verkaufen', viewSell], decks: ['Decks', viewDecks], wuensche: ['Wünsche', viewWuensche], spiele: ['Spiele', viewSpiele], help: ['Hilfe', viewHelp],
-  konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true]};  // true: nicht in der Navigation (Link im Fuß)
+  konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true],
+  spieltisch: ['Spieltisch', viewSpieltisch, true]};  // true: nicht in der Navigation (Link im Fuß)
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
 let rendered = null, enterTimer, neueAnsicht = false;
 // Zahl läuft beim ersten Aufruf der Ansicht hoch (nicht beim Neuzeichnen, nicht bei reduzierter Bewegung)

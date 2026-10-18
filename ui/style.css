@@ -880,6 +880,17 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
   .dtop { grid-template-columns: minmax(0, 1fr); } .dtop .img { max-width: 13rem; }
   .fan { height: 15rem; } .fan a { --w: 8rem; } .fan a:nth-child(1) { --x: -4.75rem; } .fan a:nth-child(3) { --x: 4.75rem; }
 }
+/* Spieltisch (Phase 62): Zonen als Reihen kleiner Karten; getappt = um 90 Grad gedreht (nur transform, nie ein Filter auf dem Bild) */
+.probe-leiste { position: sticky; top: 4.5rem; z-index: 5; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3); }
+.probe-leben { display: inline-flex; align-items: center; gap: var(--space-1); }
+.probe-leben > span { padding-inline: var(--space-2); }
+.probe-zone h2 { margin-bottom: var(--space-3); }
+.probe-reihe { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: var(--space-4) var(--space-3); }
+.probe-k { display: grid; justify-items: center; gap: var(--space-1); }
+.probe-k .img { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; transition: transform var(--transition-fast); }
+.probe-k img, .probe-k .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.probe-k.tapped .img { transform: rotate(90deg) scale(.72); }
+.probe-ziele { flex-wrap: wrap; justify-content: flex-start; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 @media print {
   header, footer, .noprint, #toast, #drop, #peek, #tip, #funken, #karten-hg, body::after { display: none !important; }
