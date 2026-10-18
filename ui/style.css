@@ -1019,7 +1019,7 @@ button.row:hover { background: var(--color-surface-alt); }
 .erf-ab { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3) var(--space-4); margin-top: var(--space-5);
   position: sticky; bottom: 0; padding: var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom)); background: var(--color-background); border-top: var(--border-width) solid var(--color-border); }
 .erf-ab .field { flex: 1 1 14rem; min-width: 0; }
-.erf-ab input { width: 100%; }
+.erf-ab .field input { width: 100%; }
 /* nach den Grundregeln oben, sonst schlagen die sie (gleiche Spezifität) */
 @media (max-width: 1024px) { .erf-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 768px) { .erf-vorgaben { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
