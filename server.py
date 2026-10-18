@@ -1192,6 +1192,9 @@ def dispatch(conn, method, path, q, body=b"", filename="", fetch=None, edhrec=No
             if teil.endswith(".txt"):
                 return 200, "text/plain; charset=utf-8", deckbuild.export_text(d).encode()
             return _json(d)
+        if method == "POST" and path == "/api/vergleich":  # Phase 64: {a, b} je {id}, {binder} oder {text}
+            d = json.loads(body or b"{}")
+            return _json(deckbuild.vergleich(conn, d.get("a"), d.get("b"), lookup or mtg._lookup))
         if method == "GET" and path == "/api/summary":
             return _json(api_summary(conn))
         if method == "GET" and path == "/api/cards":

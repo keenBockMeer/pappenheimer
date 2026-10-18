@@ -774,6 +774,62 @@ def deck_suche(conn, did, q, limit=24):
     return sorted(out, key=lambda r: not r["frei"])[:limit]
 
 
+def _vergleich_seite(conn, x, lookup):
+    """Eine Seite des Vergleichs: {"id"} gespeichertes Deck, {"binder"} fertiges Deck, {"text"} eingefügte Liste (wie beim Import gelesen).
+    -> (Name, {oracle_id: Menge}, unbekannte Namen)"""
+    x = x if isinstance(x, dict) else {}
+    if x.get("id") is not None or x.get("binder"):
+        d = deck_detail(conn, int(x["id"])) if x.get("id") is not None else binder_deck(conn, str(x["binder"]))
+        if not d:
+            raise ValueError("Unbekanntes Deck")
+        menge = Counter()
+        for c in d["cards"] + (d.get("commanders") or ([d["commander"]] if d.get("commander") else [])):
+            menge[c["oracle_id"]] += c.get("qty") or 1
+        return d["name"], dict(menge), []
+    teil = mtg.parse_decklist(str(x.get("text") or ""))
+    if not teil["cards"]:
+        raise ValueError("In der Liste steht keine Karte")
+    ids = mtg.resolve(conn, teil["cards"], lookup)
+    oids = {r[0]: r[1] for r in conn.execute("SELECT scryfall_id, oracle_id FROM cards WHERE scryfall_id IN (SELECT value FROM json_each(?))",
+                                             (json.dumps([i for i in ids if i]),))}
+    menge, unbekannt = Counter(), []
+    for c, sid in zip(teil["cards"], ids):
+        if oids.get(sid):
+            menge[oids[sid]] += c["qty"]
+        else:
+            unbekannt.append(c["name"])
+    return teil["name"] or "Eingefügte Liste", dict(menge), unbekannt
+
+
+def vergleich(conn, a, b, lookup=None):
+    """Zwei Decks vergleichen (Phase 64): je Karte Menge in A und B, Kopien im Besitz und frei, Preis (billigster Druck); „fehlt“ = mehr nötig,
+    als du besitzt (Standardländer fehlen nie). -> {a, b, beide, nur_a, nur_b, fehlt: {a, b}}"""
+    seiten = [_vergleich_seite(conn, x, lookup or sources.scryfall_lookup) for x in (a, b)]
+    alle = sorted(set(seiten[0][1]) | set(seiten[1][1]))
+    info = {r["oracle_id"]: r for r in conn.execute(
+        "SELECT oracle_id, name, image_url image, type_line, MIN(COALESCE(price_eur, price_eur_foil)) preis FROM cards "
+        "WHERE oracle_id IN (SELECT value FROM json_each(?)) GROUP BY oracle_id", (json.dumps(alle),))}
+    besitz = {r[0]: r[1] for r in conn.execute(
+        f"SELECT c.oracle_id, SUM(col.qty) FROM collection col JOIN cards c USING (scryfall_id) WHERE {mtg.OWNED} "
+        f"AND c.oracle_id IN (SELECT value FROM json_each(?)) GROUP BY c.oracle_id", (json.dumps(alle),))}
+    frei, preis = free_copies(conn), cheapest(conn)
+    out = {"beide": [], "nur_a": [], "nur_b": []}
+    fehlt = {s: {"karten": 0, "preis": 0.0} for s in "ab"}
+    for oid in alle:
+        r = info.get(oid) or {"name": oid, "image": None, "type_line": "", "preis": None}  # Karte ohne Zeile in cards (wie in deck_detail)
+        basic = (r["type_line"] or "").startswith("Basic")
+        k = {"oracle_id": oid, "name": r["name"], "image": r["image"], "a": seiten[0][1].get(oid, 0), "b": seiten[1][1].get(oid, 0),
+             "besitz": besitz.get(oid, 0), "frei": frei.get(oid, 0), "preis": 0.0 if basic else preis.get(oid, r["preis"])}
+        for s in "ab":
+            k["fehlt_" + s] = 0 if basic else max(0, k[s] - k["besitz"])
+            fehlt[s]["karten"] += k["fehlt_" + s]
+            fehlt[s]["preis"] += k["fehlt_" + s] * (k["preis"] or 0)
+        out["beide" if k["a"] and k["b"] else "nur_a" if k["a"] else "nur_b"].append(k)
+    for lst in out.values():
+        lst.sort(key=lambda k: k["name"].lower())
+    return out | {s: {"name": n, "karten": sum(m.values()), "unbekannt": u} for s, (n, m, u) in zip("ab", seiten)} | {"fehlt": fehlt}
+
+
 def cheapest(conn):
     """oracle_id -> billigster Preis unter den Kopien im Besitz."""
     return {r[0]: r[1] for r in conn.execute(

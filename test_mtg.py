@@ -8514,3 +8514,40 @@ def test_deck_js_eingebunden():
     assert seite.index('<script src="/deck.js"></script>') < seite.index('<script src="/app.js"></script>')
     assert not re.search(r"\b(document|window|fetch|XMLHttpRequest|localStorage)\b", dk)
     assert server.EINRICHTUNG_DATEIEN["/deck.js"] == "deck.js"
+
+
+def test_decks_vergleichen(conn):
+    """Abnahme Phase 64: ein gebautes gegen ein fertiges Deck, dann gegen eine eingefügte Liste (Namen aus der Datenbank, sonst Scryfall, Unbekanntes
+    genannt); was fehlt, samt Preis (billigste eigene Kopie, sonst der bekannte Druck); Standardländer fehlen nie"""
+    karte(conn, 1, "Chef", ci="G", typ="Legendary Creature — Elf", eur=2.0)
+    karte(conn, 2, "Grün", ci="G", eur=1.5)
+    karte(conn, 3, "Forest", typ="Basic Land — Forest", eur=0.1, qty=5)
+    karte(conn, 4, "Fertig Eins", ci="G", binder="Mein Deck", btyp="deck", eur=4.0)
+    karte(conn, 5, "Zweimal", ci="G", eur=1.0)
+    conn.execute("INSERT INTO decks(id, name, commander_oracle_id, bracket, saved_at) VALUES (1, 'Chef', ?, 3, 'x')", (oid(1),))
+    conn.executemany("INSERT INTO deck_cards VALUES (1,?,?)", [(oid(1), "commander"), (oid(2), "core"), (oid(3), "basic"), (oid(3), "basic"), (oid(5), "core")])
+    conn.commit()
+    fremd = {"id": uid(50), "oracle_id": oid(50), "name": "Fremd", "set": "tst", "collector_number": "50", "lang": "en", "type_line": "Artifact", "cmc": 1.0,
+             "color_identity": [], "rarity": "rare", "legalities": {"commander": "legal"}, "prices": {"eur": "3.5"}, "mana_cost": "", "oracle_text": "",
+             "image_uris": {"normal": "https://cards.scryfall.io/normal/front/test/50.jpg"}}
+    gefragt = []
+    def lookup(idents):
+        gefragt.extend(x.get("name") for x in idents)
+        return [fremd] if any(x.get("name") == "Fremd" for x in idents) else [], []
+    namen = lambda r, g: [(k["name"], k["a"], k["b"]) for k in r[g]]
+    r = deckbuild.vergleich(conn, {"id": 1}, {"binder": "Mein Deck"}, lookup)
+    assert (r["a"]["name"], r["a"]["karten"], r["b"]["karten"]) == ("Chef", 5, 1) and r["beide"] == [] and gefragt == []
+    assert namen(r, "nur_a") == [("Chef", 1, 0), ("Forest", 2, 0), ("Grün", 1, 0), ("Zweimal", 1, 0)] and namen(r, "nur_b") == [("Fertig Eins", 0, 1)]
+    assert r["fehlt"] == {"a": {"karten": 0, "preis": 0.0}, "b": {"karten": 0, "preis": 0.0}}
+    liste = "Deck\n1 Grün\n2 Zweimal\n1 Fremd\n1 Gibtsnicht\n10 Forest\n"
+    r = deckbuild.vergleich(conn, {"id": 1}, {"text": liste}, lookup)
+    assert namen(r, "beide") == [("Forest", 2, 10), ("Grün", 1, 1), ("Zweimal", 1, 2)] and namen(r, "nur_a") == [("Chef", 1, 0)]
+    assert namen(r, "nur_b") == [("Fremd", 0, 1)] and r["b"]["unbekannt"] == ["Gibtsnicht"] and "Grün" not in gefragt
+    assert r["fehlt"]["a"] == {"karten": 0, "preis": 0.0} and r["fehlt"]["b"]["karten"] == 2 and r["fehlt"]["b"]["preis"] == pytest.approx(4.5)
+    zweimal = next(k for k in r["beide"] if k["name"] == "Zweimal")
+    assert (zweimal["besitz"], zweimal["fehlt_b"], zweimal["preis"]) == (1, 1, 1.0)
+    for a, b, fehler in (({"id": 99}, {"id": 1}, "Unbekanntes Deck"), ({"id": 1}, {"text": "  "}, "keine Karte"), ({"id": 1}, None, "keine Karte")):
+        with pytest.raises(ValueError, match=fehler):
+            deckbuild.vergleich(conn, a, b, lookup)
+    code, _, body = server.dispatch(conn, "POST", "/api/vergleich", {}, json.dumps({"a": {"binder": "Mein Deck"}, "b": {"text": liste}}).encode(), lookup=lookup)
+    assert code == 200 and json.loads(body)["fehlt"]["a"]["karten"] == 0
