@@ -353,7 +353,6 @@ h3 { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin: var
 .legend > div { display: grid; gap: var(--space-1); align-content: start; }
 .anteil { height: .75rem; border-radius: 2px; background: var(--color-surface-alt); margin-bottom: var(--space-2); }
 .anteil span { display: block; height: 100%; width: var(--w); border-radius: 2px; transform-origin: left; }
-#main.enter .anteil span { animation: grow .9s var(--ease-out) .3s both; }
 @keyframes grow { from { transform: scaleX(0); } }
 /* Die Hilfe-Symbole in Kennzahlen und Legende erscheinen erst, wenn die Maus darüber steht oder der Fokus darauf liegt (am Handy bleiben sie sichtbar) */
 @media (hover: hover) {
@@ -370,7 +369,7 @@ h3 { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin: var
 .bars { display: grid; grid-template-columns: 8rem minmax(0, 1fr) 4.5rem; align-items: center; row-gap: var(--space-4); column-gap: var(--space-3); }
 .bars .lbl { display: flex; align-items: center; gap: var(--space-2); }
 .track { border-left: 1px solid var(--data-baseline); height: 14px; display: flex; align-items: center; }
-.track span { height: 8px; width: var(--w); background: var(--data-bar); border-radius: 0 3px 3px 0; min-width: 1px; transform-origin: left; animation: grow .8s var(--ease-out) backwards; }
+.track span { height: 8px; width: var(--w); background: var(--data-bar); border-radius: 0 3px 3px 0; min-width: 1px; }
 .bars .val { text-align: right; color: var(--color-text-secondary); }
 .bars.wide { grid-template-columns: 8rem minmax(0, 1fr) 11.5rem; }
 @media (max-width: 40rem) { .bars.wide { grid-template-columns: 6rem minmax(0, 1fr) 7.5rem; } .bars.wide .val { font-size: var(--text-sm); } }
@@ -423,13 +422,10 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .card .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }  /* lange Decknamen kürzen statt die Kachel zu verbreitern */
 .card img, .card .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--color-surface-alt); box-shadow: var(--shadow-card);
   transition: transform .5s var(--ease-spring), box-shadow var(--transition-normal); }  /* zurück in die Ruhe mit Feder */
-/* Hover: Karte hebt sich und neigt sich zur Maus (--rx und --ry setzt app.js), schnell beim Folgen */
-.card:hover img, .card:hover .noimg { transform: translateY(-6px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); box-shadow: var(--shadow-lg);
+/* Hover: Karte hebt sich (keine Neigung zur Maus und kein Auftritt beim Öffnen, E40) */
+.card:hover img, .card:hover .noimg { transform: translateY(-6px); box-shadow: var(--shadow-lg);
   transition: transform .16s var(--ease-out), box-shadow var(--transition-normal); }
 .card:active img { transform: translateY(-1px) scale(.99); }
-/* Auftritt: die Kacheln einer Seite fliegen gestaffelt ein, die ersten 16 nacheinander */
-@keyframes tile-in { from { opacity: 0; transform: translateY(18px) scale(.94) rotate(-1.5deg); } }
-.grid > .card { perspective: 700px; animation: tile-in .5s var(--ease-out) both; animation-delay: calc(min(sibling-index(), 16) * 28ms); }
 .card .cap { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); font-size: var(--text-sm); margin-top: var(--space-1); }
 .card .cap .p { font-weight: var(--weight-semibold); }
 .card .cap .q { color: var(--color-text-muted); }
@@ -480,6 +476,7 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .welcome .beispiel-angebot .muted { font-size: var(--text-sm); }
 #beispiel-leiste { padding-top: var(--space-4); }
 #beispiel-leiste[hidden] { display: none; }
+.beispiel-zeile { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); counter-reset: s; }
 .steps li { display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--space-3); counter-increment: s; }
 .steps li::before { content: counter(s); width: 1.625rem; height: 1.625rem; border-radius: var(--radius-md); border: var(--border-width) solid var(--color-border-strong); display: grid; place-items: center;
@@ -681,9 +678,7 @@ dialog .x:hover { background: var(--color-surface-alt); color: var(--color-text)
 .hint { font-size: var(--text-sm); }
 .detail { padding: var(--space-6) var(--space-6) var(--space-10); display: grid; gap: var(--space-6); }
 .dtop { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
-.dtop .img { perspective: 700px; }
-.dtop .img img, .dtop .img .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--color-surface-alt); box-shadow: var(--shadow-lg); transition: transform .5s var(--ease-spring); }
-.dtop .img:hover img { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .16s var(--ease-out); }
+.dtop .img img, .dtop .img .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--color-surface-alt); box-shadow: var(--shadow-lg); }
 .detail .links { display: flex; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); flex-wrap: wrap; font-size: var(--text-sm); }
 .detail .links a { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-text-secondary); text-underline-offset: 3px; }
 .detail .links a:hover { color: var(--color-text); }
@@ -754,15 +749,8 @@ footer select { min-height: 2rem; padding-block: var(--space-1); font-size: var(
 .help dt { font-weight: var(--weight-semibold); display: flex; align-items: center; gap: var(--space-2); }
 .help dd { margin: 0; color: var(--color-text-secondary); max-width: 68ch; }
 
-/* --- Bewegung: Ansicht blendet gestaffelt ein (nur beim Wechsel der Ansicht) ---------------------------------- */
-#main.enter > * { animation: enter var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }
+/* --- Bewegung nur als Antwort auf eine Handlung (E40): kein Auftritt beim Öffnen einer Ansicht ------------------ */
 @keyframes enter { from { opacity: 0; transform: translateY(12px); } }
-#main.enter .fan a { animation: deal .7s var(--ease-out) both; animation-delay: calc(180ms + var(--k, 0) * 90ms); }
-@keyframes deal { from { opacity: 0; translate: -50% calc(-50% + 40px); rotate: 0deg; } }
-.fan a:nth-child(2) { --k: 1; } .fan a:nth-child(3) { --k: 2; }
-/* Listen, Hinweise und Kacheln treten gestaffelt auf, wenn eine Ansicht neu geöffnet wird (nur dann: Neuzeichnen bleibt ruhig) */
-#main.enter :is(.rows, .rail, .todo, .decks, .news, .facts, .hstats, .legend) > * { animation: tile-in .5s var(--ease-out) backwards; animation-delay: calc(120ms + min(sibling-index(), 10) * 40ms); }
-.grid.small > .card { animation-delay: calc(min(sibling-index(), 40) * 14ms); }  /* ein Deck mit 100 Karten wird ausgeteilt */
 .row img, .row .noimg, .thumb { transition: transform .4s var(--ease-spring); }
 a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-4deg) scale(1.08); }
 #scan-hit .hit { animation: deal-in .45s var(--ease-spring) backwards; }  /* jede erkannte Karte springt ins Bild */
@@ -887,7 +875,6 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
     --ink-deck: #1b569e; --ink-keep: #9c3c14; --ink-sell: #0c6446; --ink-bulk: #725000; }
   body { background: #fff; color: #000; }
   body::before { display: none; }
-  #main.enter > * { animation: none; }
   .dot, .chip { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .row, .tbl tr, .binder9 .card { break-inside: avoid; }
 }

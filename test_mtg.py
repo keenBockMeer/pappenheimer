@@ -2079,11 +2079,11 @@ def test_wertverlauf_kurve_punkte_und_luecken():
 
 
 def test_bewegung_steht_bei_weniger_bewegung_still():
-    """E34: Flug der Karte, Neigung der Kacheln und hochlaufende Zahl fragen „weniger Bewegung“ im Skript ab, alles andere stoppt die eine Regel im CSS."""
+    """E34: Flug der Karte und hochlaufende Zahl fragen „weniger Bewegung“ im Skript ab, alles andere stoppt die eine Regel im CSS."""
     js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
     spiel = js[js.index("function sortSpiel("):js.index("// --- Verkaufen:")]
     assert "img && !calm.matches" in spiel
-    assert "!calm.matches ? e.target.closest('.grid > .card, .dtop .img')" in js and "if (calm.matches) { el.textContent = fmt(ziel); return; }" in js  # Zahl steht gleich auf dem Endwert
+    assert "if (calm.matches || erst) { el.textContent = fmt(ziel); return; }" in js  # Zahl steht gleich auf dem Endwert
     assert "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important;" in css
 
 
@@ -2094,10 +2094,26 @@ def test_hintergrund_ruht_bei_weniger_bewegung_im_scanner_und_im_druck():
     assert "if (calm.matches) fZeichnen(0);" in js and "if (calm.matches || hgPref() !== 'an')" in js
     assert "body.vollbild::after, body.vollbild #funken { display: none; }" in css and "#funken, #karten-hg, body::after { display: none !important; }" in css and "body.vollbild #karten-hg { display: none; }" in css
     assert css.count("--aura-stark:") == 2 and "--aura-stark: 15%" in css  # nie stärker als 16 % (Regel im Kopf von style.css)
-    # Karten im Hintergrund: eigener Behälter, Standardwahl, und die Regeln für die Bilder kennen nur transform und opacity (Scryfall: kein Filter auf Kartenbildern)
-    assert 'id="karten-hg"' in html and '<option value="karten">' in html and "hgPref() !== 'karten'" in js and "|| 'karten'" in js and "beispielLeiste(); kartenHg(); }" in js
+    # Karten im Hintergrund: eigener Behälter, wählbar (Standard ist seit Phase 61 „aus“), und die Regeln für die Bilder kennen nur transform und opacity (Scryfall: kein Filter auf Kartenbildern)
+    assert 'id="karten-hg"' in html and '<option value="karten">' in html and "hgPref() !== 'karten'" in js and "beispielLeiste(); kartenHg(); }" in js
     karten_css = css[css.index("\n#karten-hg {"):css.index("@keyframes schweben")] + css[css.index("@keyframes schweben"):][:400]
     assert "filter" not in karten_css and "blur(" not in karten_css and "opacity: var(--o)" in karten_css
+
+
+def test_ruhe_kein_hintergrund_keine_bewegung_beim_oeffnen():
+    """Phase 61 (E40): ohne gespeicherte Wahl kein Hintergrund (kartenHg lädt dann nichts), eine gespeicherte Wahl wirkt weiter; kein gestaffelter
+    Auftritt, keine Neigung, keine hochlaufende Zahl beim Öffnen; die Beispiel-Leiste ist eine Zeile mit derselben Aktion."""
+    js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
+    assert "localStorage.getItem('mtg-hg') || 'aus'; } catch { return 'aus'; }" in js and "|| 'karten'" not in js
+    assert "if (kFertig || kBusy || hgPref() !== 'karten') return;" in js and "hgSel.value = hgPref();" in js
+    render = js[js.index("async function render("):js.index("addEventListener('hashchange', () => render());")]
+    assert "animateIn" not in js and "neueAnsicht" not in js and "if (neu) scrollTo(0, 0);" in render
+    assert "#main.enter" not in css and "--rx" not in css and "--rx" not in js and "tile-in" not in css
+    assert "erst = !('z' in el.dataset)" in js  # erstes Zeigen = Endwert, danach läuft die Zahl (Summe unter Verkaufen)
+    assert "bump(" in js and ".bump {" in css and "@keyframes enter" in css  # bleibt: Springen der Zahl, Filter und „Karte für Karte“
+    leiste = js[js.index("async function beispielLeiste("):js.index("async function beispielAktion(")]
+    assert 'data-beispiel="entfernen"' in leiste and "info('beispiel'" in leiste and "note(" not in leiste and leiste.count("<p ") == 1
+    assert (WURZEL / "tests" / "einfach_eval.js").read_text(encoding="utf-8").count("async function einfachEval(") == 1
 
 
 def test_klassen_des_sortier_modus_kollidieren_nicht():
@@ -7822,7 +7838,7 @@ def test_beispiel_im_image_in_der_zip_und_in_der_oberflaeche():
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
     html = (WURZEL / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'id="beispiel-leiste"' in html and 'data-beispiel="laden"' in js and 'data-beispiel="entfernen"' in js and "post('beispiel', {aktion" in js
-    assert "Beispielsammlung ansehen" in js and "Das ist die Beispielsammlung" in js and "r.beispiel" in js and "s.beispiel?.angebot" in js
+    assert "Beispielsammlung ansehen" in js and 'class="beispiel-zeile"' in js and "r.beispiel" in js and "s.beispiel?.angebot" in js
     tip = js[js.index("  beispiel: '"):js.index("\n", js.index("  beispiel: '"))]
     leiste = js[js.index("// --- Beispielsammlung"):js.index("// --- Import: Datei oder eingefügte Liste")]
     for text in (tip, leiste):

@@ -302,11 +302,6 @@ async function viewHome() {
     ${s.news.length ? `<section class="sec" aria-label="Neuigkeiten"><h2>Neuigkeiten <small>seit dem letzten Import</small></h2>
       <ul class="news">${s.news.map(n => `<li><span class="ic${NEWS_WARN.has(n.kind) ? ' warn' : ''}">${icon(NEWS_ICON[n.kind] || 'info')}</span><div${n.oracle_id ? ` data-oid="${esc(n.oracle_id)}"` : ''}>${esc(n.text)}<div class="s">${esc(n.sub)}</div></div></li>`).join('')}</ul></section>` : ''}</div>`;
   jobsUi(); verlaufHover();
-  if (neueAnsicht) {
-    zaehlen($('.display'), s.value, eur0);
-    [s.cards, s.unique, s.available].forEach((n, i) => zaehlen($$('.hstats dd')[i], n, x => num(Math.round(x))));
-    STACKS.forEach((k, i) => zaehlen($$('.legend .v')[i], P[k].value, eur0));
-  }
 }
 
 // Wertverlauf: eine Linie (Wert je Tag), Fläche als Hauch, Wert am Ende, Fadenkreuz mit Tooltip, Tabelle zum Aufklappen (dataviz-Regeln)
@@ -1915,8 +1910,7 @@ async function beispielLeiste() {
   let b;
   try { b = await api('beispiel'); } catch { return; }  // ohne Antwort bleibt die Leiste, wie sie ist
   box.hidden = !b.da;
-  box.innerHTML = b.da ? note(['info', 'Das ist die Beispielsammlung', `${karten(b.karten)} aus einem Binder und einem Deck, zum Ausprobieren. Sie verschwindet auch von selbst, sobald du deine erste echte Datei importierst.`,
-    `<button class="btn" type="button" data-beispiel="entfernen">${icon('trash')}Beispiel entfernen</button>`]) : '';
+  box.innerHTML = b.da ? `<p class="beispiel-zeile">${icon('info')}Beispielsammlung ${info('beispiel', 'Beispielsammlung')} · <button class="link" type="button" data-beispiel="entfernen">Entfernen</button></p>` : '';  // eine Zeile (E40), die Erklärung steht in TIP.beispiel
 }
 async function beispielAktion(aktion, knopf) {
   if (aktion === 'entfernen' && !confirm('Die Beispielsammlung entfernen? Sie verschwindet mit allem, was dazugehört. Andere Karten bleiben, wie sie sind.')) return;
@@ -3573,36 +3567,23 @@ async function viewMessbilder() {
 const VIEWS = {'': ['Übersicht', viewHome], cards: ['Karten', viewCards], sets: ['Serien', viewSets], sort: ['Sortieren', viewSort], scan: ['Scannen', viewScan], sell: ['Verkaufen', viewSell], decks: ['Decks', viewDecks], wuensche: ['Wünsche', viewWuensche], spiele: ['Spiele', viewSpiele], help: ['Hilfe', viewHelp],
   konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true]};  // true: nicht in der Navigation (Link im Fuß)
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
-let rendered = null, enterTimer, neueAnsicht = false;
-// Zahl läuft beim ersten Aufruf der Ansicht hoch (nicht beim Neuzeichnen, nicht bei reduzierter Bewegung)
+let rendered = null;
+// Zahl läuft vom zuletzt gezeigten Wert zum neuen, also nur nach einer Handlung (E40: beim ersten Zeigen gleich der Endwert, nicht bei reduzierter Bewegung)
 const zaehlen = (el, ziel, fmt) => {
   if (!el) return;
-  const von = +el.dataset.z || 0, t0 = performance.now(), dauer = 800 * Math.min(1, Math.abs(ziel - von) / Math.max(Math.abs(ziel), 1) + .2);
+  const von = +el.dataset.z || 0, t0 = performance.now(), dauer = 800 * Math.min(1, Math.abs(ziel - von) / Math.max(Math.abs(ziel), 1) + .2), erst = !('z' in el.dataset);
   el.dataset.z = ziel;
-  if (calm.matches) { el.textContent = fmt(ziel); return; }
+  if (calm.matches || erst) { el.textContent = fmt(ziel); return; }
   el.textContent = fmt(von);
   const schritt = t => { const k = Math.min((t - t0) / dauer, 1); el.textContent = fmt(von + (ziel - von) * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(schritt); };
   requestAnimationFrame(schritt);
 };
 const bump = el => { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); };  // kurzes Springen, wenn sich eine Zahl erhöht
-// Kacheln und die Karte im Detail neigen sich zur Maus (nur mit Maus, nicht bei reduzierter Bewegung, höchstens 7 Grad)
-let geneigt = null;
-const aufrichten = () => { geneigt?.style.removeProperty('--rx'); geneigt?.style.removeProperty('--ry'); geneigt = null; };
-document.addEventListener('pointermove', e => {
-  const c = e.pointerType === 'mouse' && !calm.matches ? e.target.closest('.grid > .card, .dtop .img') : null;
-  if (c !== geneigt) aufrichten();
-  if (!c) return;
-  geneigt = c;
-  const b = c.getBoundingClientRect();
-  c.style.setProperty('--ry', `${((e.clientX - b.left) / b.width - .5) * 14}deg`);
-  c.style.setProperty('--rx', `${(.5 - (e.clientY - b.top) / b.height) * 14}deg`);
-}, {passive: true});
-document.documentElement.addEventListener('pointerleave', aufrichten);
 
-// --- Hintergrund (E35): „Meine Karten“ (kartenHg, Standard), Funken oder nur der Schimmer aus CSS. Funken in den fünf Mana-Farben treiben hinter der Seite, verbinden sich zu Sternbildern und weichen der Maus aus; beim Öffnen stieben sie aus der Mitte.
+// --- Hintergrund (E35, E40): ohne gespeicherte Wahl aus; „Meine Karten“ (kartenHg), Funken oder nur der Schimmer aus CSS. Funken in den fünf Mana-Farben treiben hinter der Seite, verbinden sich zu Sternbildern und weichen der Maus aus; beim Öffnen stieben sie aus der Mitte.
 // Der Schimmer dahinter ist reines CSS. Bei „weniger Bewegung“ steht ein ruhiges Bild, im Scanner (Vollbild) und im Druck ruht alles; im Fuß lässt sich der Hintergrund wählen.
 const hgSel = $('#hintergrund'), cv = $('#funken'), cx = cv.getContext('2d');
-const hgPref = () => { try { return localStorage.getItem('mtg-hg') || 'karten'; } catch { return 'karten'; } };
+const hgPref = () => { try { return localStorage.getItem('mtg-hg') || 'aus'; } catch { return 'aus'; } };
 let fPts = [], fFarben = [], fA = .85, fLaeuft = false, fN = 0;
 const fMaus = {x: -1e4, y: -1e4};
 const fLesen = () => { const s = getComputedStyle(document.documentElement); fFarben = ['w', 'u', 'b', 'r', 'g'].map(k => s.getPropertyValue('--aura-' + k).trim()); fA = +s.getPropertyValue('--funken-a') || .85; };
@@ -3680,18 +3661,11 @@ addEventListener('pointermove', e => {
 document.documentElement.addEventListener('pointerleave', () => { fMaus.x = -1e4; });
 addEventListener('resize', () => { if (hgPref() === 'an') { fGroesse(); fNeu(false); if (calm.matches) fZeichnen(0); } });
 hgAnwenden(true);
-// neue Ansicht: Abschnitte blenden gestaffelt ein (nicht bei Neuzeichnen derselben Ansicht, das soll ruhig bleiben)
-const animateIn = () => {
-  if (calm.matches) return;
-  [...main.children].forEach((el, i) => el.style.setProperty('--i', Math.min(i, 8)));
-  main.classList.remove('enter'); void main.offsetWidth; main.classList.add('enter');
-  clearTimeout(enterTimer); enterTimer = setTimeout(() => main.classList.remove('enter'), 1500);
-};
 async function render(force) {
   const hash = location.hash || '#/';
   if (!hash.startsWith('#/') || loginOffen) return;  // Sprunglink (#main) ist keine Ansicht; vor der Anmeldung nichts laden
   if (!force && hash === rendered) return;
-  const neu = neueAnsicht = hash.split('?')[0] !== (rendered || '').split('?')[0];
+  const neu = hash.split('?')[0] !== (rendered || '').split('?')[0];
   rendered = hash;
   const [path, qs] = hash.slice(2).split('?');
   const [title, view] = VIEWS[path] || ['Nicht gefunden', viewMissing];
@@ -3700,7 +3674,7 @@ async function render(force) {
   hidePeek(); hideTip(); scanStop(); main.onclick = main.onchange = main.onkeydown = null;
   const vorher = main.firstElementChild;  // Skelett nur, solange die neue Ansicht noch nichts geschrieben hat (viewCards schreibt vor dem Laden)
   const slow = setTimeout(() => { if (rendered === hash && main.firstElementChild === vorher) main.innerHTML = skeleton(); }, 160);
-  try { await view(new URLSearchParams(qs || '')); if (neu) { scrollTo(0, 0); animateIn(); } beispielLeiste(); kartenHg(); }
+  try { await view(new URLSearchParams(qs || '')); if (neu) scrollTo(0, 0); beispielLeiste(); kartenHg(); }
   catch (e) { if (e instanceof LoginNoetig) return; main.innerHTML = `<section class="panel error"><h2>${icon('alert')}Das hat nicht geklappt</h2><p class="muted">${esc(e.message)}</p><button class="btn" type="button" data-retry>${icon('refresh')}Nochmal versuchen</button></section>`; }
   finally { clearTimeout(slow); }
 }

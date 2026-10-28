@@ -77,7 +77,7 @@ Wunsch des Autors (2026-10-18):
 - [ ] Phase 60 – Deck einscannen und jeder Druck wählbar (alle Drucke einer Karte auf der Scan-Liste, Druckwahl mit eigenen Drucken, Übernehmen als fertiges Deck) – gebaut, Tests grün; offen: am Handy mit echten Karten
 
 Ausbau v8 (Einfach am Handy: Sammelalbum, fünf Ziele, Schnell-Scan, kurze Texte; Entscheidungen E40 bis E42, Befund und Probe unter „Ausbau v8“; eine Phase pro Session, Reihenfolge 61 bis 65):
-- [ ] Phase 61 – Ruhe: kein Hintergrund im Standard, keine Bewegung beim Öffnen, Beispiel-Leiste in einer Zeile, Messung im Handy-Format
+- [x] Phase 61 – Ruhe: kein Hintergrund im Standard, keine Bewegung beim Öffnen, Beispiel-Leiste in einer Zeile, Messung im Handy-Format
 - [ ] Phase 62 – App-Rahmen: fünf Ziele (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten, Seite „Mehr“
 - [ ] Phase 63 – Schnell-Scan: ein Tipp bis zur laufenden Kamera, Einstellungen im Blatt, Erkennung von selbst vorbereitet
 - [ ] Phase 64 – Sammelalbum als Start: Binder-Seiten mit 3 × 3 Fächern, warmer dunkler Ton
@@ -1686,6 +1686,20 @@ Vorgebauter Katalog mit Fingerabdrücken und Namen als Datei einer Veröffentlic
 - **Tests:** Standard des Hintergrunds; kein `animateIn`-Aufruf in `render`; die Beispiel-Leiste nennt die Aktionen wie bisher (`data-beispiel`).
 
 **Abnahme:** ein neuer Browser sieht keinen Hintergrund und keine Bewegung beim Öffnen einer Ansicht; eine gespeicherte Wahl „Meine Karten“ wirkt weiter · Beispiel-Leiste in einer Zeile · alle Tests grün. **Real (Autor):** am Handy durch die Ansichten tippen: ruhig genug?
+
+**Ergebnis (2026-10-28):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (279), neuer Test `test_ruhe_kein_hintergrund_keine_bewegung_beim_oeffnen`. `hgPref` ohne Wahl `aus`; `animateIn`, `#main.enter` samt gestaffeltem Auftritt, `tile-in` der Kacheln, wachsende Balken der Übersicht, Neigung (`--rx`/`--ry`) und `neueAnsicht` entfallen; `zaehlen` zeigt beim ersten Mal (kein `data-z`) gleich den Endwert, danach läuft die Zahl wie bisher. Beispiel-Leiste: eine Zeile `.beispiel-zeile` mit `info('beispiel')` und dem Link „Entfernen“ (`data-beispiel="entfernen"`). Im Browser geprüft (Probe-Instanz mit der Beispielsammlung, 375 × 812 und am Rechner): neuer Browser `data-hg=aus`, kein Abruf `cards?sort=added`, nach dem Öffnen keine laufende Animation; mit gespeichertem `mtg-hg=karten` neun Karten im Hintergrund; Summe unter Verkaufen steht beim Öffnen sofort.
+Messung mit `tests/einfach_eval.js` (zählt nur sichtbaren Text in `#main`; vorher = Code von Phase 60, beide mit geladenem Katalog, ohne vorbereitete Fingerabdrücke):
+
+| 375 × 812 | vorher | nachher |
+|---|---|---|
+| Ziele in der Navigation | 10 | 10 |
+| Scannen: Tipps bis „Kamera starten“ | 2 | 2 |
+| Scannen: Wörter / Knöpfe davor | 242 / 28 | 204 / 28 |
+| Scannen: Oberkante „Kamera starten“ | 2.387 px (2,9 Höhen) | 2.126 px (2,6 Höhen) |
+| Scannen: Wörter auf der Seite | 421 | 383 |
+| Übersicht: Seitenhöhe | 5,9 Höhen | 5,6 Höhen |
+
+Die Ausgangswerte liegen nah am Befund (260 Wörter, 35 Knöpfe, 2.453 px); der Rest erklärt sich aus dem, was das Skript als sichtbar zählt, und dem Stand der Erkennung. Der Gewinn kommt allein aus der Beispiel-Leiste (rund 40 Wörter, 260 px); der Ablauf bis zur Kamera ist erst Sache von Phase 63. Messung im verdeckten Tab: das Skript wartet höchstens 3 s auf laufende Animationen. **Offen (real, Autor):** am Handy durch die Ansichten tippen: ruhig genug? Das langsam drehende Logo (E35) blieb, es war nicht Teil der Phase.
 
 ### Phase 62 – App-Rahmen mit fünf Zielen (E41)
 **Ziel:** Die App fühlt sich am Handy an wie eine App: unten fünf Ziele, alles andere unter „Mehr“.
