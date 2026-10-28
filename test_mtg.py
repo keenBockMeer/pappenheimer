@@ -2147,6 +2147,37 @@ def test_app_rahmen_fuenf_ziele():
     assert m["start_url"] == "/#/" and [s["url"] for s in m["shortcuts"]] == ["/#/scan?modus=erfassen"]
 
 
+def test_schnell_scan():
+    """Phase 63 (E42): Der Scan-Knopf führt nach Erfassen und startet die Kamera gleich mit (nur er, nie ein Neuzeichnen); Erfassen ist der
+    Standard, Prüfen ein Umschalter; die Erkennung wählt sich ohne eigene Wahl selbst; die Einstellungen sind ein Blatt; die Messbilder-Schalter
+    stehen nur mit „Für Entwickler“ da; die Scan-Liste hat keinen Erklärabsatz und endet mit „Weiter scannen“ und „In Sammlung übernehmen“."""
+    js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
+    assert 'href="#/scan?modus=erfassen"' in js[js.index("const navLink"):js.index("const navHtml")]
+    klick = js[js.index("let scanLos = false;"):js.index("const scanG")]
+    assert "closest('.nav-scan')" in klick and "scanLos = true" in klick
+    scan = js[js.index("async function viewScan("):js.index("async function scanStart(")]
+    assert "scanModus = p.get('modus') === 'pruefen' ? 'pruefen' : 'erfassen';" in scan and "mtg-scan-modus" not in js
+    assert "const los = scanLos; scanLos = false;" in scan and "if (los && scanIx) scanStart();" in scan
+    erfassen = js[js.index("async function viewErfassen("):js.index("function erfBinderUi(")]
+    assert "const los = scanLos; scanLos = false;" in erfassen and "if (bereit) { if (los) scanStart(); }" in erfassen
+    assert "erfVorbereiten(false).then(" in erfassen  # Sets ohne fertige Erkennung: von selbst vorbereiten
+    assert "alle: erkennung ? erkennung === 'alle' : kat.fertig > 0" in erfassen and "erf.erkennung = erf.alle ? 'alle' : 'sets'" in js
+    # Einstellungen: ein Blatt (kein details mehr), auf der Seite nur die Zeile mit den Vorgaben
+    assert '<section class="panel erf" id="erf-setup"' in erfassen and "<details" not in erfassen and "$('#erf-setup').open" not in js
+    assert 'data-blatt="erf-setup"' in erfassen and "#erf-setup.offen {" in css and "\n#voll-schleier {" in css
+    assert erfassen.index("erf-zeile") < erfassen.index("${camBox(") < erfassen.index('id="erf-setup"')
+    # Messbilder nur für Entwickler
+    assert "const entwickler = () => merk('mtg-entwickler', '0'" in js and "mess: dev && !!alt.mess" in erfassen
+    teil = erfassen[erfassen.index("${dev ?"):]
+    assert teil.index('id="erf-mess"') < teil.index("` : ''}") and teil.index('id="erf-huelle"') < teil.index("` : ''}")
+    assert "if (dev) api('messbilder')" in erfassen and "id=\"entwickler\"" in js and "merke('mtg-entwickler'" in js and "  entwickler: '" in js
+    # Scan-Liste
+    liste = js[js.index("function erfListe("):js.index("const erfRow")]
+    assert "TIP.scanliste)}</p>" not in liste and "info('scanliste'" in liste
+    assert liste.index("data-weiter") < liste.index("In Sammlung übernehmen (") and "Fertig (${num(n)})" in liste
+    assert "if (t.closest('[data-weiter]'))" in js
+
+
 def test_klassen_des_sortier_modus_kollidieren_nicht():
     """„Karte für Karte“ nutzt nur Klassen mit `kk-`: `.spiel` (Zeilen unter Spiele) und `.pile`/`.piles` (Stapel-Ansicht der Decks) gehören anderen Ansichten und haben je genau eine Regel."""
     css = (WURZEL / "ui" / "style.css").read_text(encoding="utf-8")

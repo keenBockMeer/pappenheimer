@@ -999,8 +999,16 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
 .kandb[aria-pressed="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }  /* gewählte Karte beim Prüfen */
 
 /* Erfassen (Phase 25): Vorbereitung zum Zuklappen (die Zusammenfassung bleibt sichtbar), Set-Wahl, Vorgaben, Liste der Sitzung */
-.erf summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); cursor: pointer; font-weight: var(--weight-medium); }
-.erf[open] summary { margin-bottom: var(--space-5); }
+/* Schnell-Scan (Phase 63, E42): oben nur die Vorgaben in einer Zeile und der große Knopf; die Einstellungen sind ein Blatt von unten, auch am
+   Rechner (die Scan-Liste nur im Vollbild). Ebenen wie im Vollbild: Schleier 24, Blatt 25 (über der Navigation, unter Toast und Dialog). */
+.erf-zeile { justify-content: space-between; margin-bottom: 0; }
+#cam-go, #erf-einrichten { min-height: 3rem; padding-inline: var(--space-6); font-size: var(--text-md); }
+#erf-setup { position: fixed; inset: auto 0 0; z-index: 25; max-width: 60rem; max-height: 84dvh; overflow-y: auto; overscroll-behavior: contain; margin: 0 auto;
+  padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom)); background: var(--color-surface); border: 0; border-top: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-xl); visibility: hidden; transform: translateY(100%); transition: transform var(--transition-normal), visibility 0s linear var(--dur); }
+#erf-setup.offen { visibility: visible; transform: none; transition: transform var(--transition-normal); }
+#erf-setup > h2 { display: flex; align-items: center; gap: var(--space-2); }
+#voll-schleier { display: grid; place-items: start center; position: fixed; inset: 0; z-index: 24; padding-top: calc(var(--space-3) + env(safe-area-inset-top)); background: var(--color-backdrop); }
 .erf-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-6) var(--space-8); align-items: start; }
 .erf-vorgaben { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .erf-vorgaben .wide { grid-column: 1 / -1; }
@@ -1076,15 +1084,12 @@ button.row:hover { background: var(--color-surface-alt); }
   body.vollbild .pruefen .scanres { bottom: 0; padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom)); }
   body.vollbild .pruefen .scanres .hit { grid-template-columns: 3.5rem minmax(0, 1fr); }
   body.vollbild .pruefen .scanres .hit .urteil { display: block; margin: 0; font-size: var(--text-2xl); }
-  /* Blätter von unten: Scan-Liste und Einstellungen */
-  body.vollbild :is(#erf-liste, #erf-setup) { display: block; position: fixed; inset: auto 0 0; z-index: 25; max-height: 84dvh; overflow-y: auto; overscroll-behavior: contain; margin: 0;
+  /* Blatt von unten: Scan-Liste (die Einstellungen sind immer ein Blatt, siehe Schnell-Scan) */
+  body.vollbild #erf-liste { display: block; position: fixed; inset: auto 0 0; z-index: 25; max-height: 84dvh; overflow-y: auto; overscroll-behavior: contain; margin: 0;
     padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom)); background: var(--color-surface); border: 0; border-top: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-xl); visibility: hidden; transform: translateY(100%); transition: transform var(--transition-normal), visibility 0s linear var(--dur); }
-  body.vollbild :is(#erf-liste, #erf-setup).offen { visibility: visible; transform: none; transition: transform var(--transition-normal); }
+  body.vollbild #erf-liste.offen { visibility: visible; transform: none; transition: transform var(--transition-normal); }
   body.vollbild .erf-ab { bottom: calc(-1 * var(--space-8) - env(safe-area-inset-bottom)); background: var(--color-surface); }  /* bis an den Rand: „unten“ misst ab dem Innenabstand des Blatts */
-  body.vollbild #erf-setup > summary { display: none; }
-  body.vollbild #erf-setup h2.nur-voll { display: flex; }
-  body.vollbild #voll-schleier { display: grid; place-items: start center; position: fixed; inset: 0; z-index: 24; padding-top: calc(var(--space-3) + env(safe-area-inset-top)); background: var(--color-backdrop); }
   body.vollbild .row.erf { grid-template-columns: 2.75rem minmax(0, 1fr) auto; }
   body.vollbild .row.erf .sub2 { white-space: normal; }  /* „Druck prüfen“ steht am Ende der Zeile und darf nicht abgeschnitten sein */
   body.vollbild :is(#erf-liste, #erf-setup) :is(.link, .more, a:not(.btn)) { display: inline-flex; align-items: center; min-height: 2.75rem; }

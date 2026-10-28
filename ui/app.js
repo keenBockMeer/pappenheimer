@@ -102,7 +102,7 @@ const TIP = {
   titel: 'Die App liest zuerst den Namen oben auf der Karte und wählt dann unter den Drucken dieses Namens das passende Bild. So erkennt sie mehr Karten von selbst und verwechselt ähnliche Bilder seltener. Dafür gehen je Karte zwei schmale Streifen mit der Namenszeile an deinen Server. Sie werden dort gelesen und nicht gespeichert, das übrige Kamerabild bleibt auf dem Gerät. Ist der Name nicht lesbar (Spiegelung auf Foil oder Hülle, sehr alte Karten, Name quer), vergleicht die App wie bisher nur das Bild.',
   schnell: 'Die App zählt eine Karte, sobald sie sich sicher genug ist: bei einem sehr klaren Bild nach einem Blick, sonst nach zwei oder drei. Ein unscharfes Bild zwischendurch wirft die Zählung nicht mehr um. Beim Erfassen merkt sie auch Kopien beim Durchblättern: Schnippst du die gezählte Karte weg und liegt darunter eine gleiche, fragt sie „Weitere Kopie gelegt?“; schnippst du weiter, sammelt die Frage mit („3 weitere Kopien?“), ein Tipp auf das Plus zählt sie alle. Ohne den Haken zählt sie wie bisher erst, wenn zwei Bilder nacheinander sicher sind, und weitere Kopien nur über +1.',
   frei: 'Die App sucht die Karte im ganzen Kamerabild: Sie muss nicht im Rahmen liegen, nur ganz zu sehen sein und ungefähr aufrecht stehen. Am besten geht es auf einem ruhigen Untergrund, von dem sich die Karte abhebt. Findet die App keine Karte, gilt der Rahmen in der Mitte. Fertige Karten legst du außerhalb des Bilds ab, sonst zählt die App sie noch einmal. Ohne den Haken zählt nur der Rahmen.',
-  vollbild: 'Am Handy füllt die Kamera beim Erfassen den Bildschirm. Oben steht, was auf der Scan-Liste liegt; „Liste“ am Rand zeigt sie zum Prüfen und Übernehmen. Unten stellst du Foil, Sprache und Zustand für die nächsten Karten ein, „+1“ zählt die letzte Karte noch einmal, und ein Tipp auf sie ändert sie. Das Kreuz oben links beendet die Kamera.',
+  vollbild: 'Am Handy füllt die Kamera beim Erfassen den Bildschirm. Oben steht, was auf der Scan-Liste liegt; „Fertig“ am Rand zeigt sie zum Prüfen und Übernehmen. Unten stellst du Foil, Sprache und Zustand für die nächsten Karten ein, „+1“ zählt die letzte Karte noch einmal, und ein Tipp auf sie ändert sie. Das Kreuz oben links beendet die Kamera.',
   setlock: 'Die App vergleicht nur mit den Drucken der gewählten Sets. Das macht die Erkennung schnell und genau, Karten aus anderen Sets erkennt sie dann aber nicht: Set dazunehmen. Für einen Commander-Precon das Commander-Set wählen (etwa DSC), für Booster das Set und seine Specials.',
   scanbinder: 'Einen Scan-Binder führt die App selbst. Kein ManaBox-Import ändert ihn, und er zählt wie jeder Binder im Bestand, im Sortier-Plan und beim Verkaufen. Was du mit der App erfasst, scannst du nicht zusätzlich in einer Scanner-App wie ManaBox, sonst zählt es doppelt.',
   vorgaben: 'Sprache, Zustand und Foil sieht die Kamera nicht: Diese Vorgaben gelten für jede erfasste Karte, einzelne änderst du auf der Scan-Liste mit einem Tipp. Gibt es einen Druck nur als Foil, wird er als Foil erfasst.',
@@ -193,6 +193,7 @@ const TIP = {
   mehrQuellen: 'Woher die App Daten holt und was sie dabei verrät.',
   mehrHelp: 'Wie alles funktioniert, Schritt für Schritt.',
   mehrMessbilder: 'Kamerabilder zum Messen der Erkennung ansehen und zuordnen.',
+  entwickler: 'Zeigt die Messbilder hier und beim Erfassen die Schalter „Messbilder speichern“ und „Karten stecken in Hüllen“. Nur zum Messen der Erkennung, gilt für diesen Browser.',
 };
 const info = (k, label) => `<button type="button" class="info" data-tip="${esc(TIP[k] || k)}" aria-label="${esc((label ? label + ': ' : '') + (TIP[k] || k))}">${icon('help')}</button>`;
 // Manasymbol wie auf der Karte; deco = nur Schmuck (der Knopf drumherum trägt die Beschriftung)
@@ -2425,6 +2426,15 @@ const scanRahmen = (vw, vh, bw = vw, bh = vh, voll = false) => {
 };
 // Vollbild (Phase 34): Am Handy füllt die Kamera den Bildschirm, solange sie läuft (body.vollbild, die Aufteilung steht in style.css)
 const vollbild = () => document.body.classList.contains('vollbild') && matchMedia('(max-width: 768px)').matches;
+// Schnell-Scan (Phase 63, E42): Der Scan-Knopf der Navigation startet die Kamera gleich mit (scanLos, die Ansicht liest und löscht es). Steht
+// die Ansicht schon da, startet er sie direkt. Neu zeichnen (render(true)) startet nie von selbst.
+let scanLos = false;
+addEventListener('click', e => {
+  const a = e.target.closest('.nav-scan');
+  if (!a) return;
+  if (location.hash !== a.getAttribute('href')) scanLos = true;
+  else if (!scanStream && $('#cam-go') && !$('#cam-go').disabled) scanStart();
+});
 const scanG = v => scanRahmen(v.videoWidth, v.videoHeight, v.clientWidth || v.videoWidth, v.clientHeight || v.videoHeight, vollbild());
 // Rahmen über dem Kamerabild zeichnen, neu nur, wenn sich die Anzeige geändert hat (Handy gedreht, Vollbild an oder aus) -> der Rahmen
 function scanRahmenZeigen(v) {
@@ -2437,13 +2447,12 @@ function scanRahmenZeigen(v) {
   }
   return g;
 }
-// Blatt von unten im Vollbild: Scan-Liste oder Einstellungen (id), ohne id alle zu. Solange eins offen ist, ruht die Erkennung (scanLoop).
+// Blatt von unten: Einstellungen (immer, Phase 63) oder Scan-Liste (im Vollbild), ohne id alle zu. Solange eins offen ist, ruht die Erkennung (scanLoop).
 function blatt(id) {
   for (const b of $$('#erf-liste, #erf-setup')) b.classList.toggle('offen', b.id === id);
   const zu = $('#voll-schleier');
   if (!zu) return;
   zu.hidden = !id;
-  if (id === 'erf-setup' || vollbild()) $('#erf-setup').open = id === 'erf-setup';  // als Blatt aufgeklappt, danach wieder zu wie beim Start der Kamera
   if (id) $('button', zu).focus();
 }
 function scanEnde() {  // Kamera aus, die Ansicht bleibt: am Handy zurück aus dem Vollbild zur Seite
@@ -2472,16 +2481,17 @@ const KAMERA_TIPPS = [['Licht', 'Gleichmäßig und hell, am besten Tageslicht od
   ['Halten', 'Die ganze Karte ins Bild, aufrecht und ruhig. Das Handy aufstützen oder die Karte hinlegen hilft.'],
   ['Stapel', 'Fertige Karten außerhalb des Bilds ablegen. Liegt eine gezählte Karte später wieder ruhig im Bild, zählt die App sie noch einmal.']];
 const SCAN_MODI = [['pruefen', 'Prüfen'], ['erfassen', 'Erfassen']];
-const scanKopf = modus => head('Scannen', modus === 'erfassen' ? 'Neue Karten erfassen: Karten nacheinander vor die Kamera halten. Jede erkannte Karte kommt auf die Scan-Liste, nach dem Prüfen übernimmst du alle in einen Binder.'
+const scanKopf = modus => head('Scannen', modus === 'erfassen' ? 'Karten nacheinander vor die Kamera halten, dann prüfen und übernehmen.'
   : 'Halte eine Karte aus deiner Sammlung vor die Kamera. Die App sagt dir, wohin sie gehört: in ein Deck, behalten, verkaufen oder Bulk.',
   `<div class="seg" role="group" aria-label="Was die Kamera tut">${SCAN_MODI.map(([k, l]) => `<button class="btn small" type="button" data-modus="${k}" aria-pressed="${k === modus}">${l}</button>`).join('')}</div>`);
 const camBox = (bereit, status) => `<section class="split scan ${scanModus}" aria-label="Kamera und Ergebnis">
     <div class="sec"><div class="toolbar camleiste"><div class="voll-oben nur-voll"><button class="btn" type="button" id="voll-zu" aria-label="Kamera beenden">${icon('x')}</button><span id="voll-summe">${scanModus === 'erfassen' ? '' : 'Karte prüfen'}</span>
-          ${scanModus === 'erfassen' ? '<button class="btn" type="button" data-blatt="erf-setup">Einstellungen</button>' : ''}</div>
+          <button class="btn" type="button" data-modus="${scanModus === 'erfassen' ? 'pruefen' : 'erfassen'}">${scanModus === 'erfassen' ? 'Prüfen' : 'Erfassen'}</button>
+          ${scanModus === 'erfassen' ? `<button class="btn" type="button" data-blatt="erf-setup" aria-label="Einstellungen">${icon('gear')}</button>` : ''}</div>
         <select id="cam" aria-label="Kamera" hidden></select>
-        <div class="voll-rand"><button class="btn" type="button" id="cam-lampe" aria-pressed="false" hidden>${icon('flashlight')}Licht</button>${scanModus === 'erfassen' ? `<button class="btn nur-voll" type="button" data-blatt="erf-liste">Liste</button>
+        <div class="voll-rand"><button class="btn" type="button" id="cam-lampe" aria-pressed="false" hidden>${icon('flashlight')}Licht</button>${scanModus === 'erfassen' ? `<button class="btn nur-voll" type="button" data-blatt="erf-liste" id="voll-fertig">Fertig</button>
           <button class="btn nur-voll" type="button" data-messbild aria-label="Bild aufnehmen" hidden>Bild</button>` : ''}</div>
-        <button class="btn primary" type="button" id="cam-go"${bereit ? '' : ' disabled'}>Kamera starten</button></div>
+        <button class="btn primary" type="button" id="cam-go"${bereit ? '' : ' disabled'}>${icon('camera')}Kamera starten</button>${scanModus === 'erfassen' ? `<button class="btn" type="button" id="erf-einrichten" data-blatt="erf-setup"${bereit ? ' hidden' : ''}>${icon('gear')}Einrichten</button>` : ''}</div>
       <div class="cam" id="cam-box"><video id="cam-video" playsinline muted></video>
         <svg class="lage" id="cam-lage" preserveAspectRatio="xMidYMid slice" aria-hidden="true" hidden><path class="aussen"/><rect class="rahmen"/><polygon class="viereck"/></svg></div>
       <p class="note-line" id="cam-aufl" hidden></p>
@@ -2495,19 +2505,19 @@ const camBox = (bereit, status) => `<section class="split scan ${scanModus}" ari
       <select data-erfvor="cond" aria-label="Zustand">${optionen(COND_KURZ, erf.cond)}</select>
       <button class="btn primary" type="button" data-erfplus aria-label="Eine weitere Kopie der letzten Karte">${icon('plus', 'sm')}1</button></div>` : ''}
   </section>`;
-const scanModusWahl = e => {  // Reiter Prüfen/Erfassen; die Wahl merkt sich der Browser (am Handy wird meist erfasst)
+const scanModusWahl = e => {  // Umschalter Prüfen/Erfassen (Phase 63: Erfassen ist der Standard); läuft die Kamera, startet sie im anderen Modus gleich wieder
   const b = e.target.closest('[data-modus]');
   if (!b) return false;
-  merke('mtg-scan-modus', b.dataset.modus);
+  scanLos = !!scanStream;
   location.hash = b.dataset.modus === 'erfassen' ? '#/scan?modus=erfassen' : '#/scan?modus=pruefen';
   return true;
 };
 
 async function viewScan(p) {
   scanStand = ''; scanKons = null;
-  scanModus = merk('mtg-scan-modus', 'pruefen', SCAN_MODI);
-  if (p.get('modus')) scanModus = p.get('modus') === 'erfassen' ? 'erfassen' : 'pruefen';
+  scanModus = p.get('modus') === 'pruefen' ? 'pruefen' : 'erfassen';
   if (scanModus === 'erfassen') return viewErfassen(p.get('deck') === '1');
+  const los = scanLos; scanLos = false;
   const r = await api('scan?v=' + FP_V);
   scanIx = r.ids.length ? fpIndex(r) : null;
   main.innerHTML = `${scanKopf('pruefen')}
@@ -2518,6 +2528,7 @@ async function viewScan(p) {
   $('#cam-go').onclick = () => scanStart();
   $('#cam').onchange = e => scanStart(e.target.value);
   $('#scan-schnell').onchange = schnellSetzen;
+  if (los && scanIx) scanStart();
   main.onclick = e => { if (scanModusWahl(e)) return; if (e.target.closest('#voll-zu')) return scanEnde(); const b = e.target.closest('[data-scanpick]'); if (b) scanTreffer(+b.dataset.scanpick); };
   if (!r.fehlt.length) return;
   const lauf = async () => {  // einmalig alle, später nur neue Drucke (nach einem Import)
@@ -2861,7 +2872,10 @@ const COND_KURZ = {mint: 'MT', near_mint: 'NM', excellent: 'EX', good: 'GD', lig
 const erfArt = z => [`${z.set_code} #${z.number}`, z.foil !== 'normal' && FOIL[z.foil], LANG[z.language] || z.language, COND[z.condition] || z.condition].filter(Boolean).join(', ');
 const optionen = (obj, sel) => Object.entries(obj).map(([v, l]) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
 let erf = null, erfIx = null, erfSetsAlle = null, erfZug = {frei: true, wahl: false, oids: [], fremd: 0, anders: 0}, erfNr = 0, erfKette = Promise.resolve(), erfBest = [], erfKand = [], katJob = null, katalogTimer = null;
-const erfMerken = () => merke('mtg-erfassen', JSON.stringify({sets: erf.sets, binder: erf.binder, lang: erf.lang, cond: erf.cond, foil: erf.foil, mess: erf.mess, huelle: erf.huelle, alle: erf.alle, titel: erf.titel}));
+const erfMerken = () => merke('mtg-erfassen', JSON.stringify({sets: erf.sets, binder: erf.binder, lang: erf.lang, cond: erf.cond, foil: erf.foil, mess: erf.mess, huelle: erf.huelle, erkennung: erf.erkennung, titel: erf.titel}));
+// Werkzeuge zum Messen (Messbilder) nur mit „Für Entwickler“ unter Mehr (E42), sonst unsichtbar und aus
+const entwickler = () => merk('mtg-entwickler', '0', [['1'], ['0']]) === '1';
+let erfSetupOffen = false;  // Einstellungen nach dem Neuzeichnen wieder als Blatt öffnen (Wechsel der Erkennung)
 // Scans, die den Server nicht erreicht haben, merkt sich der Browser je Sammlung: Sie überstehen den Neuaufbau der Ansicht und das Neuladen
 const erfOffenKey = () => 'mtg-erf-offen:' + (sess.aktiv || '');
 const erfOffenMerken = () => merke(erfOffenKey(), JSON.stringify(erf.offen));
@@ -2873,13 +2887,21 @@ async function viewErfassen(deck = false) {  // deck (Phase 60): aus „Deck ein
   try { alt = JSON.parse(localStorage.getItem('mtg-erfassen') || '{}'); offen = JSON.parse(localStorage.getItem(erfOffenKey()) || '[]'); } catch { /* privates Fenster: Standard */ }
   const [ei, kat] = await Promise.all([api('erfassen'), api('scan/katalog?v=' + FP_V)]), heute = ei.vorschlag;
   const binder = deck ? '' : !alt.binder || (/^Scan \d{4}-\d\d-\d\d$/.test(alt.binder) && alt.binder !== heute) ? heute : alt.binder;  // gestriger Standardname: heute ein neuer
+  // Erkennung (Phase 63): ohne eigene Wahl „Alle Karten“, sobald es vorbereitete Kartenbilder gibt, sonst die zuletzt gewählten Sets
+  const erkennung = ['alle', 'sets'].includes(alt.erkennung) ? alt.erkennung : null, dev = entwickler();
   erf = {sets: alt.sets || [], binder, deck, decks: new Set(ei.binder.filter(b => b.deck).map(b => b.name)), lang: alt.lang || 'en', cond: alt.cond || 'near_mint', foil: alt.foil || 'normal', liste: ei.liste, zuletzt: ei.zuletzt, offen, letzte: null,
-         mess: !!alt.mess, huelle: !!alt.huelle, messStand: null, alle: alt.alle === true, titel: alt.titel !== false, kat, kontext: []};
+         mess: dev && !!alt.mess, huelle: !!alt.huelle, messStand: null, erkennung, alle: erkennung ? erkennung === 'alle' : kat.fertig > 0, titel: alt.titel !== false, kat, kontext: []};
   erfZug = {frei: true, wahl: false, oids: [], fremd: 0, anders: 0}; erfBest = []; scanKons = null; erfTitel = null; erfDa = false;
   const bereit = erfKann();
   main.innerHTML = `${scanKopf('erfassen')}
-    <details class="panel erf" id="erf-setup"${bereit ? '' : ' open'}><summary><span id="erf-sum"></span><span class="muted small-print">ändern</span></summary>
-      <h2 class="nur-voll">Einstellungen ${info('vollbild', 'Scannen im Vollbild')}</h2>
+    ${deck ? `<p class="note-line">${esc(TIP.deckscan)}</p>` : ''}
+    <div class="toolbar erf-zeile"><span class="muted min0" id="erf-sum"></span><button class="btn small" type="button" data-blatt="erf-setup">${icon('gear', 'sm')}Einstellungen</button></div>
+    ${camBox(bereit, erfStart())}
+    <div id="voll-schleier" hidden><button class="btn" type="button">${icon('x')}Schließen</button></div>
+    <section class="sec" aria-label="Scan-Liste" id="erf-liste"></section>
+    <section class="sec" aria-label="Deine Scan-Binder" id="erf-binder-sec"></section>
+    <section class="panel erf" id="erf-setup" aria-label="Einstellungen">
+      <h2>Einstellungen ${info('vollbild', 'Scannen im Vollbild')}</h2>
       <div class="field"><span>Erkennung ${info('ohneset', 'Erkennung')}</span>
         <div class="seg" role="group" aria-label="Womit die Kamera vergleicht">${[[false, 'Nur gewählte Sets'], [true, 'Alle Karten, ohne Set']].map(([a, l]) =>
           `<button class="btn small" type="button" data-erfalle="${a ? 1 : ''}" aria-pressed="${a === erf.alle}">${l}</button>`).join('')}</div>
@@ -2898,21 +2920,16 @@ async function viewErfassen(deck = false) {  // deck (Phase 60): aus „Deck ein
           <label class="field"><span>Zustand</span><select id="erf-cond" data-erfvor="cond">${optionen(COND, erf.cond)}</select></label>
           <label class="field"><span>Foil</span><select id="erf-foil" data-erfvor="foil">${optionen(FOIL, erf.foil)}</select></label>
           <p class="note-line wide">${esc(TIP.vorgaben)}</p>
-          <div class="field wide"><span>Messbilder ${info('messbilder', 'Messbilder')}</span>
+          ${dev ? `<div class="field wide"><span>Messbilder ${info('messbilder', 'Messbilder')}</span>
             <div class="seg"><label class="inl"><input type="checkbox" id="erf-mess"${erf.mess ? ' checked' : ''}> Messbilder speichern</label>
               <label class="inl"><input type="checkbox" id="erf-huelle"${erf.huelle ? ' checked' : ''}> Karten stecken in Hüllen</label></div>
-            <p class="note-line" id="erf-mess-stand"></p></div>
+            <p class="note-line" id="erf-mess-stand"></p></div>` : ''}
         </div></div>
       <div class="toolbar gap-top"${erf.alle ? ' hidden' : ''}><button class="btn primary" type="button" id="erf-vor">${icon('cloud')}Erkennung vorbereiten</button>
         <button class="link" type="button" id="erf-neu" title="${esc(TIP.erfneu)}">${icon('refresh', 'sm')}Drucke neu laden</button></div>
       <div id="erf-prep"></div>
-    </details>
-    <datalist id="erf-binderliste"></datalist>
-    ${deck ? `<p class="note-line">${esc(TIP.deckscan)}</p>` : ''}
-    ${camBox(bereit, erfStart())}
-    <div class="nur-voll" id="voll-schleier" hidden><button class="btn" type="button">${icon('x')}Schließen</button></div>
-    <section class="sec" aria-label="Scan-Liste" id="erf-liste"></section>
-    <section class="sec" aria-label="Deine Scan-Binder" id="erf-binder-sec"></section>`;
+    </section>
+    <datalist id="erf-binderliste"></datalist>`;
   erfSetsUi(); erfSumme(); erfListe(); erfBinderUi(ei); katUi(); erfBereit();
   $('#cam-go').onclick = () => scanStart();
   $('#cam').onchange = e => scanStart(e.target.value);
@@ -2927,15 +2944,19 @@ async function viewErfassen(deck = false) {  // deck (Phase 60): aus „Deck ein
     erf[k] = e.target.value; erfMerken(); erfSumme();
     for (const el of $$(`[data-erfvor="${k}"]`)) el.value = erf[k];
   };
-  for (const [id, k] of [['erf-mess', 'mess'], ['erf-huelle', 'huelle']]) $('#' + id).onchange = e => { erf[k] = e.target.checked; erfMerken(); erfSumme(); messUi(); };
+  for (const [id, k] of [['erf-mess', 'mess'], ['erf-huelle', 'huelle']]) if ($('#' + id)) $('#' + id).onchange = e => { erf[k] = e.target.checked; erfMerken(); erfSumme(); messUi(); };
   $('#erf-frei').onchange = e => { scanFrei = e.target.checked; merke('mtg-scan-frei', scanFrei ? '1' : '0'); };
   $('#scan-schnell').onchange = schnellSetzen;
   if ($('#erf-titel')) $('#erf-titel').onchange = e => { erf.titel = e.target.checked; erfTitel = null; erfMerken(); };
   if ($('#erf-namen')) $('#erf-namen').onchange = e => katalogNamen(e.target.checked);
   katalogOeffnen();
   messUi();
-  api('messbilder').then(r => { if (erf) { erf.messStand = {zahl: r.zahl, bytes: r.bytes}; messUi(); } }).catch(() => {});
+  if (dev) api('messbilder').then(r => { if (erf) { erf.messStand = {zahl: r.zahl, bytes: r.bytes}; messUi(); } }).catch(() => {});
   main.onclick = erfKlick;
+  if (erfSetupOffen) { erfSetupOffen = false; blatt('erf-setup'); }
+  const los = scanLos; scanLos = false;  // Scan-Knopf: Kamera gleich an; mit Sets ohne fertige Erkennung erst vorbereiten (die Fingerabdrücke liegen meist schon auf dem Server)
+  if (bereit) { if (los) scanStart(); }
+  else if (!erf.alle && erf.sets.length) erfVorbereiten(false).then(() => { if (los && erfKann() && $('#cam-go') && !scanStream) scanStart(); });
   try { erfSetsAlle = erfSetsAlle || (await api('set-liste')).items; erfSetsUi(); erfTreffer(); }
   catch (e) { if (e instanceof LoginNoetig) return; const t = $('#erf-treffer'); if (t) t.innerHTML = `<p class="say bad">Set-Liste nicht geladen: ${esc(e.message)}</p>`; }
 }
@@ -3008,6 +3029,7 @@ async function erfVorbereiten(neu) {
   const prep = $('#erf-prep'), knopf = $('#erf-vor'), codes = erf.sets.join();
   knopf.disabled = true;
   prep.innerHTML = `<div class="jobline">Drucke von Scryfall …</div><div class="progress busy"><span></span></div>`;
+  if (!scanStream) $('#scan-status').textContent = 'Erkennung wird vorbereitet …';
   try {
     let r = await api(`scan?v=${FP_V}&set=${encodeURIComponent(codes)}${neu ? '&neu=1' : ''}`);
     if (r.fehlt.length) {
@@ -3021,21 +3043,23 @@ async function erfVorbereiten(neu) {
     erfIx = {codes, ix, bild, sets: r.sets};
     if (codes !== erf.sets.join() || !$('#erf-prep')) return;  // inzwischen andere Sets oder Ansicht verlassen
     erfBereit();
-    $('#erf-setup').open = false;
+    if ($('#erf-setup').classList.contains('offen')) blatt();
   } catch (e) {
     if (e instanceof LoginNoetig) return;
-    if ($('#erf-prep')) prep.innerHTML = `<p class="say bad">Nicht vorbereitet: ${esc(e.message)}</p>`;
+    if ($('#erf-prep')) { prep.innerHTML = `<p class="say bad">Nicht vorbereitet: ${esc(e.message)}</p>`; if (!scanStream) $('#scan-status').textContent = erfStart(); }
   } finally { if ($('#erf-vor')) knopf.disabled = !erf.sets.length; }
 }
 
 // Gibt es etwas zu erkennen? Ohne Set-Wahl, sobald die ersten Kartenbilder vorbereitet sind, mit Set-Lock, wenn der Index zu den Sets passt
 const erfKann = () => erf.alle ? erf.kat?.fertig > 0 : erfIx?.codes === erf.sets.join();
-const erfStart = () => erfKann() ? 'Kamera starten, dann die erste Karte davor halten.' : erf.alle ? 'Erst die Kartenbilder vorbereiten, oben unter „Erkennung“.' : 'Erst Sets wählen und die Erkennung vorbereiten.';
+const erfStart = () => erfKann() ? 'Kamera starten, dann die erste Karte davor halten.' : 'Erst einrichten, welche Karten die Kamera kennt.';
 function erfBereit() {
   if (!$('#cam-go')) return;
   const kann = erfKann();
   if (kann && !erf.alle) $('#erf-prep').innerHTML = `<p class="note-line">${icon('check', 'sm')} Bereit: ${num(erfIx.ix.n)} Drucke aus ${erfIx.sets.map(x => `${esc(x.name)} (${esc(x.code)})`).join(', ')}.</p>`;
   $('#cam-go').disabled = !kann;
+  $('#cam-go').hidden = !kann || !!scanStream;  // nicht eingerichtet: nur ein Satz und „Einrichten“ (Phase 63)
+  $('#erf-einrichten').hidden = kann;
   if (!scanStream) $('#scan-status').textContent = erfStart();
 }
 
@@ -3128,9 +3152,8 @@ async function katVorbereiten() {
   katUi();
 }
 
-function erfKamera() {  // Kamera läuft: Vorbereitung zuklappen, Platz fürs Bild
-  const d = $('#erf-setup');
-  if (d) d.open = false;
+function erfKamera() {  // Kamera läuft: Einstellungen zu, Platz fürs Bild
+  blatt();
   messUi();
 }
 
@@ -3280,6 +3303,7 @@ function erfListe(fehler) {  // die Scan-Liste zum Prüfen; erst „übernehmen�
   const box = $('#erf-liste'), l = erf.liste, n = l?.karten || 0, z = erf.zuletzt, pruefen = (l?.zeilen || []).filter(x => x.pruefen).length;
   if (!box) return;
   $('#voll-summe').textContent = n ? `${karten(n)} · ${eur(l.wert)}` : 'Scan-Liste leer';
+  $('#voll-fertig').textContent = n ? `Fertig (${num(n)})` : 'Fertig';
   const vorher = +box.dataset.n || 0; box.dataset.n = n;
   const frisch = z && Date.now() - Date.parse(z.at) < ERF_ZULETZT_H * 36e5;
   box.innerHTML = `<h2>Scan-Liste ${info('scanliste', 'Scan-Liste')} <small>${n ? `${karten(n)}, ${eur(l.wert)}${pruefen ? `, ${num(pruefen)}× Druck prüfen` : ''}` : 'leer'}</small>
@@ -3289,9 +3313,10 @@ function erfListe(fehler) {  // die Scan-Liste zum Prüfen; erst „übernehmen�
       <form class="erf-ab" data-erfab="1"><label class="field"><span>${erf.deck ? 'In das Deck' : `In den Scan-Binder ${info('scanbinder', 'Scan-Binder')}`}</span>
           <input name="binder" list="erf-binderliste" maxlength="80" required value="${esc(erf.binder)}" autocomplete="off"${erf.deck ? ' placeholder="Name des Decks"' : ''}></label>
         <label class="inl"><input type="checkbox" name="deck"> Fertiges Deck ${info('scandeck', 'Fertiges Deck')}</label>
-        <button class="btn primary" type="submit">${icon('check')}${karten(n)} übernehmen</button></form>
+        <button class="btn" type="button" data-weiter>${icon('camera')}Weiter scannen</button>
+        <button class="btn primary" type="submit">${icon('check')}In Sammlung übernehmen (${num(n)})</button></form>
       <div class="toolbar gap-top"><button class="btn ghost" type="button" id="erf-verwerfen">${icon('trash', 'sm')}Liste verwerfen</button></div>`
-    : `<p class="muted">${esc(TIP.scanliste)}</p>`}
+    : '<p class="muted">Noch leer. Erkannte Karten landen hier.</p>'}
     ${frisch ? `<p class="note-line">${icon('check', 'sm')} Zuletzt übernommen: ${karten(z.karten)} in „${esc(z.binder)}“, ${day(z.at)} um ${uhr(z.at)}.
       ${z.zuruecknehmbar ? `<button class="link" type="button" id="erf-zurueckholen">${icon('left', 'sm')}zurück auf die Liste</button>` : ''}</p>` : ''}`;
   if (n > vorher) bump($('h2 small', box));
@@ -3420,12 +3445,12 @@ async function erfKlick(e) {
     else {
       $('#cam-go').disabled = true;
       $('#erf-prep').innerHTML = erf.sets.length ? '<p class="note-line">Sets geändert: Erkennung neu vorbereiten.</p>' : '';
-      if (scanStream) { scanStand = 'neu'; $('#scan-status').textContent = 'Sets geändert: erst die Erkennung neu vorbereiten.'; $('#erf-setup').open = true; }
+      if (scanStream) { scanStand = 'neu'; $('#scan-status').textContent = 'Sets geändert: erst die Erkennung neu vorbereiten.'; }
     }
     return;
   }
   const alle = t.closest('[data-erfalle]');
-  if (alle) { erf.alle = !!alle.dataset.erfalle; erfMerken(); return render(true); }
+  if (alle) { erf.alle = !!alle.dataset.erfalle; erf.erkennung = erf.alle ? 'alle' : 'sets'; erfMerken(); erfSetupOffen = true; return render(true); }
   if (t.closest('#erf-kat-go')) return katVorbereiten();
   const pick = t.closest('[data-erfpick]');
   if (pick) {
@@ -3435,6 +3460,7 @@ async function erfKlick(e) {
     return erfZaehlen(d.id, erfWie(d, erfKand), true);
   }
   if (t.closest('[data-messbild]')) return messAusloeser();
+  if (t.closest('[data-weiter]')) { if (!scanStream) return scanStart(); blatt(); return $('#cam-box').scrollIntoView({block: 'center'}); }
   const kb = t.closest('[data-blaettern]');  // Antwort auf „Weitere Kopie gelegt?“ (Phase 57): so viele Kopien wie angeboten, oder keine
   if (kb && blaettern?.id) {
     $('#blaettern-frage')?.remove();
@@ -3602,7 +3628,9 @@ async function viewMehr() {
   const zeile = ([k, [l, , , ic]]) => `<a class="mzeile" href="#/${k}">${icon(ic)}<span class="min0"><b>${l}</b><span class="muted">${TIP['mehr' + k[0].toUpperCase() + k.slice(1)]}</span></span>${icon('right', 'sm')}</a>`;
   const liste = platz => Object.entries(VIEWS).filter(([, v]) => v[2] === platz).map(zeile).join('');
   main.innerHTML = `${head('Mehr', '')}<nav class="mliste" aria-label="Mehr">${liste('mehr')}</nav>
-    <section class="sec" aria-label="Für Entwickler"><h2>Für Entwickler</h2><nav class="mliste" aria-label="Für Entwickler">${liste('entwickler')}</nav></section>`;
+    <section class="sec" aria-label="Für Entwickler"><h2>Für Entwickler</h2><label class="inl"><input type="checkbox" id="entwickler"${entwickler() ? ' checked' : ''}> Werkzeuge zum Messen zeigen ${info('entwickler', 'Für Entwickler')}</label>
+      ${entwickler() ? `<nav class="mliste" aria-label="Für Entwickler">${liste('entwickler')}</nav>` : ''}</section>`;
+  main.onchange = e => { if (e.target.id === 'entwickler') { merke('mtg-entwickler', e.target.checked ? '1' : '0'); render(true); } };
 }
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
 let rendered = null;

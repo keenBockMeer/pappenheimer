@@ -79,7 +79,7 @@ Wunsch des Autors (2026-10-18):
 Ausbau v8 (Einfach am Handy: Sammelalbum, fünf Ziele, Schnell-Scan, kurze Texte; Entscheidungen E40 bis E42, Befund und Probe unter „Ausbau v8“; eine Phase pro Session, Reihenfolge 61 bis 65):
 - [x] Phase 61 – Ruhe: kein Hintergrund im Standard, keine Bewegung beim Öffnen, Beispiel-Leiste in einer Zeile, Messung im Handy-Format
 - [x] Phase 62 – App-Rahmen: fünf Ziele (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten, Seite „Mehr“
-- [ ] Phase 63 – Schnell-Scan: ein Tipp bis zur laufenden Kamera, Einstellungen im Blatt, Erkennung von selbst vorbereitet
+- [x] Phase 63 – Schnell-Scan: ein Tipp bis zur laufenden Kamera, Einstellungen im Blatt, Erkennung von selbst vorbereitet
 - [ ] Phase 64 – Sammelalbum als Start: Binder-Seiten mit 3 × 3 Fächern, warmer dunkler Ton
 - [ ] Phase 65 – Text kürzen in allen Ansichten (höchstens ein Satz offen)
 
@@ -1734,6 +1734,18 @@ Die Wörter vor der Kamera zählte das Skript diesmal mit 258 statt 204 bei glei
 - **Tests:** die Messbilder-Schalter erscheinen nur mit „Für Entwickler“; die Einstellungen stehen im Blatt; der Scan-Knopf führt nach Erfassen; die Erkennungs-Tests der Phasen 24 bis 60 bleiben unverändert grün.
 
 **Abnahme (Handy-Format, `einfach_eval.js`):** vom Binder zur laufenden Kamera **ein Tipp, null Scrollen** (heute zwei Tipps und drei Bildschirmhöhen) · im Scanner höchstens 25 Wörter sichtbar (heute rund 260 bis zur Kamera) · Scan-Liste bis „Übernehmen“ ohne Erklärabsatz · alle Tests grün. **Real (Autor):** Handy aus der Tasche, zehn Karten erfassen und übernehmen, Zeit notieren; dabei auf alles achten, wofür er lesen oder suchen musste.
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (281), neuer Test `test_schnell_scan`. Der Scan-Knopf der Navigation setzt `scanLos` (ein `click`-Listener auf `.nav-scan`; steht die Ansicht schon da, startet er die Kamera direkt), `viewErfassen` und `viewScan` lesen und löschen es: Ist die Erkennung bereit, startet die Kamera sofort, sind Sets gewählt, aber im Browser noch nicht vorbereitet, läuft erst `erfVorbereiten` von selbst (die Fingerabdrücke liegen meist schon auf dem Server), dann die Kamera; ein Neuzeichnen startet nie. Erfassen ist der Standard von `#/scan`, `mtg-scan-modus` entfällt, Prüfen ist ein Umschalter im Kopf und im Vollbild oben (läuft die Kamera, läuft sie im anderen Modus weiter). Erkennung: ohne eigene Wahl (`erkennung` in `mtg-erfassen`, nur durch einen Klick gesetzt) „Alle Karten“, sobald `kat.fertig > 0`, sonst die Sets; ist nichts eingerichtet, stehen nur der Satz „Erst einrichten, welche Karten die Kamera kennt.“ und der Knopf „Einrichten“ da. `#erf-setup` ist kein `details` mehr, sondern immer ein Blatt von unten (auch am Rechner, `blatt`, `#voll-schleier` überall), auf der Seite steht nur die Zeile `.erf-zeile` mit den Vorgaben und „Einstellungen“; nach dem Vorbereiten und beim Start der Kamera schließt es sich. Messbilder-Schalter, `#cam-mess` und der Abruf `messbilder` nur mit „Für Entwickler“ (`mtg-entwickler`, Schalter unter Mehr samt `TIP.entwickler`; ohne ihn ist `erf.mess` aus, auch wenn es gespeichert war; der Link auf die Messbilder steht unter Mehr nur dann). Scan-Liste: leer ein Satz statt `TIP.scanliste` (bleibt hinter `info()`), am Ende „Weiter scannen“ (`data-weiter`) und „In Sammlung übernehmen (n)“; im Vollbild heißt „Liste“ jetzt „Fertig (n)“ (`#voll-fertig`).
+Messung mit `tests/einfach_eval.js` (375 × 812, Probe-Instanz mit Beispielsammlung, Set CC1 vorbereitet):
+
+| 375 × 812 | Phase 62 | nachher |
+|---|---|---|
+| Scannen: Tipps bis „Kamera starten“ | 1 | 1 (der Tipp ruft die Kamera schon auf) |
+| Scannen: Wörter / Knöpfe davor | 258 / 29 | 18 / 3 |
+| Scannen: Oberkante „Kamera starten“ | 2.126 px (2,6 Höhen) | 425 px (0,5 Höhen, kein Scrollen) |
+| Scannen: Wörter auf der Seite | 437 | 114 |
+
+Im Vollbild (nachgestellt mit `body.vollbild` ohne Kamera) bleiben rund 14 Wörter sichtbar: Summe der Liste, Prüfen, Fertig, Status, „+1“ und die Kürzel. Im Browser geprüft: ein Tipp auf den Scan-Knopf führt vom Binder (nach Neuladen) über das Vorbereiten von CC1 bis zum Aufruf der Kamera, den die Vorschau hier blockt; Blatt am Handy und am Rechner; Entwickler-Schalter an und aus. **Nicht gebaut:** „Vorbereiten im Hintergrund“ im App-Fenster am Rechner. Der Plan verlangt vorher eine Messung (Rechenzeit, ob der Rechner bedienbar bleibt) mit dem echten Katalog von rund 67.000 Kartenbildern, und die Seite weiß bisher nicht, dass sie im App-Fenster läuft (dafür braucht `/api/session` ein Feld). Das ist ein eigener Schritt. **Offen (real, Autor):** ob die Kamera nach dem Tipp ohne weitere Geste startet (Chrome und Samsung Internet unter Android, Safari unter iOS); zehn Karten erfassen und übernehmen, Zeit notieren.
 
 ### Phase 64 – Sammelalbum als Start (E40)
 **Ziel:** Wer die App öffnet, sieht seine Karten wie in einem Binder.
