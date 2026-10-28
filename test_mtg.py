@@ -2116,6 +2116,37 @@ def test_ruhe_kein_hintergrund_keine_bewegung_beim_oeffnen():
     assert (WURZEL / "tests" / "einfach_eval.js").read_text(encoding="utf-8").count("async function einfachEval(") == 1
 
 
+def test_app_rahmen_fuenf_ziele():
+    """Phase 62 (E41): genau fünf Ziele in der Navigation (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten fest und im Scanner verdeckt;
+    jede Ansicht, die nicht nur über Links erreichbar ist, steht in der Navigation oder auf „Mehr“; alle bisherigen Adressen bleiben;
+    der Fuß verweist nicht mehr auf Konten und Drucken; die Verknüpfung im Manifest ist unverändert."""
+    js, css, index = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css", "index.html"))
+    block = js[js.index("const VIEWS = {"):js.index("const navLink")]
+    platz = {k.strip("'"): p for k, p in re.findall(r"(?:^|[{,]\s*)(\w+|'')\s*:\s*\['[^']+', \w+(?:, '(\w+)')?", block, re.M)}
+    alt = {"", "cards", "sets", "sort", "scan", "sell", "decks", "wuensche", "spiele", "help", "konten", "quellen", "binder", "druck", "proxy", "rueckblick", "bericht", "messbilder"}
+    assert alt | {"mehr", "wert"} == set(platz)
+    assert [k for k, p in platz.items() if p in ("haupt", "scan")] == ["", "cards", "scan", "decks", "mehr"]
+    assert "['', 'cards', 'scan', 'decks', 'mehr'].map(" in js and 'href="#/scan?modus=erfassen"' in js[js.index("const navLink"):js.index("const navHtml")]
+    assert {k for k, p in platz.items() if p in ("mehr", "entwickler")} == {"sort", "sell", "wuensche", "spiele", "sets", "wert", "druck", "konten", "quellen", "help", "messbilder"}
+    assert {k for k, p in platz.items() if not p} == {"binder", "proxy", "rueckblick", "bericht"}  # nur über Links aus anderen Ansichten
+    assert "wert: ['Wert und Plan', viewHome," in block and "'': ['Binder', viewHome," in block  # bis Phase 64 zeigt #/ die Übersicht
+    mehr = js[js.index("async function viewMehr("):]
+    assert "v[2] === platz" in mehr and "liste('mehr')" in mehr and "liste('entwickler')" in mehr
+    for k, p in platz.items():  # jede Zeile auf „Mehr“ hat ihren Satz in TIP
+        if p in ("mehr", "entwickler"):
+            assert f"  mehr{k[0].upper() + k[1:]}: '" in js, k
+    assert "$('#nav').innerHTML = navHtml(path);" in js
+    for ziel in set(re.findall(r'href="#/(\w*)', js)):  # jeder Link der Oberfläche führt auf eine Ansicht
+        assert ziel in platz, ziel
+    handy = css[css.index("@media (max-width: 768px) {"):]
+    assert "nav#nav { position: fixed; inset: auto 0 0;" in handy and "env(safe-area-inset-bottom)" in handy and "body { padding-bottom:" in handy
+    assert "body.vollbild > header" in css  # die Navigation steckt im Kopf und ist im Scanner verdeckt
+    fuss = re.search(r"<footer.*?</footer>", index, re.S)[0]
+    assert "#/konten" not in fuss and "#/druck" not in fuss
+    m = json.loads((WURZEL / "ui" / "manifest.webmanifest").read_text(encoding="utf-8"))
+    assert m["start_url"] == "/#/" and [s["url"] for s in m["shortcuts"]] == ["/#/scan?modus=erfassen"]
+
+
 def test_klassen_des_sortier_modus_kollidieren_nicht():
     """„Karte für Karte“ nutzt nur Klassen mit `kk-`: `.spiel` (Zeilen unter Spiele) und `.pile`/`.piles` (Stapel-Ansicht der Decks) gehören anderen Ansichten und haben je genau eine Regel."""
     css = (WURZEL / "ui" / "style.css").read_text(encoding="utf-8")
@@ -6747,7 +6778,7 @@ def test_quellen_oberflaeche_hinweise_und_seite():
     """Abnahme Phase 44 (Quelltext der Oberfläche): Die Seite „Quellen“ gibt es, die Schalter laufen über den change-Listener, Hinweise mit Link
     stehen in Übersicht, Decks, Verkaufen, Sortieren und Spiele; keine Inline-Skripte, keine Gedankenstriche in den neuen Texten."""
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
-    assert "quellen: ['Quellen', viewQuellen, true]" in js and "if (t.dataset.quelle) return quelleSetzen(t);" in js
+    assert "quellen: ['Quellen', viewQuellen, 'mehr', 'cloud']" in js and "if (t.dataset.quelle) return quelleSetzen(t);" in js
     seite = js[js.index("let quellenDaten"):js.index("async function viewKonten()")]
     assert 'data-quelle="${esc(q.key)}"' in seite and "<script" not in seite and not re.search(r"\bon[a-z]+=", seite) and "post('quellen'" in seite
     assert "confirm(`${q.hinweis}" in seite and "r.gesperrt" in seite and "disabled" in seite  # beim Einschalten von EDHREC die Bedingungen, gesperrt mit MTG_QUELLEN

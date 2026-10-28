@@ -212,6 +212,16 @@ nav#nav a { text-decoration: none; color: var(--color-text-secondary); font-weig
   transition: background-color var(--transition-fast), color var(--transition-fast), transform .3s var(--ease-spring); }
 nav#nav a:hover { color: var(--color-text); background: var(--color-surface-alt); transform: translateY(-1px); }
 nav#nav a[aria-current] { color: var(--color-text); background: var(--color-secondary); box-shadow: inset 0 0 0 1px var(--color-border-strong); }
+nav#nav a { display: inline-flex; align-items: center; gap: var(--space-2); }
+/* Scan-Knopf (E40, E41): der einzige runde Knopf außer den Manasymbolen */
+.nav-scan b { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-on-primary); }
+/* Seite „Mehr“: je Ziel eine Zeile */
+.mliste { display: grid; gap: 2px; }
+.mzeile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); text-decoration: none; color: var(--color-text);
+  transition: background-color var(--transition-fast); }
+.mzeile:hover { background: var(--color-surface-alt); }
+.mzeile .min0 { display: grid; gap: 2px; }
+.mzeile .muted { font-size: var(--text-sm); }
 /* Sammlung wählen und Abmelden (nur mit Konten, Phase 13) */
 .who { display: flex; align-items: center; gap: var(--space-2); }
 .who:empty { display: none; }
@@ -842,7 +852,17 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
   .legend, .rules { grid-template-columns: minmax(0, 1fr); }
   .btn, .btn.small, nav#nav a, .tabs button, .pick, .stepper button { min-height: 2.75rem; }  /* Tippziele ≥ 44px */
   .pick, .stepper button { width: 2.75rem; height: 2.75rem; }
-  nav#nav a { display: inline-flex; align-items: center; }
+  /* Fünf Ziele unten (E41); header.top ohne backdrop-filter, sonst hängt die feste Navigation am Kopf statt am Bildschirm */
+  header.top { backdrop-filter: none; }
+  nav#nav { position: fixed; inset: auto 0 0; z-index: var(--z-header); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: end; gap: 0; overflow: visible;
+    padding: var(--space-1) var(--space-2) calc(var(--space-1) + env(safe-area-inset-bottom)); background: var(--color-background); border-top: var(--border-width) solid var(--color-border); }
+  nav#nav a { flex-direction: column; justify-content: center; gap: 2px; padding: var(--space-1) 0; font-size: var(--text-xs); }
+  nav#nav a .i { width: 1.375rem; height: 1.375rem; }
+  nav#nav a:hover { transform: none; } nav#nav a[aria-current] { background: none; box-shadow: none; color: var(--color-primary); }
+  .nav-scan b { width: 3.5rem; height: 3.5rem; margin-top: -1.75rem; box-shadow: var(--shadow-md); } .nav-scan span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  body { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+  #toast { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+  body:not(.vollbild) .erf-ab { bottom: calc(4rem + env(safe-area-inset-bottom)); }  /* „Übernehmen“ bleibt über der Navigation (die Regel für .erf-ab steht weiter unten) */
   input, select { min-height: 2.75rem; }
   .row { grid-template-columns: 2.25rem minmax(0, 1fr) auto; } .row .chips { display: none; } .row.binder { grid-template-columns: minmax(0, 1fr) auto; }
   .srow { grid-template-columns: 1.25rem 2.25rem minmax(0, 1fr) auto; } .srow > .num.muted { display: none; }
@@ -861,7 +881,6 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
 @media (max-width: 480px) {
   .rrow { grid-template-columns: 2.25rem minmax(0, 1fr) 3rem 4.75rem; } .cov .track { display: none; }
   .btn.add .long { display: none; }
-  nav#nav { flex-wrap: wrap; overflow-x: visible; }  /* alle Ansichten sichtbar statt versteckt seitlich scrollen */
   .decks { grid-template-columns: minmax(0, 1fr); }
   .decks.list .deck { grid-template-columns: 5.5rem minmax(0, 1fr) auto; }
   .bars { grid-template-columns: 6.5rem minmax(0, 1fr) 4rem; }

@@ -78,7 +78,7 @@ Wunsch des Autors (2026-10-18):
 
 Ausbau v8 (Einfach am Handy: Sammelalbum, fünf Ziele, Schnell-Scan, kurze Texte; Entscheidungen E40 bis E42, Befund und Probe unter „Ausbau v8“; eine Phase pro Session, Reihenfolge 61 bis 65):
 - [x] Phase 61 – Ruhe: kein Hintergrund im Standard, keine Bewegung beim Öffnen, Beispiel-Leiste in einer Zeile, Messung im Handy-Format
-- [ ] Phase 62 – App-Rahmen: fünf Ziele (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten, Seite „Mehr“
+- [x] Phase 62 – App-Rahmen: fünf Ziele (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten, Seite „Mehr“
 - [ ] Phase 63 – Schnell-Scan: ein Tipp bis zur laufenden Kamera, Einstellungen im Blatt, Erkennung von selbst vorbereitet
 - [ ] Phase 64 – Sammelalbum als Start: Binder-Seiten mit 3 × 3 Fächern, warmer dunkler Ton
 - [ ] Phase 65 – Text kürzen in allen Ansichten (höchstens ein Satz offen)
@@ -1710,6 +1710,17 @@ Die Ausgangswerte liegen nah am Befund (260 Wörter, 35 Knöpfe, 2.453 px); der 
 - **Tests:** genau fünf Ziele in der Navigation; jede nicht versteckte Ansicht aus `VIEWS` ist über die Navigation oder `#/mehr` erreichbar (keine verwaiste); alle bisherigen Adressen liefern dieselbe Ansicht; Manifest-Verknüpfung unverändert.
 
 **Abnahme:** fünf Ziele statt zehn Reiter; jede Ansicht in höchstens zwei Tipps erreichbar; die Navigation verdeckt am Handy keinen Inhalt und keinen Knopf (bei 375 px geprüft, auch mit geöffnetem Dialog) · alle Tests grün.
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (280), neuer Test `test_app_rahmen_fuenf_ziele`. `VIEWS` trägt je Eintrag Titel, Ansicht, Platz (`haupt`, `scan`, `mehr`, `entwickler`, ohne = nur über Links) und Icon; `navHtml` zeigt Binder (`#/`, bis Phase 64 die Übersicht), Suchen (`#/cards`), den runden Scan-Knopf (`.nav-scan`, `#/scan?modus=erfassen`), Decks und Mehr; eine Ansicht von „Mehr“ markiert „Mehr“. `viewMehr` (`#/mehr`, Klassen `.mliste`, `.mzeile`) baut die Zeilen aus `VIEWS`, die Sätze stehen in `TIP.mehr…`; „Für Entwickler“ mit den Messbildern. `#/wert` zeigt `viewHome`. Neue Phosphor-Icons `camera`, `dots`, `heart`, `dice`, `chart`, `gear`. Fuß ohne die Links auf Konten und Drucken, die Hilfe sagt „unter Mehr“. Am Handy (bis 768 px) steht `#nav` unten fest mit `env(safe-area-inset-bottom)`; `header.top` verliert dort `backdrop-filter` (sonst hängt die feste Navigation am Kopf), `body` bekommt Abstand unten, Toast und „Übernehmen“ (`.erf-ab`) stehen darüber; im Scanner (`body.vollbild`) ist der Kopf samt Navigation verdeckt. Im Browser geprüft (Probe-Instanz mit der Beispielsammlung, 375 × 812 und 1280 × 800): Seitenende und Fuß enden über der Leiste, das Kartendetail (Dialog) liegt über ihr, keine waagerechte Scrollleiste. `tests/einfach_eval.js` klickt jetzt `#nav a[href^="#/scan"]` und misst „Mehr“ mit.
+
+| 375 × 812 | Phase 61 | nachher |
+|---|---|---|
+| Ziele in der Navigation | 10 | 5 |
+| Scannen: Tipps bis „Kamera starten“ | 2 | 1 |
+| Scannen: Oberkante „Kamera starten“ | 2.126 px | 2.126 px |
+| Mehr: Wörter / Knöpfe / Höhen | – | 109 / 11 / 2,1 |
+
+Die Wörter vor der Kamera zählte das Skript diesmal mit 258 statt 204 bei gleicher Lage des Knopfs; der Ablauf bis zur Kamera ist Sache von Phase 63. **Offen (real, Autor):** am Handy die untere Leiste im installierten App-Modus (Vollbild, Kerbe unten) ansehen.
 
 ### Phase 63 – Schnell-Scan (E42)
 **Ziel:** Vom Binder bis zur laufenden Kamera ein Tipp, kein Scrollen, kein Lesen.

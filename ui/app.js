@@ -57,6 +57,12 @@ const ICONS = {plus: '<path d="M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,
   cloud: '<path d="M192.49,167.51a12,12,0,0,1,0,17l-32,32a12,12,0,0,1-17,0l-32-32a12,12,0,1,1,17-17L140,179V128a12,12,0,0,1,24,0v51l11.51-11.52A12,12,0,0,1,192.49,167.51ZM160,36A92.08,92.08,0,0,0,79,84.37,68,68,0,1,0,72,220H84a12,12,0,0,0,0-24H72a44,44,0,0,1-1.81-87.95A91.7,91.7,0,0,0,68,128a12,12,0,0,0,24,0,68,68,0,0,1,136,0,67.27,67.27,0,0,1-7.25,30.59,12,12,0,1,0,21.42,10.82A91.08,91.08,0,0,0,252,128,92.1,92.1,0,0,0,160,36Z"/>',
   cards: '<path d="M180,72H36A20,20,0,0,0,16,92V204a20,20,0,0,0,20,20H180a20,20,0,0,0,20-20V92A20,20,0,0,0,180,72Zm-4,128H40V96H176ZM240,52V176a12,12,0,0,1-24,0V56H64a12,12,0,0,1,0-24H220A20,20,0,0,1,240,52Z"/>',
   flashlight: '<path d="M184,12H72A20,20,0,0,0,52,32V77.33a20.12,20.12,0,0,0,4,12L76,116V224a20,20,0,0,0,20,20h64a20,20,0,0,0,20-20V116l20-26.67a20.12,20.12,0,0,0,4-12V32A20,20,0,0,0,184,12Zm-4,24V52H76V36Zm-20,66.67a20.12,20.12,0,0,0-4,12V220H100V114.67a20.12,20.12,0,0,0-4-12L76,76H180ZM140,120v32a12,12,0,0,1-24,0V120a12,12,0,0,1,24,0Z"/>',
+  camera: '<path d="M208,52H182.42L170,33.34A12,12,0,0,0,160,28H96a12,12,0,0,0-10,5.34L73.57,52H48A28,28,0,0,0,20,80V192a28,28,0,0,0,28,28H208a28,28,0,0,0,28-28V80A28,28,0,0,0,208,52Zm4,140a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V80a4,4,0,0,1,4-4H80a12,12,0,0,0,10-5.34L102.42,52h51.15L166,70.66A12,12,0,0,0,176,76h32a4,4,0,0,1,4,4ZM128,84a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,84Zm0,72a24,24,0,1,1,24-24A24,24,0,0,1,128,156Z"/>',
+  dots: '<path d="M144,128a16,16,0,1,1-16-16A16,16,0,0,1,144,128ZM60,112a16,16,0,1,0,16,16A16,16,0,0,0,60,112Zm136,0a16,16,0,1,0,16,16A16,16,0,0,0,196,112Z"/>',
+  heart: '<path d="M178,36c-20.09,0-37.92,7.93-50,21.56C115.92,43.93,98.09,36,78,36a66.08,66.08,0,0,0-66,66c0,72.34,105.81,130.14,110.31,132.57a12,12,0,0,0,11.38,0C138.19,232.14,244,174.34,244,102A66.08,66.08,0,0,0,178,36Zm-5.49,142.36A328.69,328.69,0,0,1,128,210.16a328.69,328.69,0,0,1-44.51-31.8C61.82,159.77,36,131.42,36,102A42,42,0,0,1,78,60c17.8,0,32.7,9.4,38.89,24.54a12,12,0,0,0,22.22,0C145.3,69.4,160.2,60,178,60a42,42,0,0,1,42,42C220,131.42,194.18,159.77,172.51,178.36Z"/>',
+  dice: '<path d="M192,28H64A36,36,0,0,0,28,64V192a36,36,0,0,0,36,36H192a36,36,0,0,0,36-36V64A36,36,0,0,0,192,28Zm12,164a12,12,0,0,1-12,12H64a12,12,0,0,1-12-12V64A12,12,0,0,1,64,52H192a12,12,0,0,1,12,12ZM104,88A16,16,0,1,1,88,72,16,16,0,0,1,104,88Zm40,40a16,16,0,1,1-16-16A16,16,0,0,1,144,128Zm40-40a16,16,0,1,1-16-16A16,16,0,0,1,184,88Zm-80,80a16,16,0,1,1-16-16A16,16,0,0,1,104,168Zm80,0a16,16,0,1,1-16-16A16,16,0,0,1,184,168Z"/>',
+  chart: '<path d="M236,208a12,12,0,0,1-12,12H32a12,12,0,0,1-12-12V48a12,12,0,0,1,24,0v85.55L88.1,95a12,12,0,0,1,15.1-.57l56.22,42.16L216.1,87A12,12,0,1,1,231.9,105l-64,56a12,12,0,0,1-15.1.57L96.58,119.44,44,165.45V196H224A12,12,0,0,1,236,208Z"/>',
+  gear: '<path d="M128,76a52,52,0,1,0,52,52A52.06,52.06,0,0,0,128,76Zm0,80a28,28,0,1,1,28-28A28,28,0,0,1,128,156Zm92-27.21v-1.58l14-17.51a12,12,0,0,0,2.23-10.59A111.75,111.75,0,0,0,225,71.89,12,12,0,0,0,215.89,66L193.61,63.5l-1.11-1.11L190,40.1A12,12,0,0,0,184.11,31a111.67,111.67,0,0,0-27.23-11.27A12,12,0,0,0,146.3,22L128.79,36h-1.58L109.7,22a12,12,0,0,0-10.59-2.23A111.75,111.75,0,0,0,71.89,31.05,12,12,0,0,0,66,40.11L63.5,62.39,62.39,63.5,40.1,66A12,12,0,0,0,31,71.89,111.67,111.67,0,0,0,19.77,99.12,12,12,0,0,0,22,109.7l14,17.51v1.58L22,146.3a12,12,0,0,0-2.23,10.59,111.75,111.75,0,0,0,11.29,27.22A12,12,0,0,0,40.11,190l22.28,2.48,1.11,1.11L66,215.9A12,12,0,0,0,71.89,225a111.67,111.67,0,0,0,27.23,11.27A12,12,0,0,0,109.7,234l17.51-14h1.58l17.51,14a12,12,0,0,0,10.59,2.23A111.75,111.75,0,0,0,184.11,225a12,12,0,0,0,5.91-9.06l2.48-22.28,1.11-1.11L215.9,190a12,12,0,0,0,9.06-5.91,111.67,111.67,0,0,0,11.27-27.23A12,12,0,0,0,234,146.3Zm-24.12-4.89a70.1,70.1,0,0,1,0,8.2,12,12,0,0,0,2.61,8.22l12.84,16.05A86.47,86.47,0,0,1,207,166.86l-20.43,2.27a12,12,0,0,0-7.65,4,69,69,0,0,1-5.8,5.8,12,12,0,0,0-4,7.65L166.86,207a86.47,86.47,0,0,1-10.49,4.35l-16.05-12.85a12,12,0,0,0-7.5-2.62c-.24,0-.48,0-.72,0a70.1,70.1,0,0,1-8.2,0,12.06,12.06,0,0,0-8.22,2.6L99.63,211.33A86.47,86.47,0,0,1,89.14,207l-2.27-20.43a12,12,0,0,0-4-7.65,69,69,0,0,1-5.8-5.8,12,12,0,0,0-7.65-4L49,166.86a86.47,86.47,0,0,1-4.35-10.49l12.84-16.05a12,12,0,0,0,2.61-8.22,70.1,70.1,0,0,1,0-8.2,12,12,0,0,0-2.61-8.22L44.67,99.63A86.47,86.47,0,0,1,49,89.14l20.43-2.27a12,12,0,0,0,7.65-4,69,69,0,0,1,5.8-5.8,12,12,0,0,0,4-7.65L89.14,49a86.47,86.47,0,0,1,10.49-4.35l16.05,12.85a12.06,12.06,0,0,0,8.22,2.6,70.1,70.1,0,0,1,8.2,0,12,12,0,0,0,8.22-2.6l16.05-12.85A86.47,86.47,0,0,1,166.86,49l2.27,20.43a12,12,0,0,0,4,7.65,69,69,0,0,1,5.8,5.8,12,12,0,0,0,7.65,4L207,89.14a86.47,86.47,0,0,1,4.35,10.49l-12.84,16.05A12,12,0,0,0,195.88,123.9Z"/>',
   tray: '<path d="M208,28H48A20,20,0,0,0,28,48V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V48A20,20,0,0,0,208,28Zm-4,24v92H179.31a19.86,19.86,0,0,0-14.14,5.86L147,168H109L90.83,149.86A19.86,19.86,0,0,0,76.69,144H52V52ZM52,204V168H75l18.14,18.14A19.86,19.86,0,0,0,107.31,192h41.38a19.86,19.86,0,0,0,14.14-5.86L181,168h23v36Zm35.51-87.51a12,12,0,0,1,17-17L116,111V76a12,12,0,0,1,24,0v35l11.51-11.52a12,12,0,0,1,17,17l-32,32a12,12,0,0,1-17,0Z"/>'};
 // Manasymbole: Phosphor Fill (Sonne, Tropfen, Totenkopf, Flamme, Baum; Raute = farblos, drei Kreise = mehrfarbig) auf den Pastelltönen der Kartensymbole
 const MANA = {W: '<path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm8,24a64,64,0,1,0,64,64A64.07,64.07,0,0,0,128,64ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/>',
@@ -175,6 +181,18 @@ const TIP = {
   gewinn: 'Was die Karten, für die der Import einen Kaufpreis kennt (zum Beispiel aus ManaBox), heute wert sind, minus was du für sie bezahlt hast. Karten ohne Kaufpreis (zum Beispiel Tokens oder hochgeladene Decklisten) zählen nicht mit.',
   verlauf: 'Der Wert deiner Sammlung an jedem Tag, an dem die App lief (Preise oder Import). Er ändert sich durch neue oder verkaufte Karten und durch Preise. Punkte markieren die Tage mit Wert, solange es wenige sind. Gestrichelt heißt: Dazwischen lief die App nicht, die Linie verbindet nur.',
   cardmarket: 'Aus der täglichen Preisliste von Cardmarket: der niedrigste Angebotspreis (ab), der Trend und der Schnitt der letzten 30 Tage, ohne Sprache und Zustand. Fürs Verkaufen ist „ab“ die Untergrenze.',
+  // Seite „Mehr“ (E41): je Ziel ein Satz, Schlüssel 'mehr' + Name der Ansicht
+  mehrSort: 'Welche Karte wohin gehört: Deck, Behalten, Verkaufen oder Bulk.',
+  mehrSell: 'Verkaufslisten mit Preisen, zum Beispiel für den Ankauf bei einem Händler.',
+  mehrWuensche: 'Karten, die du haben willst, mit Zielpreis.',
+  mehrSpiele: 'Partien deiner Spielgruppe und welches Deck wie oft gewinnt.',
+  mehrSets: 'Deine Karten nach Serien, mit Wert und Vollständigkeit.',
+  mehrWert: 'Wert deiner Sammlung, Verlauf und was als Nächstes ansteht.',
+  mehrDruck: 'Trennkarten und Etiketten für Serien, Binder und Decks.',
+  mehrKonten: 'Konten, Sicherung, Handy verbinden und Updates.',
+  mehrQuellen: 'Woher die App Daten holt und was sie dabei verrät.',
+  mehrHelp: 'Wie alles funktioniert, Schritt für Schritt.',
+  mehrMessbilder: 'Kamerabilder zum Messen der Erkennung ansehen und zuordnen.',
 };
 const info = (k, label) => `<button type="button" class="info" data-tip="${esc(TIP[k] || k)}" aria-label="${esc((label ? label + ': ' : '') + (TIP[k] || k))}">${icon('help')}</button>`;
 // Manasymbol wie auf der Karte; deco = nur Schmuck (der Knopf drumherum trägt die Beschriftung)
@@ -1742,7 +1760,7 @@ function viewHelp() {
       <p><b>Cardmarket und Ankauf.</b> Neben jedem Preis steht der niedrigste Angebotspreis bei Cardmarket („ab“). Über der Liste steht, was nach 5 % Provision bleibt. ${TIP.sprachen} Im Reiter Bulk rechnet die App als Beispiel aus, was KEEPSEVEN laut seiner Bulk-Preisliste zahlen würde.</p>
       <p><b>Verkauft je Jahr.</b> ${TIP.meldegrenze}</p>
       <p><b>Recherche.</b> Mit Claude Code auf dem Desktop (Skill mtg-recherche) entstehen Dossiers zu deinen Commandern und ein Markt-Radar aus Foren und Preisseiten. Das Dossier steht dann beim Deck, Treffer aus dem Radar bei deinen Karten unter Neuigkeiten. Beides sind Hinweise mit Quelle, keine Anlageberatung.</p>
-      <p><b>Drucken.</b> Unter „Drucken“ (Link im Fuß) gibt es Trennkarten in Kartenbreite (63 × 95 mm, neun je Seite) und Etiketten (70 × 37 mm, 24 je Bogen) für Serien, Binder und Decks. ${proxyAn() ? 'Das Proxy-Blatt druckt Karten zum Ausprobieren in Originalgröße, jede mit „Playtest“, erreichbar auch aus den Upgrade-Vorschlägen eines Decks und aus den Wünschen. ' : 'Das Proxy-Blatt ist aus; das Hauptkonto kann es unter „Konten und Sicherung“ einschalten. '}Beim Drucken die Skalierung auf 100 % lassen. Zu jedem Deck zeigt „Zerlegen: wohin?“, auf welchen Stapel jede Karte zurückgeht.</p>
+      <p><b>Drucken.</b> Unter „Drucken“ (unter Mehr) gibt es Trennkarten in Kartenbreite (63 × 95 mm, neun je Seite) und Etiketten (70 × 37 mm, 24 je Bogen) für Serien, Binder und Decks. ${proxyAn() ? 'Das Proxy-Blatt druckt Karten zum Ausprobieren in Originalgröße, jede mit „Playtest“, erreichbar auch aus den Upgrade-Vorschlägen eines Decks und aus den Wünschen. ' : 'Das Proxy-Blatt ist aus; das Hauptkonto kann es unter „Konten und Sicherung“ einschalten. '}Beim Drucken die Skalierung auf 100 % lassen. Zu jedem Deck zeigt „Zerlegen: wohin?“, auf welchen Stapel jede Karte zurückgeht.</p>
       <p><b>Spiele.</b> Nach jeder Runde Deck wählen und Gewonnen oder Nicht gewonnen klicken, mehr braucht es nicht (Tisch, Züge und Notiz sind freiwillig). Die Siegquote steht ab fünf Spielen, Decks, die seit zwei Monaten ruhen, nennt die App als Kandidaten zum Zerlegen. In der Spielgruppe trägst du die Decks deiner Mitspieler mit Bracket ein und lässt dir zeigen, welches deiner Decks heute passt. Salt zeigt, wie viele der von EDHREC als besonders ärgerlich gewählten Karten in einem Deck stecken.</p>
       <p><b>Sammler.</b> Im Kartendetail bekommt jede Kopie einen Ort (Kiste, Binder), „verliehen an“ und eine Notiz. Das steht getrennt vom importierten Bestand und bleibt bei jedem neuen Import erhalten. Suche danach mit <code>ort:kiste</code> oder <code>is:verliehen</code>. Unter Serien siehst du, wie viel von jedem Set dir fehlt, ein Klick zeigt das Set als Binder mit neun Karten je Seite. Dazu gibt es den Rückblick auf dein Sammeljahr und einen Wert-Bericht zum Drucken (für Versicherung oder Nachlass), beide über die Übersicht.</p>
       <p><b>Wächter.</b> Bei jeder Preis-Aktualisierung vergleicht die App, ob eine deiner Karten gebannt, wieder erlaubt oder zum Game Changer wurde, und meldet das auf der Übersicht mit den betroffenen Decks. Einmal am Tag schaut sie in neue und angekündigte Sets: Erscheint eine deiner Karten ab 5 € neu, steht „Reprint“ in der Verkaufsliste. Im Kartendetail stehen die offiziellen Rulings.</p>
@@ -1767,7 +1785,7 @@ function viewHelp() {
       <dt>Bracket</dt><dd>${TIP.bracket}</dd><dt>Game Changer</dt><dd>${TIP.gc}</dd><dt>Ø Manawert</dt><dd>${TIP.cmc}</dd><dt>Staple</dt><dd>${TIP.staple}</dd>
       <dt>Bulk</dt><dd>${TIP.bulk}</dd><dt>Preis</dt><dd>${TIP.value}</dd></dl></section>
     <section id="h-konten"><h2>Konten und Server</h2>
-      <p>Unter <a href="#/konten">Konten und Sicherung</a> (ganz unten auf jeder Seite) legst du ein Hauptkonto an. Danach kannst du weitere, getrennte Sammlungen anlegen, zum Beispiel für deine Kinder, und oben rechts zwischen ihnen wechseln. Jede Sammlung hat ihre eigenen Karten, Decks und Regeln.</p>
+      <p>Unter <a href="#/konten">Konten und Sicherung</a> (unter Mehr) legst du ein Hauptkonto an. Danach kannst du weitere, getrennte Sammlungen anlegen, zum Beispiel für deine Kinder, und oben rechts zwischen ihnen wechseln. Jede Sammlung hat ihre eigenen Karten, Decks und Regeln.</p>
       <ul><li><b>Ohne Passwort</b> läuft die App wie bisher nur auf deinem Rechner.</li>
         <li><b>Mit Passwort</b> fürs Hauptkonto kannst du sie auf deinem eigenen Server betreiben und von jedem Gerät aus öffnen, auch wenn dein Rechner aus ist. Wie das geht, steht in der README.</li>
         <li>Ein Unterkonto <b>mit Passwort</b> meldet sich selbst an und sieht nur seine eigene Sammlung, eins <b>ohne Passwort</b> verwaltest nur du.</li>
@@ -3564,8 +3582,28 @@ async function viewMessbilder() {
   };
 }
 
-const VIEWS = {'': ['Übersicht', viewHome], cards: ['Karten', viewCards], sets: ['Serien', viewSets], sort: ['Sortieren', viewSort], scan: ['Scannen', viewScan], sell: ['Verkaufen', viewSell], decks: ['Decks', viewDecks], wuensche: ['Wünsche', viewWuensche], spiele: ['Spiele', viewSpiele], help: ['Hilfe', viewHelp],
-  konten: ['Konten und Sicherung', viewKonten, true], quellen: ['Quellen', viewQuellen, true], binder: ['Binder', viewBinder, true], druck: ['Drucken', viewDruck, true], proxy: ['Proxy-Blatt', viewProxy, true], rueckblick: ['Rückblick', viewRueckblick, true], bericht: ['Wert-Bericht', viewBericht, true], messbilder: ['Messbilder', viewMessbilder, true]};  // true: nicht in der Navigation (Link im Fuß)
+// Platz (E41): haupt = die Navigation (dazu in der Mitte der Scan-Knopf), mehr = Seite „Mehr“, entwickler = dort unter „Für Entwickler“, ohne = nur über Links
+const VIEWS = {'': ['Binder', viewHome, 'haupt', 'cards'], cards: ['Suchen', viewCards, 'haupt', 'search'], scan: ['Scannen', viewScan, 'scan', 'camera'], decks: ['Decks', viewDecks, 'haupt', 'crown'], mehr: ['Mehr', viewMehr, 'haupt', 'dots'],
+  sort: ['Sortieren', viewSort, 'mehr', 'layers'], sell: ['Verkaufen', viewSell, 'mehr', 'euro'], wuensche: ['Wünsche', viewWuensche, 'mehr', 'heart'], spiele: ['Spiele', viewSpiele, 'mehr', 'dice'], sets: ['Serien', viewSets, 'mehr', 'tray'],
+  wert: ['Wert und Plan', viewHome, 'mehr', 'chart'], druck: ['Drucken', viewDruck, 'mehr', 'printer'], konten: ['Konten und Sicherung', viewKonten, 'mehr', 'gear'], quellen: ['Quellen', viewQuellen, 'mehr', 'cloud'], help: ['Hilfe', viewHelp, 'mehr', 'help'],
+  messbilder: ['Messbilder', viewMessbilder, 'entwickler', 'camera'],
+  binder: ['Binder', viewBinder], proxy: ['Proxy-Blatt', viewProxy], rueckblick: ['Rückblick', viewRueckblick], bericht: ['Wert-Bericht', viewBericht]};
+const navLink = (k, aktiv) => {
+  const [l, , platz, ic] = VIEWS[k];
+  return platz === 'scan' ? `<a class="nav-scan" href="#/scan?modus=erfassen"${aktiv ? ' aria-current="page"' : ''}><b>${icon(ic)}</b><span>${l}</span></a>`
+    : `<a href="#/${k}"${aktiv ? ' aria-current="page"' : ''}>${icon(ic)}<span>${l}</span></a>`;
+};
+// Fünf Ziele (E41): Binder, Suchen, Scannen, Decks, Mehr; eine Ansicht von „Mehr“ markiert „Mehr“
+const navHtml = path => {
+  const platz = VIEWS[path]?.[2];
+  return ['', 'cards', 'scan', 'decks', 'mehr'].map(k => navLink(k, k === path || (k === 'mehr' && (platz === 'mehr' || platz === 'entwickler')))).join('');
+};
+async function viewMehr() {
+  const zeile = ([k, [l, , , ic]]) => `<a class="mzeile" href="#/${k}">${icon(ic)}<span class="min0"><b>${l}</b><span class="muted">${TIP['mehr' + k[0].toUpperCase() + k.slice(1)]}</span></span>${icon('right', 'sm')}</a>`;
+  const liste = platz => Object.entries(VIEWS).filter(([, v]) => v[2] === platz).map(zeile).join('');
+  main.innerHTML = `${head('Mehr', '')}<nav class="mliste" aria-label="Mehr">${liste('mehr')}</nav>
+    <section class="sec" aria-label="Für Entwickler"><h2>Für Entwickler</h2><nav class="mliste" aria-label="Für Entwickler">${liste('entwickler')}</nav></section>`;
+}
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
 let rendered = null;
 // Zahl läuft vom zuletzt gezeigten Wert zum neuen, also nur nach einer Handlung (E40: beim ersten Zeigen gleich der Endwert, nicht bei reduzierter Bewegung)
@@ -3670,7 +3708,7 @@ async function render(force) {
   const [path, qs] = hash.slice(2).split('?');
   const [title, view] = VIEWS[path] || ['Nicht gefunden', viewMissing];
   document.title = `${title} · ${APP}`;
-  $('#nav').innerHTML = Object.entries(VIEWS).filter(([, [, , versteckt]]) => !versteckt).map(([k, [l]]) => `<a href="#/${k}"${k === path ? ' aria-current="page"' : ''}>${l}</a>`).join('');
+  $('#nav').innerHTML = navHtml(path);
   hidePeek(); hideTip(); scanStop(); main.onclick = main.onchange = main.onkeydown = null;
   const vorher = main.firstElementChild;  // Skelett nur, solange die neue Ansicht noch nichts geschrieben hat (viewCards schreibt vor dem Laden)
   const slow = setTimeout(() => { if (rendered === hash && main.firstElementChild === vorher) main.innerHTML = skeleton(); }, 160);

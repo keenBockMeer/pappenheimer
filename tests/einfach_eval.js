@@ -9,9 +9,9 @@
 async function einfachEval({ansichten = null} = {}) {
   const ANSICHTEN = ansichten || [
     {name: 'Übersicht', hash: '#/'},
-    {name: 'Scannen (Erfassen)', hash: '#/', tipps: ['#nav a[href="#/scan"]', '[data-modus="erfassen"][aria-pressed="false"]'], ziel: '#cam-go'},
+    {name: 'Scannen (Erfassen)', hash: '#/', tipps: ['#nav a[href^="#/scan"]', '[data-modus="erfassen"][aria-pressed="false"]'], ziel: '#cam-go'},
     {name: 'Karten', hash: '#/cards'}, {name: 'Serien', hash: '#/sets'}, {name: 'Sortieren', hash: '#/sort'}, {name: 'Verkaufen', hash: '#/sell'},
-    {name: 'Decks', hash: '#/decks'}, {name: 'Wünsche', hash: '#/wuensche'}, {name: 'Spiele', hash: '#/spiele'}, {name: 'Hilfe', hash: '#/help'},
+    {name: 'Decks', hash: '#/decks'}, {name: 'Wünsche', hash: '#/wuensche'}, {name: 'Spiele', hash: '#/spiele'}, {name: 'Hilfe', hash: '#/help'}, {name: 'Mehr', hash: '#/mehr'},
   ];
   const MERKER = ['mtg-scan-modus'];
   const sichtbar = el => el.checkVisibility ? el.checkVisibility({visibilityProperty: true, opacityProperty: true}) : !!el.offsetParent;
