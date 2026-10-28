@@ -193,6 +193,7 @@ const TIP = {
   mehrQuellen: 'Woher die App Daten holt und was sie dabei verrät.',
   mehrHelp: 'Wie alles funktioniert, Schritt für Schritt.',
   mehrMessbilder: 'Kamerabilder zum Messen der Erkennung ansehen und zuordnen.',
+  hgvorbereiten: 'Rechnet fehlende Kartenbilder für „Alle Karten, ohne Set“, solange du sonst nichts tust und die Kamera aus ist, und schickt sie an den Server; jedes Gerät nutzt sie danach mit. Ohne eigene Wahl an, wenn die App am Rechner im eigenen Fenster läuft. Gilt für diesen Browser.',
   entwickler: 'Zeigt die Messbilder hier und beim Erfassen die Schalter „Messbilder speichern“ und „Karten stecken in Hüllen“. Nur zum Messen der Erkennung, gilt für diesen Browser.',
 };
 const info = (k, label) => `<button type="button" class="info" data-tip="${esc(TIP[k] || k)}" aria-label="${esc((label ? label + ': ' : '') + (TIP[k] || k))}">${icon('help')}</button>`;
@@ -2264,13 +2265,14 @@ function fpSuche(ix, src, cx, cy, w, h, k = 3, vor = FP_VOR, lagen = FP_LAGEN) {
 const fpB64 = fp => btoa(String.fromCharCode(...new Uint8Array(fp.buffer)));
 // fehlende Fingerabdrücke aus den kleinen Scryfall-Bildern rechnen (CDN ohne Limit, erlaubt CORS) und in Paketen speichern: je Druck unter
 // „scan“ oder je Aussehen unter „scan/katalog“ (Phase 32); stopp() = true bricht ab, das Gerechnete ist dann gespeichert
-async function fpJob(fehlt, progress, ziel = 'scan', stopp) {
+async function fpJob(fehlt, progress, ziel = 'scan', stopp, ruhig) {  // ruhig: vor jedem Bild abwarten (Vorbereiten im Hintergrund)
   const laden = u => new Promise((ok, err) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => ok(im); im.onerror = err; im.src = u; });
   let fertig = 0, paket = {};
   const senden = async () => { const p = paket; paket = {}; if (Object.keys(p).length) await post(ziel, {v: FP_V, fp: p}); };
   const queue = [...fehlt];
   await Promise.all(Array.from({length: 16}, async () => {  // die Zeit geht fürs Laden drauf (rund 180 ms je Bild), das Rechnen kostet 1,5 ms
     for (let f; !stopp?.() && (f = queue.shift());) {
+      if (ruhig) await ruhig();
       try { const im = await laden(small(f.image)); const w = im.naturalWidth, h = im.naturalHeight; paket[f.id] = fpB64(fingerprint(im, w / 2, h / 2, w, h)); }
       catch { /* Bild fehlt: beim nächsten Mal wieder versucht */ }
       if (++fertig % 200 === 0) { await senden(); progress?.(fertig, fehlt.length); }
@@ -2909,6 +2911,7 @@ async function viewErfassen(deck = false) {  // deck (Phase 60): aus „Deck ein
         <div id="erf-katalog"></div>
         <label class="inl"><input type="checkbox" id="erf-frei"${scanFrei ? ' checked' : ''}> Karte frei im Bild suchen ${info('frei', 'Karte frei im Bild suchen')}</label>
         ${schnellSchalter()}
+        <label class="inl"><input type="checkbox" id="erf-hg"${hgVorbereiten() ? ' checked' : ''}> Im Hintergrund vorbereiten ${info('hgvorbereiten', 'Im Hintergrund vorbereiten')}</label>
         ${erf.alle && kat.titel ? `<label class="inl"><input type="checkbox" id="erf-titel"${erf.titel ? ' checked' : ''}> Namen der Karte lesen ${info('titel', 'Namen der Karte lesen')}</label>` : ''}
         ${erf.alle ? `<label class="inl"><input type="checkbox" id="erf-namen" disabled> Deutsche Kartennamen laden (rund ${num(DEUTSCH_MB)} MB) ${info('namen', 'Deutsche Kartennamen laden')}</label><div id="erf-namen-stand"></div>` : ''}</div>
       <div class="erf-grid gap-top">
@@ -2947,6 +2950,7 @@ async function viewErfassen(deck = false) {  // deck (Phase 60): aus „Deck ein
   for (const [id, k] of [['erf-mess', 'mess'], ['erf-huelle', 'huelle']]) if ($('#' + id)) $('#' + id).onchange = e => { erf[k] = e.target.checked; erfMerken(); erfSumme(); messUi(); };
   $('#erf-frei').onchange = e => { scanFrei = e.target.checked; merke('mtg-scan-frei', scanFrei ? '1' : '0'); };
   $('#scan-schnell').onchange = schnellSetzen;
+  $('#erf-hg').onchange = e => { merke('mtg-vorbereiten', e.target.checked ? '1' : '0'); if (e.target.checked) katImHintergrund(); else if (katJob?.still) katJob.stopp = true; };
   if ($('#erf-titel')) $('#erf-titel').onchange = e => { erf.titel = e.target.checked; erfTitel = null; erfMerken(); };
   if ($('#erf-namen')) $('#erf-namen').onchange = e => katalogNamen(e.target.checked);
   katalogOeffnen();
@@ -3130,24 +3134,44 @@ function katUi() {
         <button class="link" type="button" id="erf-kat-go">${katJob ? 'Anhalten' : icon('cloud', 'sm') + 'Jetzt vorbereiten'}</button></p>
       ${katJob ? `<div class="progress"><span style="--p:${k.fertig / k.gesamt}"></span></div>` : ''}`;
 }
-async function katVorbereiten() {
-  if (katJob) { katJob.stopp = true; return; }
-  const job = katJob = {stopp: false};
+// Vorbereiten im Hintergrund (Phase 63, E38): Im App-Fenster am Rechner (Phase 55, der Server öffnet es mit ?fenster=1, das Fenster merkt es
+// sich) rechnet die App fehlende Kartenbilder von selbst, aber nur im Leerlauf und nie, solange die Kamera läuft; so muss das Handy nichts
+// vorbereiten. Schalter in den Einstellungen des Scanners (mtg-vorbereiten), ohne Wahl an nur im App-Fenster. Aus: wie vorher.
+const FENSTER = (() => { try { if (new URLSearchParams(location.search).has('fenster')) sessionStorage.setItem('mtg-fenster', '1'); return sessionStorage.getItem('mtg-fenster') === '1'; } catch { return false; } })();
+const hgVorbereiten = () => merk('mtg-vorbereiten', FENSTER ? '1' : '0', [['1'], ['0']]) === '1';
+// Ein Leerlauf gibt LEERLAUF_MS frei, nicht nur ein Bild: Je Bild auf requestIdleCallback zu warten, schaffte 5,5 Bilder/s statt 255
+// (gemessen am 2026-10-29, Probe mit 66.820 Bildern; der ungebremste Lauf hatte keine lange Aufgabe und höchstens 18 ms Verzögerung)
+const LEERLAUF_MS = 1000;
+let leerBis = 0;
+const leerlauf = () => !scanStream && performance.now() < leerBis ? Promise.resolve() : new Promise(ok => {
+  const f = () => scanStream ? setTimeout(f, 2000) : requestIdleCallback(() => { leerBis = performance.now() + LEERLAUF_MS; ok(); }, {timeout: 2000});
+  f();
+});
+async function katImHintergrund() {
+  if (!hgVorbereiten() || katJob || !window.requestIdleCallback) return;
+  try { const r = await api(`scan/katalog?v=${FP_V}`); if (r.gesamt && r.fertig < r.gesamt) katVorbereiten(true); }
+  catch { /* ohne Katalog oder ohne Anmeldung: nichts zu tun */ }
+}
+async function katVorbereiten(still = false) {
+  if (katJob) { if (!still) katJob.stopp = true; return; }
+  const job = katJob = {stopp: false, still};
   let zuletzt = -1;
   try {
     for (;;) {
       const r = await api(`scan/katalog?v=${FP_V}&fehlt=1`);
+      Object.assign(job, {fertig: r.fertig, gesamt: r.gesamt});
       if (erf) { erf.kat = r; katUi(); erfBereit(); erfSumme(); }
       if (job.stopp || !r.fehlt.length || r.fertig === zuletzt) break;  // eine Runde ohne neues Bild: Die übrigen lassen sich gerade nicht laden
       const start = zuletzt = r.fertig;  // erf.kat ist r: nicht darauf weiterzählen
       await fpJob(r.fehlt, a => {
+        job.fertig = Math.min(start + a, r.gesamt);
         if (!erf?.kat) return;
-        erf.kat.fertig = Math.min(start + a, r.gesamt); erfBereit(); erfSumme();
+        erf.kat.fertig = job.fertig; erfBereit(); erfSumme();
         const z = $('#erf-kat-n');
         if (z) { z.textContent = num(erf.kat.fertig); $('#erf-kat .progress span')?.style.setProperty('--p', erf.kat.fertig / r.gesamt); }
-      }, 'scan/katalog', () => job.stopp);
+      }, 'scan/katalog', () => job.stopp, still ? leerlauf : null);
     }
-  } catch (e) { if (!(e instanceof LoginNoetig)) flash('Vorbereiten unterbrochen: ' + e.message); }
+  } catch (e) { if (!(e instanceof LoginNoetig) && !still) flash('Vorbereiten unterbrochen: ' + e.message); }
   katJob = null;
   katUi();
 }
@@ -3627,7 +3651,8 @@ const navHtml = path => {
 async function viewMehr() {
   const zeile = ([k, [l, , , ic]]) => `<a class="mzeile" href="#/${k}">${icon(ic)}<span class="min0"><b>${l}</b><span class="muted">${TIP['mehr' + k[0].toUpperCase() + k.slice(1)]}</span></span>${icon('right', 'sm')}</a>`;
   const liste = platz => Object.entries(VIEWS).filter(([, v]) => v[2] === platz).map(zeile).join('');
-  main.innerHTML = `${head('Mehr', '')}<nav class="mliste" aria-label="Mehr">${liste('mehr')}</nav>
+  const kj = katJob?.gesamt ? `<p class="note-line">${icon('refresh', 'sm')} Kartenbilder für die Erkennung: ${num(katJob.fertig)} von ${num(katJob.gesamt)} vorbereitet${katJob.still ? ', im Hintergrund' : ''}.</p>` : '';
+  main.innerHTML = `${head('Mehr', '')}${kj}<nav class="mliste" aria-label="Mehr">${liste('mehr')}</nav>
     <section class="sec" aria-label="Für Entwickler"><h2>Für Entwickler</h2><label class="inl"><input type="checkbox" id="entwickler"${entwickler() ? ' checked' : ''}> Werkzeuge zum Messen zeigen ${info('entwickler', 'Für Entwickler')}</label>
       ${entwickler() ? `<nav class="mliste" aria-label="Für Entwickler">${liste('entwickler')}</nav>` : ''}</section>`;
   main.onchange = e => { if (e.target.id === 'entwickler') { merke('mtg-entwickler', e.target.checked ? '1' : '0'); render(true); } };
@@ -3752,6 +3777,6 @@ navigator.serviceWorker?.register('/sw.js').catch(() => {});  // nur damit der B
     try { if ((await api('einrichtung')).modus === 'einrichtung') return showEinrichtung(); } catch { /* ohne Antwort wie bisher: eine Sammlung */ }
   }
   if (sess.modus === 'anmeldung' && !sess.angemeldet) return showLogin();
-  whoUi(); render();
+  whoUi(); render(); katImHintergrund();
   api('jobs').then(j => { jobs = j; if (Object.values(j).some(x => x.running)) pollJobs(); }).catch(() => {});
 })();

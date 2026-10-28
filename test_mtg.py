@@ -2176,6 +2176,11 @@ def test_schnell_scan():
     assert "TIP.scanliste)}</p>" not in liste and "info('scanliste'" in liste
     assert liste.index("data-weiter") < liste.index("In Sammlung übernehmen (") and "Fertig (${num(n)})" in liste
     assert "if (t.closest('[data-weiter]'))" in js
+    # Vorbereiten im Hintergrund: Standard an nur im App-Fenster (der Server öffnet es mit ?fenster=1), nur im Leerlauf, nie bei laufender Kamera
+    assert "merk('mtg-vorbereiten', FENSTER ? '1' : '0'" in js and "sessionStorage.setItem('mtg-fenster', '1')" in js
+    assert "scanStream ? setTimeout(f, 2000) : requestIdleCallback(() => { leerBis = performance.now() + LEERLAUF_MS; ok(); }" in js and "still ? leerlauf : null" in js and "if (ruhig) await ruhig();" in js
+    assert 'id="erf-hg"' in erfassen and "  hgvorbereiten: '" in js and "render(); katImHintergrund();" in js
+    assert "katJob?.gesamt ?" in js[js.index("async function viewMehr("):]
 
 
 def test_klassen_des_sortier_modus_kollidieren_nicht():
@@ -2864,7 +2869,7 @@ def test_ui_fenster_ohne_konsole_und_endet_mit_dem_fenster(daten, monkeypatch, c
     lauf.join(20)
     assert not lauf.is_alive() and gestartet[-1] == 0, "der Server endet nicht mit dem Fenster"
     assert fenster == [["edge.exe", f"--user-data-dir={daten / 'fenster'}", "--no-first-run", "--no-default-browser-check"]]
-    assert (daten / "argv.txt").read_text().startswith("--app=http://127.0.0.1:")
+    assert (daten / "argv.txt").read_text().startswith("--app=http://127.0.0.1:") and (daten / "argv.txt").read_text().endswith("/?fenster=1")
     monkeypatch.setattr(mtg, "fenster_browser", lambda: None)  # kein Edge, kein Chrome: der Browser wie bisher
     monkeypatch.setattr(server, "serve", lambda *a: gestartet.append(a))
     mtg.main(["ui", "--fenster", "--port", "0"])

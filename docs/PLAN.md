@@ -1745,7 +1745,15 @@ Messung mit `tests/einfach_eval.js` (375 × 812, Probe-Instanz mit Beispielsamml
 | Scannen: Oberkante „Kamera starten“ | 2.126 px (2,6 Höhen) | 425 px (0,5 Höhen, kein Scrollen) |
 | Scannen: Wörter auf der Seite | 437 | 114 |
 
-Im Vollbild (nachgestellt mit `body.vollbild` ohne Kamera) bleiben rund 14 Wörter sichtbar: Summe der Liste, Prüfen, Fertig, Status, „+1“ und die Kürzel. Im Browser geprüft: ein Tipp auf den Scan-Knopf führt vom Binder (nach Neuladen) über das Vorbereiten von CC1 bis zum Aufruf der Kamera, den die Vorschau hier blockt; Blatt am Handy und am Rechner; Entwickler-Schalter an und aus. **Nicht gebaut:** „Vorbereiten im Hintergrund“ im App-Fenster am Rechner. Der Plan verlangt vorher eine Messung (Rechenzeit, ob der Rechner bedienbar bleibt) mit dem echten Katalog von rund 67.000 Kartenbildern, und die Seite weiß bisher nicht, dass sie im App-Fenster läuft (dafür braucht `/api/session` ein Feld). Das ist ein eigener Schritt. **Offen (real, Autor):** ob die Kamera nach dem Tipp ohne weitere Geste startet (Chrome und Samsung Internet unter Android, Safari unter iOS); zehn Karten erfassen und übernehmen, Zeit notieren.
+Im Vollbild (nachgestellt mit `body.vollbild` ohne Kamera) bleiben rund 14 Wörter sichtbar: Summe der Liste, Prüfen, Fertig, Status, „+1“ und die Kürzel. Im Browser geprüft: ein Tipp auf den Scan-Knopf führt vom Binder (nach Neuladen) über das Vorbereiten von CC1 bis zum Aufruf der Kamera, den die Vorschau hier blockt; Blatt am Handy und am Rechner; Entwickler-Schalter an und aus. **Nachgereicht (2026-10-29): Vorbereiten im Hintergrund.** Der Server öffnet das App-Fenster mit `/?fenster=1`, die Seite merkt es sich für dieses Fenster in `sessionStorage` (`FENSTER`; ein Feld in `/api/session` hätte auch ein Handy am selben Rechner als App-Fenster gemeldet). Schalter „Im Hintergrund vorbereiten“ in den Einstellungen des Scanners (`mtg-vorbereiten`, `TIP.hgvorbereiten`), ohne Wahl an nur im App-Fenster. `katImHintergrund` startet nach der Anmeldung `katVorbereiten(true)`, wenn der Katalog da ist und Bilder fehlen (lädt nie den Katalog selbst); `fpJob` wartet vor jedem Bild auf `leerlauf`: nie bei laufender Kamera, sonst gibt ein `requestIdleCallback` `LEERLAUF_MS` (1 s) frei. Fehler bleiben still, „Mehr“ zeigt den Stand in einer Zeile. Gemessen in der Probe-Instanz mit dem echten Katalog (66.820 Bilder) am Rechner, je rund 40 bis 70 s:
+
+| Lauf | Bilder/s | alle | lange Aufgaben | Verzögerung der Seite (95 % / höchstens) |
+|---|---|---|---|---|
+| je Bild ein `requestIdleCallback` (erster Entwurf) | 5,5 | gut 3 h | 0 | 9 / 14 ms |
+| ungebremst (Knopf „Jetzt vorbereiten“) | 255 | gut 4 min | 0 | 9 / 18 ms |
+| Leerlauf gibt 1 s frei (gebaut) | 87 | rund 13 min | 0 | 9 / 17 ms |
+
+Der Rechner bleibt also in allen drei Fällen bedienbar; das Netz zum Bild-CDN war hier schnell, langsameres Netz dauert länger. **Offen (real, Autor):** ob die Kamera nach dem Tipp ohne weitere Geste startet (Chrome und Samsung Internet unter Android, Safari unter iOS); zehn Karten erfassen und übernehmen, Zeit notieren.
 
 ### Phase 64 – Sammelalbum als Start (E40)
 **Ziel:** Wer die App öffnet, sieht seine Karten wie in einem Binder.

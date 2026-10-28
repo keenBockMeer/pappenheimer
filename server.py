@@ -2221,7 +2221,7 @@ def serve(port=PORT, open_browser=True, host="127.0.0.1", daily=True, log=False,
         print(f"Einrichtung: Code {code}\nNoch gibt es kein Hauptkonto. Die Adresse der App im Browser öffnen und dort diesen Code eingeben; "
               f"er gilt, bis das Hauptkonto angelegt ist. Noch einmal zeigen: mtg einrichtung", flush=True)
     if fenster:  # mit eigenem Profil ist der gestartete Prozess das Fenster selbst und endet, sobald es zu ist (am Rechner geprüft)
-        app = subprocess.Popen([*fenster, f"--app={url}"])
+        app = subprocess.Popen([*fenster, f"--app={url}/?fenster=1"])  # ?fenster=1: die Seite weiß, dass sie das App-Fenster ist (Phase 63)
         threading.Thread(target=lambda: (app.wait(), srv.shutdown()), daemon=True).start()
     elif open_browser:
         webbrowser.open(url)
