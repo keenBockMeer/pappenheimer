@@ -80,7 +80,7 @@ Ausbau v8 (Einfach am Handy: Sammelalbum, fünf Ziele, Schnell-Scan, kurze Texte
 - [x] Phase 61 – Ruhe: kein Hintergrund im Standard, keine Bewegung beim Öffnen, Beispiel-Leiste in einer Zeile, Messung im Handy-Format
 - [x] Phase 62 – App-Rahmen: fünf Ziele (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten, Seite „Mehr“
 - [x] Phase 63 – Schnell-Scan: ein Tipp bis zur laufenden Kamera, Einstellungen im Blatt, Erkennung von selbst vorbereitet
-- [ ] Phase 64 – Sammelalbum als Start: Binder-Seiten mit 3 × 3 Fächern, warmer dunkler Ton
+- [x] Phase 64 – Sammelalbum als Start: Binder-Seiten mit 3 × 3 Fächern, warmer dunkler Ton
 - [ ] Phase 65 – Text kürzen in allen Ansichten (höchstens ein Satz offen)
 
 ## Ziel
@@ -1766,6 +1766,17 @@ Der Rechner bleibt also in allen drei Fällen bedienbar; das Netz zum Bild-CDN w
 - **Tests:** `#/` liefert den Binder; die Seiten haben neun Fächer; eine leere Sammlung zeigt `welcome`; die Übersicht bleibt unter `#/wert` erreichbar.
 
 **Abnahme:** Start zeigt bei 1.000 Karten die erste Seite ohne spürbares Warten (Messung: Zeit bis zum ersten Bild) · keine waagerechte Scrollleiste der Seite bei 375 px · alle Tests grün. **Real (Autor):** gefällt der Start am Handy so wie in der Probe?
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (282), neuer Test `test_sammelalbum_als_start`. `#/` zeigt `viewAlbum`: Seiten mit 3 × 3 Fächern (`.album-seite`, `.album-fach`, alle Klassen mit `album-`), Wischen über `scroll-snap`, die zuletzt gescannten Karten vorn (`cards?sort=added`, wie geplant), „Seite n von m“ und Punkte bis `ALBUM_PUNKTE` (12) Seiten, freie Fächer auf der letzten Seite. Die erste Seite kommt mit einem Abruf von `ALBUM_LADEN` (117) Karten, ohne auf `summary` zu warten; weitere Abrufe beim Blättern (diese und die nächste Seite). Die ersten zwei Seiten laden ihre Bilder sofort (in der verdeckten Vorschau lud `loading="lazy"` gar nicht), der Rest mit `lazy`. Kopf: „Meine Karten“ und die Binder-Wahl (`#/?binder=…`), darunter eine Zeile mit Kartenzahl und Wert, „Scan-Liste: n Karten“ (neues Feld `scanliste` in `/api/summary`) und dem ersten Punkt aus „Als Nächstes“ mit Link nach „Wert und Plan“ (dafür `todoListe(s)`, das `viewHome` jetzt auch nutzt). Nie Text auf dem Bild: Preis und Anzahl in `.album-cap` darunter. Nach „In Sammlung übernehmen“ geht es zum Binder des Scans, die neuen Karten tragen einen Rahmen (`.album-karte.neu`, outline), bis die Ansicht verlassen wird; der Binder blättert zur Seite der ersten. Kartendetail am Handy als Blatt von unten (`dialog.sheet`, `@keyframes blatt-hoch`). Ton: Dunkel mit den Werten aus E40 (Grund `#14110d`, Seite `#1d1914`, Fach `--album-fach` `#0e0c09`, Schrift `#f0e7d8`, gedämpft `#ab9f8a`), die übrigen Flächen, Ränder und Eingaben warm nachgezogen; Hell in derselben Ordnung (Einband `#ece4d6`, Seite `#faf6ee`, Fach `#e4dacb`); alle Schriften ≥ 4,5:1, Eingaberahmen ≥ 3:1 auf ihren Flächen (nachgerechnet); `theme-color` und Manifest auf `#14110d`. Die Seite ist so breit, wie die Höhe des Fensters erlaubt (am Handy über der Navigation, am Rechner im Fenster; Schätzung im CSS).
+Messung in einer Probe-Instanz mit 1.000 verschiedenen Karten (Beispielsammlung, mit neuen Kennungen aufgefüllt, echte Bilder vom CDN), 375 × 812, Laden der Seite:
+
+| | Zeit nach Start der Seite |
+|---|---|
+| Kartenabruf der ersten Seite | 220 bis 273 ms |
+| erstes Bild da | 276 ms (das Bild lag schon im Cache) |
+| Übersicht (Wert, Hinweis) | 372 ms |
+
+Keine waagerechte Scrollleiste bei 375 px (Breite der Seite = 375), die Binderseite samt „Seite 1 von 112“ endet über der Navigation (744 bzw. 753 px), am Rechner (1280 × 800) im Fenster. Im Browser geprüft: Blättern auf Seite 21 und 112 lädt nach, letzte Seite mit 1 Karte und 8 freien Fächern, Binder-Wahl, Markierung nach dem Übernehmen (nachgestellt) und ihr Verschwinden, Kartendetail von unten, `#/wert`, Hell. In der verdeckten Vorschau laufen weder Scroll-Ereignisse noch Animationen; beides wurde von Hand ausgelöst bzw. beendet. **Offen (real, Autor):** gefällt der Start am Handy so wie in der Probe? Wischen mit dem Finger und das Nachladen beim Blättern auf dem echten Gerät.
 
 ### Phase 65 – Text kürzen in allen Ansichten (E42)
 **Ziel:** Keine Ansicht beginnt mit einem Absatz.

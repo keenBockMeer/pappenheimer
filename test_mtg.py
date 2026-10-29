@@ -2129,7 +2129,7 @@ def test_app_rahmen_fuenf_ziele():
     assert "['', 'cards', 'scan', 'decks', 'mehr'].map(" in js and 'href="#/scan?modus=erfassen"' in js[js.index("const navLink"):js.index("const navHtml")]
     assert {k for k, p in platz.items() if p in ("mehr", "entwickler")} == {"sort", "sell", "wuensche", "spiele", "sets", "wert", "druck", "konten", "quellen", "help", "messbilder"}
     assert {k for k, p in platz.items() if not p} == {"binder", "proxy", "rueckblick", "bericht"}  # nur über Links aus anderen Ansichten
-    assert "wert: ['Wert und Plan', viewHome," in block and "'': ['Binder', viewHome," in block  # bis Phase 64 zeigt #/ die Übersicht
+    assert "wert: ['Wert und Plan', viewHome," in block and "'': ['Binder', viewAlbum," in block  # seit Phase 64 ist #/ der Binder
     mehr = js[js.index("async function viewMehr("):]
     assert "v[2] === platz" in mehr and "liste('mehr')" in mehr and "liste('entwickler')" in mehr
     for k, p in platz.items():  # jede Zeile auf „Mehr“ hat ihren Satz in TIP
@@ -2181,6 +2181,32 @@ def test_schnell_scan():
     assert "scanStream ? setTimeout(f, 2000) : requestIdleCallback(() => { leerBis = performance.now() + LEERLAUF_MS; ok(); }" in js and "still ? leerlauf : null" in js and "if (ruhig) await ruhig();" in js
     assert 'id="erf-hg"' in erfassen and "  hgvorbereiten: '" in js and "render(); katImHintergrund();" in js
     assert "katJob?.gesamt ?" in js[js.index("async function viewMehr("):]
+
+
+def test_sammelalbum_als_start(daten):
+    """Phase 64 (E40): #/ ist der Binder (Seiten mit neun Fächern, Wischen, zuletzt gescannte vorn), die erste Seite wartet nicht auf die
+    Übersicht; eine leere Sammlung zeigt welcome; die Übersicht bleibt unter #/wert; nach dem Übernehmen springt der Binder zu den neuen Karten
+    und markiert sie; das Kartendetail kommt am Handy von unten; der Ton steht als Tokens oben in style.css; die Übersicht nennt die Scan-Liste."""
+    js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
+    album = js[js.index("async function viewAlbum("):js.index("// Platz (E41)")]
+    assert "const ALBUM_FACH = 9," in js and "'<div class=\"album-fach\"></div>'.repeat(ALBUM_FACH)" in album
+    assert "cards?sort=added&per_page=${ALBUM_LADEN}" in album and "if (!erst.total && !binder) return welcome(await sumP);" in album
+    assert album.index("const erst = await abruf(1);") < album.index("const s = await sumP;")  # erste Seite vor der Übersicht
+    assert "todoListe(s)[0]" in album and 'href="#/wert"' in album and "s.scanliste" in album
+    assert "neu?.has(c.oracle_id)" in album and "albumNeu = oids; location.hash = '#/?binder='" in js
+    assert "scroll-snap-type: x mandatory" in css and ".album-karte.neu { outline:" in css and "loading=\"lazy\"" in js[js.index("const pic ="):][:200]
+    assert "const todo = todoListe(s);" in js[js.index("async function viewHome("):]
+    handy = css[css.index("@media (max-width: 768px) {"):]
+    assert "dialog.sheet { margin: auto 0 0;" in handy and "@keyframes blatt-hoch" in css
+    root = css[css.index(":root {"):css.index(":root[data-theme=\"light\"]")]
+    hell = css[css.index(":root[data-theme=\"light\"]"):css.index("/* --- Grundlagen")]
+    for t in ("--color-background:      #14110d;", "--color-surface:         #1d1914;", "--album-fach: #0e0c09;", "--color-text:            #f0e7d8;", "--color-text-muted:      #ab9f8a;"):
+        assert t in root, t
+    assert "--album-fach:" in hell and "--color-background:      #ece4d6;" in hell
+    m = json.loads((WURZEL / "ui" / "manifest.webmanifest").read_text(encoding="utf-8"))
+    assert m["theme_color"] == m["background_color"] == "#14110d" and 'content="#14110d"' in (WURZEL / "ui" / "index.html").read_text(encoding="utf-8")
+    with closing(mtg.connect()) as conn:
+        assert server.api_summary(conn)["scanliste"] == 0
 
 
 def test_klassen_des_sortier_modus_kollidieren_nicht():
@@ -6818,7 +6844,7 @@ def test_quellen_oberflaeche_hinweise_und_seite():
     seite = js[js.index("let quellenDaten"):js.index("async function viewKonten()")]
     assert 'data-quelle="${esc(q.key)}"' in seite and "<script" not in seite and not re.search(r"\bon[a-z]+=", seite) and "post('quellen'" in seite
     assert "confirm(`${q.hinweis}" in seite and "r.gesperrt" in seite and "disabled" in seite  # beim Einschalten von EDHREC die Bedingungen, gesperrt mit MTG_QUELLEN
-    for ansicht in ("async function viewHome()", "async function viewDecks(p)", "async function viewSell()", "async function viewSort(p)", "async function viewSpiele()"):
+    for ansicht in ("function todoListe(s)", "async function viewDecks(p)", "async function viewSell()", "async function viewSort(p)", "async function viewSpiele()"):
         rumpf = js[js.index(ansicht):]
         rumpf = rumpf[:rumpf.index("\n}\n")]
         assert "aus('" in rumpf, ansicht

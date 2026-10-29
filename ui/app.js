@@ -269,11 +269,9 @@ function welcome(s = {}) {
   <p class="muted welcome-foot">Alles bleibt bei dir: auf deinem Rechner oder deinem eigenen Server, keine fremde Cloud. Mehr in der <a href="#/help">Hilfe</a>.</p>`;
 }
 
-async function viewHome() {
-  const s = await api('summary');
-  if (!s.cards) return welcome(s);
-  const li = s.last_import, P = s.plan, R = s.rules, minTxt = eurMin(R.sell_min), andere = fremd();
-  undoInfo = s.undo;
+// „Als Nächstes“: je Punkt [Icon, Titel, Text, Aktion, Job]; die Übersicht zeigt alle, der Binder den ersten als Zeile
+function todoListe(s) {
+  const P = s.plan, minTxt = eurMin(s.rules.sell_min);
   const vk = {cards: P.sell.cards + P.bulk.cards, value: P.sell.value + P.bulk.value};
   const todo = [];
   if (!s.setup.edhrec && aus('edhrec')) todo.push(['info', 'EDHREC ist abgeschaltet', 'Commander-Ranking und Deckbau brauchen die Daten von EDHREC. Auf der Seite „Quellen“ siehst du, was EDHREC erfährt, und kannst es einschalten.', ausLink]);
@@ -286,6 +284,15 @@ async function viewHome() {
   if (sess.rolle === 'haupt' && s.sicherung.scan_karten && aussen.alt) todo.push(['alert', aussen.titel, `${karten(s.sicherung.scan_karten)} aus Scan-Bindern gibt es nur in dieser App, und die tägliche Sicherung liegt auf demselben Rechner. Leg eine Kopie woanders ab.`, `<a class="btn" href="#/konten">Zur Sicherung</a>`]);
   if (s.verliehen.length) todo.push(['info', `Verliehen: ${s.verliehen.slice(0, 3).map(v => `${v.name} an ${v.verliehen}`).join(', ')}${s.verliehen.length > 3 ? ` und ${s.verliehen.length - 3} weitere` : ''}`, 'Steht bei der Kopie im Kartendetail. Zurück? Dort den Namen löschen.', `<a class="btn" href="#/cards?q=${encodeURIComponent('is:verliehen')}">Anzeigen</a>`]);
   if (!s.decks && s.setup.edhrec) todo.push(['layers', 'Erstes Deck bauen', 'Das Commander-Ranking zeigt, welche Decks du schon fast zusammen hast.', `<a class="btn" href="#/decks">Zu den Decks</a>`]);
+  return todo;
+}
+
+async function viewHome() {
+  const s = await api('summary');
+  if (!s.cards) return welcome(s);
+  const li = s.last_import, P = s.plan, andere = fremd();
+  undoInfo = s.undo;
+  const todo = todoListe(s);
   // Fächer: die drei wertvollsten Karten, die teuerste liegt vorn in der Mitte
   const top = s.top.filter(c => c.image).slice(0, 3), fan = top.length === 3 ? [top[1], top[0], top[2]] : top;
   const max = Math.max(...s.colors.map(c => c.value), 1);
@@ -3432,8 +3439,8 @@ async function erfForm(f) {
   dlg.close(); flash(+d.qty === 0 ? `${z.name}: von der Liste genommen` : 'Gespeichert');
 }
 
-async function erfUebernehmen(f) {  // die geprüfte Liste in den Binder
-  const b = f.elements.binder.value.trim(), deck = f.elements.deck.checked;
+async function erfUebernehmen(f) {  // die geprüfte Liste in den Binder; danach zeigt der Binder sie markiert (Phase 64)
+  const b = f.elements.binder.value.trim(), deck = f.elements.deck.checked, oids = new Set(erf.liste.zeilen.map(z => z.oracle_id));
   await erfKette;  // erst die laufenden Scans
   if (erf.offen.length && !confirm(`${karten(erf.offen.length)} sind noch nicht beim Server angekommen. Sie kommen nicht mit in den Binder, bleiben aber zum erneuten Senden stehen. Trotzdem übernehmen?`)) return;
   try {
@@ -3441,8 +3448,8 @@ async function erfUebernehmen(f) {  // die geprüfte Liste in den Binder
     erf.binder = b; erf.liste = r.liste; erf.zuletzt = r.zuletzt; erf.letzte = null; erfMerken();
     if ($('#scan-hit')) $('#scan-hit').innerHTML = '';
     erfListe(); erfBinderNeu();
-    if (vollbild()) blatt();  // die Runde ist fertig: zurück zur Kamera, ohne das Blatt eigens zu schließen
     flash(`Übernommen: ${karten(r.sitzung.karten)} in ${deck ? 'das Deck ' : ''}„${b}“`);
+    albumNeu = oids; location.hash = '#/?binder=' + encodeURIComponent(b);
   } catch (e) { if (!(e instanceof LoginNoetig)) flash('Fehler: ' + e.message); }
 }
 
@@ -3632,8 +3639,62 @@ async function viewMessbilder() {
   };
 }
 
+// --- Binder (Phase 64, E40): der Start als Sammelalbum. Seiten mit 3 × 3 Fächern, Wischen blättert (scroll-snap), die zuletzt gescannten
+// Karten vorn (cards?sort=added). Die erste Seite kommt mit einem kleinen Abruf, ohne auf die Übersicht (summary) zu warten; Wert, Binder-Wahl,
+// Scan-Liste und der erste Punkt aus „Als Nächstes“ folgen, sobald sie da ist. Weitere Karten lädt der Binder je ALBUM_LADEN beim Blättern.
+const ALBUM_FACH = 9, ALBUM_LADEN = 117, ALBUM_PUNKTE = 12;  // 117 = 13 Seiten, die API gibt höchstens 120 je Abruf; Punkte nur bis 12 Seiten
+let albumNeu = null;  // nach „In Sammlung übernehmen“: die oracle_ids der neuen Karten, markiert bis die Ansicht verlassen wird
+// sofort: die ersten zwei Seiten ohne loading="lazy" (in der verdeckten Vorschau lud lazy gar nicht, und die erste Seite soll ohnehin gleich stehen)
+const albumKarte = (c, neu, sofort) => `<a href="#" class="album-karte${neu ? ' neu' : ''}" data-oid="${esc(c.oracle_id)}" aria-label="${esc(c.name)}, ${eur(c.price)}">${sofort && c.image ? `<img alt="${esc(c.name)}" src="${esc(c.image)}">` : pic(c.image, c.name)}</a>
+  <span class="album-cap"><span>${eur(c.price)}</span>${c.qty > 1 ? `<span>×${c.qty}</span>` : ''}</span>`;
+async function viewAlbum(p) {
+  const binder = p.get('binder') || '', neu = albumNeu, sumP = api('summary');
+  albumNeu = null;
+  sumP.catch(() => {});  // Fehler zeigt der Abruf unten
+  const abruf = n => api(`cards?sort=added&per_page=${ALBUM_LADEN}&page=${n}${binder ? '&binder=' + encodeURIComponent(binder) : ''}`);
+  const erst = await abruf(1);
+  if (!erst.total && !binder) return welcome(await sumP);
+  const zahl = Math.max(1, Math.ceil(erst.total / ALBUM_FACH));
+  main.innerHTML = `<section class="album" aria-labelledby="album-titel">
+    <div class="album-kopf"><h1 id="album-titel">Meine Karten</h1><select id="album-binder" aria-label="Binder"><option value="">Alle Karten</option>${binder ? `<option selected>${esc(binder)}</option>` : ''}</select></div>
+    <p class="album-leiste muted" id="album-hinweis">${karten(erst.copies)}</p>
+    <div class="album-seiten" id="album-seiten" tabindex="0" aria-label="Binderseiten, wischen oder Pfeiltasten zum Blättern">
+      ${Array.from({length: zahl}, (_, i) => `<div class="album-seite" role="group" aria-label="Seite ${i + 1}">${'<div class="album-fach"></div>'.repeat(ALBUM_FACH)}</div>`).join('')}</div>
+    <div class="album-fuss"><span id="album-n" aria-live="polite">Seite 1 von ${num(zahl)}</span>
+      ${zahl > 1 && zahl <= ALBUM_PUNKTE ? `<span class="album-punkte" aria-hidden="true">${'<i></i>'.repeat(zahl)}</span>` : ''}</div>
+  </section>`;
+  const box = $('#album-seiten'), seiten = box.children, geladen = new Set([1]);
+  const fuellen = (r, n) => r.items.forEach((c, j) => {
+    const k = (n - 1) * ALBUM_LADEN + j, fach = seiten[Math.floor(k / ALBUM_FACH)]?.children[k % ALBUM_FACH];
+    if (fach) { fach.innerHTML = albumKarte(c, neu?.has(c.oracle_id), k < 2 * ALBUM_FACH); fach.classList.add('voll'); }
+  });
+  fuellen(erst, 1);
+  const hier = () => Math.round(box.scrollLeft / ((seiten[0].offsetWidth + parseFloat(getComputedStyle(box).columnGap)) || 1));
+  const zeigen = () => {
+    const i = Math.min(hier(), zahl - 1);
+    $('#album-n').textContent = `Seite ${num(i + 1)} von ${num(zahl)}`;
+    $$('.album-punkte i').forEach((d, j) => d.classList.toggle('an', j === i));
+    for (const s of [i, i + 1]) {  // diese und die nächste Seite: fehlt ihr Abruf, jetzt holen
+      const n = Math.floor(s * ALBUM_FACH / ALBUM_LADEN) + 1;
+      if (s < zahl && !geladen.has(n)) { geladen.add(n); abruf(n).then(r => fuellen(r, n)).catch(() => geladen.delete(n)); }
+    }
+  };
+  box.onscroll = zeigen;
+  zeigen();
+  if (neu) { const i = [...box.querySelectorAll('.album-fach')].findIndex(f => f.querySelector('.neu')); if (i > 0) seiten[Math.floor(i / ALBUM_FACH)].scrollIntoView({inline: 'start', block: 'nearest'}); }
+  main.onchange = e => { if (e.target.id === 'album-binder') location.hash = e.target.value ? '#/?binder=' + encodeURIComponent(e.target.value) : '#/'; };
+  try {
+    const s = await sumP;
+    if (!$('#album-seiten')) return;  // Ansicht schon verlassen
+    $('#album-binder').innerHTML = `<option value="">Alle Karten</option>${s.binders.map(b => `<option${b.name === binder ? ' selected' : ''}>${esc(b.name)}</option>`).join('')}`;
+    const t = todoListe(s)[0];
+    $('#album-hinweis').innerHTML = [binder ? karten(erst.copies) : `${karten(s.cards)} · ${eur0(s.value)}`, s.scanliste ? `<a href="#/scan?modus=erfassen">Scan-Liste: ${karten(s.scanliste)}</a>` : '',
+      t ? `${esc(t[1])} · <a href="#/wert">Wert und Plan</a>` : ''].filter(Boolean).join(' · ');
+  } catch { /* ohne Übersicht bleibt die Kartenzahl stehen */ }
+}
+
 // Platz (E41): haupt = die Navigation (dazu in der Mitte der Scan-Knopf), mehr = Seite „Mehr“, entwickler = dort unter „Für Entwickler“, ohne = nur über Links
-const VIEWS = {'': ['Binder', viewHome, 'haupt', 'cards'], cards: ['Suchen', viewCards, 'haupt', 'search'], scan: ['Scannen', viewScan, 'scan', 'camera'], decks: ['Decks', viewDecks, 'haupt', 'crown'], mehr: ['Mehr', viewMehr, 'haupt', 'dots'],
+const VIEWS = {'': ['Binder', viewAlbum, 'haupt', 'cards'], cards: ['Suchen', viewCards, 'haupt', 'search'], scan: ['Scannen', viewScan, 'scan', 'camera'], decks: ['Decks', viewDecks, 'haupt', 'crown'], mehr: ['Mehr', viewMehr, 'haupt', 'dots'],
   sort: ['Sortieren', viewSort, 'mehr', 'layers'], sell: ['Verkaufen', viewSell, 'mehr', 'euro'], wuensche: ['Wünsche', viewWuensche, 'mehr', 'heart'], spiele: ['Spiele', viewSpiele, 'mehr', 'dice'], sets: ['Serien', viewSets, 'mehr', 'tray'],
   wert: ['Wert und Plan', viewHome, 'mehr', 'chart'], druck: ['Drucken', viewDruck, 'mehr', 'printer'], konten: ['Konten und Sicherung', viewKonten, 'mehr', 'gear'], quellen: ['Quellen', viewQuellen, 'mehr', 'cloud'], help: ['Hilfe', viewHelp, 'mehr', 'help'],
   messbilder: ['Messbilder', viewMessbilder, 'entwickler', 'camera'],

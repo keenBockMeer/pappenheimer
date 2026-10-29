@@ -190,7 +190,7 @@ def api_summary(conn):
     return {"cards": s["cards"], "unique": s["unique"], "value": s["value"], "available": s["available"],
             "colors": [{"key": k, "label": lab, "value": farben[k]["value"] if k in farben else 0,
                         "cards": farben[k]["n"] if k in farben else 0} for k, lab in COLORS],
-            "binders": api_binders(conn), "beispiel": mtg.beispiel_info(conn), "plan": mtg.stack_totals(zeilen), "rules": mtg.rules(conn), "sell_min": mtg.rules(conn)["sell_min"],
+            "binders": api_binders(conn), "beispiel": mtg.beispiel_info(conn), "scanliste": conn.execute("SELECT COALESCE(SUM(qty), 0) FROM scan_liste").fetchone()[0], "plan": mtg.stack_totals(zeilen), "rules": mtg.rules(conn), "sell_min": mtg.rules(conn)["sell_min"],
             "decks": len(decks), "deck_tiles": decks[:4], "news": konten.ordner_news(conn) + mtg.posteingang_news(conn) + deckbuild.waechter_news(conn) + deckbuild.radar_news(conn) + deckbuild.news(conn, rows=zeilen) + alarm,
             "movers": bew | {"up": bew["up"][:3], "down": bew["down"][:3]},
             "setup": {"edhrec": conn.execute("SELECT COUNT(*) FROM edhrec").fetchone()[0],
