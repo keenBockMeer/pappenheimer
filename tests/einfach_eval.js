@@ -8,10 +8,12 @@
 // Die Kamera startet die Messung nie, „Kamera starten“ ist nur das Ziel.
 async function einfachEval({ansichten = null} = {}) {
   const ANSICHTEN = ansichten || [
-    {name: 'Übersicht', hash: '#/'},
+    {name: 'Binder', hash: '#/'}, {name: 'Wert und Plan', hash: '#/wert'},
     {name: 'Scannen (Erfassen)', hash: '#/', tipps: ['#nav a[href^="#/scan"]', '[data-modus="erfassen"][aria-pressed="false"]'], ziel: '#cam-go'},
+    {name: 'Prüfen', hash: '#/scan?modus=pruefen'},
     {name: 'Karten', hash: '#/cards'}, {name: 'Serien', hash: '#/sets'}, {name: 'Sortieren', hash: '#/sort'}, {name: 'Verkaufen', hash: '#/sell'},
     {name: 'Decks', hash: '#/decks'}, {name: 'Wünsche', hash: '#/wuensche'}, {name: 'Spiele', hash: '#/spiele'}, {name: 'Hilfe', hash: '#/help'}, {name: 'Mehr', hash: '#/mehr'},
+    {name: 'Konten', hash: '#/konten'}, {name: 'Quellen', hash: '#/quellen'}, {name: 'Drucken', hash: '#/druck'},
   ];
   const MERKER = ['mtg-scan-modus'];
   const sichtbar = el => el.checkVisibility ? el.checkVisibility({visibilityProperty: true, opacityProperty: true}) : !!el.offsetParent;

@@ -81,7 +81,7 @@ Ausbau v8 (Einfach am Handy: Sammelalbum, fünf Ziele, Schnell-Scan, kurze Texte
 - [x] Phase 62 – App-Rahmen: fünf Ziele (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten, Seite „Mehr“
 - [x] Phase 63 – Schnell-Scan: ein Tipp bis zur laufenden Kamera, Einstellungen im Blatt, Erkennung von selbst vorbereitet
 - [x] Phase 64 – Sammelalbum als Start: Binder-Seiten mit 3 × 3 Fächern, warmer dunkler Ton
-- [ ] Phase 65 – Text kürzen in allen Ansichten (höchstens ein Satz offen)
+- [x] Phase 65 – Text kürzen in allen Ansichten (höchstens ein Satz offen)
 
 ## Ziel
 Alles lokal auf dem Desktop, im Browser unter `http://127.0.0.1:8765`:
@@ -1785,6 +1785,29 @@ Keine waagerechte Scrollleiste bei 375 px (Breite der Seite = 375), die Binderse
 - **Tests:** die bestehenden Tests, die Texte prüfen (`TIP`, Hinweise der Einrichtung, Fan Content Policy), bleiben grün oder ziehen mit.
 
 **Abnahme:** Tabelle je Ansicht vorher und nachher (Wörter bis zum Ziel), im Mittel mindestens halbiert · Hilfe und `TIP` enthalten alles, was vorher offen stand · alle Tests grün.
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (283), neuer Test `test_text_kurz_alles_hinter_info`; nachgezogen `test_update_oberflaeche_knopf_nur_fuers_hauptkonto` und `test_qr_oberflaeche_nur_mit_erreichbarer_adresse` (die Sätze stehen jetzt in `TIP.update`, `TIP.handy`, `TIP.handylokal`) und `test_quellen_oberflaeche_hinweise_und_seite` (der EDHREC-Hinweis steht in `todoListe`). Je Ansicht ein Satz im Kopf, der Rest wörtlich in `TIP` hinter `info()`: neu `hauptkonto`, `konten`, `handy`, `handylokal`, `sicherung`, `update`, `verschl`, `decksneu`, `verkaufen`, `preisbewegung`, `pruefen`, `fpvorbereiten`, `spiele`, `sortieren`, `serien`, `drucken`, `karten`, `wuensche`, `selbstwaehlen`; ergänzt `zweiterordner`, `proxyblatt`, `bracketcheck`, `combos`, `verlauf`, `tisch`, `staple`, `fertigedecks`. Hinweise (`note`) mit Titel und einem Satz (`VERSCHL`, Combos, Erkennungsbilder, Sicherung außer Haus, EDHREC aus). Die Seite „Quellen“ klappt je Quelle ein, was sie erfährt, wie oft und die Bedingungen (`details.mehr`); den Hinweis zu EDHREC zeigt beim Einschalten weiter `confirm`. Die Erklärung unter der Kamera ist ein Satz mit `info()` auf `TIP.scan`, `erfassen` oder `erfassenAlle`. Gestrichen ohne Ersatz im `TIP` sind nur Sätze, die schon woanders offen stehen oder in der Hilfe: „Auf der Seite Quellen … einschalten“ (der Knopf „Quellen“ steht daneben, die Hilfe erklärt es unter „Quellen“), „Von jeder Karte bleibt mindestens eine bei dir“ in „Als Nächstes“ (steht im Kopf von Verkaufen) und „Noch nichts.“.
+Messung im Handy-Format (375 × 812, Probe mit der Beispielsammlung, EDHREC aus): sichtbare Wörter in Absätzen und Hinweisen (`p`, `.note`, `dd`), das ist der Erklärtext; die Hilfe ist das Ziel der Texte und zählt nicht mit, „Mehr“ hat keine Absätze. Die Gesamtzahl je Ansicht wird von Kartennamen und Preisen bestimmt und taugt dafür nicht.
+
+| Ansicht | vorher | nachher | Anteil |
+|---|---|---|---|
+| Quellen | 554 | 78 | 0,14 |
+| Konten und Sicherung | 519 | 143 | 0,28 |
+| Decks | 150 | 72 | 0,48 |
+| Verkaufen | 116 | 74 | 0,64 |
+| Prüfen | 95 | 31 | 0,33 |
+| Wert und Plan | 91 | 55 | 0,60 |
+| Erfassen | 80 | 33 | 0,41 |
+| Spiele | 53 | 30 | 0,57 |
+| Wünsche | 47 | 21 | 0,45 |
+| Sortieren | 43 | 18 | 0,42 |
+| Serien | 29 | 13 | 0,45 |
+| Drucken | 22 | 11 | 0,50 |
+| Karten | 20 | 8 | 0,40 |
+| Binder | 9 | 9 | 1,00 |
+| **Summe / Mittel** | **1.828** | **596** | **0,48** |
+
+Bei Verkaufen und „Wert und Plan“ stehen die übrigen Wörter vor allem in Zahlen und Regeln (Behalten-Regel, Wert, Verkaufsposten); der Binder hat nur seine Zeile mit Wert und Hinweis. `tests/einfach_eval.js` misst jetzt auch Binder, „Wert und Plan“, Prüfen, Konten, Quellen und Drucken. **Offen (real, Autor):** am Handy durch alle Ansichten: fehlt irgendwo eine Erklärung, die vorher half?
 
 **Offen bleibt (Ausbau v8):** Scan aus einer Installation ohne Server am Handy (Phase 51), Bewegung beim Blättern im Binder (erst nach Rückmeldung), die englische Oberfläche (Phase 54) mit den kürzeren Texten.
 

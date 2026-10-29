@@ -2209,6 +2209,22 @@ def test_sammelalbum_als_start(daten):
         assert server.api_summary(conn)["scanliste"] == 0
 
 
+def test_text_kurz_alles_hinter_info():
+    """Phase 65 (E42): Was vorher offen erklärte, steht jetzt in TIP und ist über info() erreichbar; die Seite „Quellen“ klappt je Quelle ein, was
+    sie erfährt; die Köpfe der Ansichten haben einen Satz. Keine Gedankenstriche in den neuen Texten."""
+    js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
+    tip = dict(re.findall(r"^  (\w+): '(.*)',$", js, re.M))
+    for k in ("hauptkonto", "konten", "handy", "handylokal", "sicherung", "update", "verschl", "decksneu", "verkaufen", "preisbewegung", "pruefen",
+              "fpvorbereiten", "spiele", "sortieren", "serien", "drucken", "karten", "wuensche", "selbstwaehlen"):
+        assert k in tip and f"info('{k}'" in js, k
+        assert "–" not in tip[k] and "—" not in tip[k], k
+    assert "mtg wiederherstellen DATEI.zip" in tip["sicherung"] and "MTG_AUSSEN_SCHLUESSEL" in tip["verschl"] and "Hak an, was du brauchst" in tip["drucken"]
+    quellen = js[js.index("async function viewQuellen("):js.index("async function quelleSetzen(")]
+    assert quellen.index('<details class="mehr">') < quellen.index("q.schickt") < quellen.index("</details>")
+    for titel, sub in re.findall(r"head\(`?(Quellen|Verkaufen|Decks|Spiele|Sortieren|Serien|Drucken|Karten|Wünsche)[^,]*, '([^']*)'", js):
+        assert sub.count(". ") == 0, (titel, sub)  # ein Satz
+
+
 def test_klassen_des_sortier_modus_kollidieren_nicht():
     """„Karte für Karte“ nutzt nur Klassen mit `kk-`: `.spiel` (Zeilen unter Spiele) und `.pile`/`.piles` (Stapel-Ansicht der Decks) gehören anderen Ansichten und haben je genau eine Regel."""
     css = (WURZEL / "ui" / "style.css").read_text(encoding="utf-8")
@@ -6985,7 +7001,8 @@ def test_update_oberflaeche_knopf_nur_fuers_hauptkonto():
     Gedankenstriche, keine Inline-Skripte; die Seite „Quellen“ nennt GitHub „nur auf Knopfdruck“."""
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
     teil = js[js.index("// Updates (Phase 50"):js.index("async function viewKonten()")]
-    assert 'id="up-suchen"' in teil and "post('update'" in teil and "Nach Updates suchen" in teil and "nie von selbst" in teil and "Adresse deines Rechners" in teil
+    tip_update = js[js.index("  update: '"):].splitlines()[0]  # Phase 65: der Satz zu GitHub steht hinter info('update')
+    assert 'id="up-suchen"' in teil and "post('update'" in teil and "Nach Updates suchen" in teil and "info('update'" in teil and "nie von selbst" in tip_update and "Adresse deines Rechners" in tip_update
     assert "docker compose pull" in teil and "pappenheimer-windows.zip" in teil and "Sicherheit" in teil and "l.sicherheit ? 'alert'" in teil and "Änderungen ansehen" in teil
     assert "–" not in teil and "—" not in teil and "<script" not in teil and not re.search(r"\bon[a-z]+=", teil)
     assert "if (e.target.closest('#up-suchen')) return updateSuchen();" in js and "api('update')" in js
@@ -7048,7 +7065,9 @@ def test_qr_oberflaeche_nur_mit_erreichbarer_adresse():
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
     teil = js[js.index("// Handy verbinden: QR-Code"):js.index("async function viewKonten()")]
     assert "const LOKAL = /^(localhost|127(\\.\\d+){3}|\\[?::1\\]?)$/;" in teil and "class=\"qr\">${qr.svg}" in teil
-    assert "App installieren" in teil and "Zum Startbildschirm" in teil and "über https" in teil and "Öffne die App einmal über die Adresse deines Servers" in teil
+    tip = dict(re.findall(r"^  (\w+): '(.*)',$", js, re.M))  # Phase 65: die Anleitung steht hinter info('handy') bzw. info('handylokal')
+    assert "info('handy'" in teil and "info('handylokal'" in teil
+    assert "App installieren" in tip["handy"] and "Zum Startbildschirm" in tip["handy"] and "über https" in tip["handy"] and "Öffne die App einmal über die Adresse deines Servers" in tip["handylokal"]
     assert "–" not in teil and "—" not in teil and "<script" not in teil and not re.search(r"\bon[a-z]+=", teil)
     konto = js[js.index("async function viewKonten()"):js.index("function openPw(")]
     assert "post('qr', {text: adresse})" in konto and "location.origin" in konto and "haupt && !LOKAL.test(location.hostname)" in konto

@@ -114,15 +114,34 @@ const TIP = {
   csv: 'Alle Binder als CSV im Format des ManaBox-Sammlungsexports, mit Kaufpreis und Datum. ManaBox kann sie importieren, und in eine leere Sammlung dieser App hochgeladen ergibt sie wieder denselben Bestand. Für eine echte Sicherung mit Decks, Notizen und Spielen: die ZIP.',
   posteingang: 'Für alle, die weiter mit einer Scanner-App wie ManaBox scannen: Den CSV-Export am Handy per Teilen in einen Sync-Ordner legen (Syncthing oder Drive), der auf diesen Ordner zeigt. Einmal am Tag übernimmt die App jede neue Datei wie beim Hochladen, jede nur einmal. Würde eine Datei mehr als ein Viertel entfernen, bleibt sie liegen und steht als Warnung in den Neuigkeiten. „rückgängig“ auf der Übersicht nimmt den letzten Import zurück.',
   aussen: 'Die tägliche Sicherung liegt auf demselben Rechner bzw. Server wie deine Sammlung. Geht der kaputt, ist sie mit weg. Deshalb eine Kopie woanders: auf dem Server jede Nacht per deploy/sicherung-aussen.sh, etwa auf eine Storage Box (Anleitung in der README), oder die App kopiert selbst in einen zweiten Ordner (unten), sonst die ZIP herunterladen und auf einen USB-Stick oder in deine Cloud legen. Beides zählt hier. Die ZIP enthält Passwort-Hashes und Kaufpreise: Mit einer Schlüsseldatei verschlüsselt gpg die Kopie vor dem Kopieren, sonst gehört sie nur an einen Ort, dem du traust.',
-  zweiterordner: 'Eine zweite Kopie der täglichen Sicherung in einem Ordner auf diesem Rechner oder Server, der selbst woanders hin gesichert wird: der Ordner einer Cloud (OneDrive, Dropbox, Nextcloud), ein NAS oder eine eingehängte Storage Box. Die App legt dort nach der täglichen Sicherung eine Datei mtg-JJJJ-MM-TT.zip ab (mit Schlüssel mtg-JJJJ-MM-TT.zip.gpg) und löscht nur solche Dateien, wenn sie älter als 60 Tage sind. Alles andere im Ordner fasst sie nicht an. Auf dem Server mit Docker muss der Ordner erst in compose.yaml eingebunden sein (README).',
+  zweiterordner: 'Nur du als Hauptkonto stellst das ein. Eine zweite Kopie der täglichen Sicherung in einem Ordner auf diesem Rechner oder Server, der selbst woanders hin gesichert wird: der Ordner einer Cloud (OneDrive, Dropbox, Nextcloud), ein NAS oder eine eingehängte Storage Box. Die App legt dort nach der täglichen Sicherung eine Datei mtg-JJJJ-MM-TT.zip ab (mit Schlüssel mtg-JJJJ-MM-TT.zip.gpg) und löscht nur solche Dateien, wenn sie älter als 60 Tage sind. Alles andere im Ordner fasst sie nicht an. Auf dem Server mit Docker muss der Ordner erst in compose.yaml eingebunden sein (README).',
   einrichtung: 'Diese Installation hat noch kein Hauptkonto. Den Einrichtungs-Code schreibt der Server beim Start in sein Protokoll, die Zeile beginnt mit „Einrichtung: Code“. Mit Docker zeigt ihn „docker compose logs mtg“, auf dem Server selbst auch „mtg einrichtung“. Der Code gilt, bis das Hauptkonto angelegt ist, danach nie wieder.',
   einrneu: 'Du legst das Hauptkonto an. Es sieht und verwaltet alle Sammlungen dieser Installation und legt später Unterkonten an. Mit Name und Passwort meldest du dich ab jetzt an. Ein vergessenes Passwort setzt nur die Kommandozeile neu: mtg konto passwort NAME.',
   einrzip: 'Für den Umzug auf einen neuen Server: die ZIP aus „Konten und Sicherung“ oder aus dem Ordner data/sicherungen. Die App prüft sie und setzt Konten, Sammlungen und hochgeladene Dateien ein. Danach meldest du dich mit Name und Passwort von damals an. Eine verschlüsselte Datei (.gpg) vorher mit gpg entschlüsseln.',
   einrbelegt: 'Im Datenordner dieser Installation liegen schon Dateien, deshalb gibt es hier nur „Neu anfangen“. Eine vorhandene Sammlung gehört danach dem Hauptkonto. Eine Sicherung spielst du in diesem Fall auf dem Server ein: mtg wiederherstellen DATEI.zip.',
-  proxyblatt: 'Das Proxy-Blatt druckt Karten in Originalgröße, jede mit dem Aufdruck „Playtest“, zum Ausprobieren, bevor du kaufst. Es ist aus, bis das Hauptkonto es einschaltet, und der Schalter gilt für die ganze Installation. Die Fan Content Policy von Wizards nimmt Proxys aus: Der Hinweis im Fuß der Seite deckt sie nicht. Drucke sie nur zum Testen.',
-  fertigedecks: 'Manche Exporte nennen nicht, ob ein Binder ein fertiges Deck ist. Trägst du hier den Namen eines Binders ein, gilt er als fertiges Deck: Seine Karten bleiben im Stapel Deck und zählen nicht als verfügbar. Exporte, die den Typ „deck“ nennen, und hochgeladene Decklisten brauchen keinen Eintrag. Die Liste gilt für diese Sammlung.',
+  proxyblatt: 'Das Proxy-Blatt druckt Karten in Originalgröße, jede mit dem Aufdruck „Playtest“, zum Ausprobieren, bevor du kaufst. Es ist aus, bis das Hauptkonto es einschaltet, und der Schalter gilt für die ganze Installation. Ausgeschaltet gibt es keinen Link dazu und keine Schnittstelle. Die Fan Content Policy von Wizards nimmt Proxys aus: Der Hinweis im Fuß der Seite deckt sie nicht. Drucke sie nur zum Testen.',
+  fertigedecks: 'Manche Exporte nennen nicht, ob ein Binder ein fertiges Deck ist. Trägst du hier den Namen eines Binders ein, gilt er als fertiges Deck: Seine Karten bleiben im Stapel Deck und zählen nicht als verfügbar. Exporte, die den Typ „deck“ nennen, und hochgeladene Decklisten brauchen keinen Eintrag. Die Liste gilt für diese Sammlung. Das gilt nur für Exporte ohne Typ „deck“.',
   beispiel: 'Die Beispielsammlung zeigt in einer Minute, was die App kann: gut 170 Karten in einem Binder, ein Commander-Deck und die Pläne dazu (Behalten, Verkaufen, Bulk). Dafür fragt die App einmal bei Scryfall nach den Kartendaten (zwei Anfragen), die Bilder lädt dein Browser von dort. Kaufpreise und Daten im Beispiel sind erfunden. Oben entfernst du sie mit einem Klick, sie verschwindet auch von selbst, wenn du deine erste echte Datei importierst.',
   quellen: 'Jede Quelle außer Scryfall kannst du abschalten, für die ganze Installation: auch für Unterkonten und den täglichen Lauf. Abgeschaltet heißt: Die App ruft sie nicht mehr auf, die Ansichten sagen es, und alles andere läuft weiter. Nur das Hauptkonto stellt das ein.',
+  spiele: 'Nach jeder Runde: Deck wählen, Gewonnen oder Nicht gewonnen. Daraus kommen Siegquote, Lieblingsdecks und Decks, die nur noch im Regal stehen.',
+  sortieren: 'Wähl einen Binder. Du bekommst die Karten in Scan-Reihenfolge und legst jede auf den angezeigten Stapel.',
+  serien: 'Welche Serien du schon eingescannt hast, mit Karten, Wert und wie viel vom Set dir fehlt. Klick zeigt die Serie als Binder, fehlende Karten grau.',
+  drucken: 'Trennkarten für Kisten und Etiketten für Boxen und Binder. Hak an, was du brauchst, dann Drucken (A4, Skalierung 100 %).',
+  karten: 'Alles, was du besitzt. Eine Kachel je Karte, über alle Editionen. Klick öffnet Details und Plan.',
+  wuensche: 'Karten, die du haben willst, mit Zielpreis. Wunschlisten aus einer Scanner-App (zum Beispiel ManaBox) erscheinen hier von selbst. Füg oben eine Karte hinzu oder merk sie dir im Kartendetail (Klick auf eine Karte).',
+  selbstwaehlen: 'Alle möglichen Commander deiner Sammlung: Karte antippen, dann „Deck um diesen Commander bauen“.',
+  decksneu: 'Fertige Decks lädst du als Textliste hoch oder scannst sie ein, neue baut die App aus deinen freien Karten. Bestehende Decks werden dabei nie auseinandergenommen.',
+  verkaufen: 'Alles, was in keinem Deck steckt und über deine Behalten-Regel hinausgeht. Von jeder Karte bleibt mindestens eine bei dir (oder so viele, wie die Regel unten sagt).',
+  preisbewegung: 'Die App merkt sich bei jeder Preis-Aktualisierung den Preis jeder Karte. Nach ein paar Tagen steht hier, was gestiegen oder gefallen ist.',
+  pruefen: 'Halte eine Karte aus deiner Sammlung vor die Kamera. Die App sagt dir, wohin sie gehört: in ein Deck, behalten, verkaufen oder Bulk.',
+  fpvorbereiten: 'Einmal nötig: Die App merkt sich von jedem deiner Drucke ein kleines Bild von Scryfall. Das dauert ein paar Minuten, die Seite muss so lange offen bleiben. Später kommen nur neue Drucke dazu, ein paar davon rechnet sie still nach.',
+  hauptkonto: 'Das reicht, solange die App nur auf deinem Rechner läuft. Mit einem Hauptkonto legst du getrennte Sammlungen an, zum Beispiel für deine Kinder, und schützt die App mit einem Passwort. Das Passwort brauchst du, wenn sie auf deinem eigenen Server läuft. Deine jetzige Sammlung gehört dann dem Hauptkonto und bleibt, wie sie ist.',
+  konten: 'Du bist das Hauptkonto und siehst alle, Unterkonten mit Passwort sehen nur ihre eigene.',
+  handy: 'Scanne den Code mit dem Handy, öffne die Seite dort und installiere sie als App. Das Handy zeigt dann deine Sammlung auf diesem Server. So geht es: Kamera-App am Handy öffnen und auf den Code halten, die Seite öffnen und anmelden. Danach im Browsermenü „App installieren“ oder „Zum Startbildschirm“ wählen. Die Kamera gibt der Browser nur über https frei.',
+  handylokal: 'Du hast diese Seite über die Adresse dieses Rechners geöffnet. Die erreicht das Handy nicht. Öffne die App einmal über die Adresse deines Servers, zum Beispiel https://dein-server.dein-netz.ts.net, dann steht hier der QR-Code.',
+  sicherung: 'Eine ZIP-Datei mit allen Sammlungen, Konten und den hochgeladenen Dateien. Solange die App läuft, legt sie außerdem jeden Tag selbst eine im Ordner data/sicherungen an, die letzten 14 bleiben. Zurückspielen: App beenden, dann mtg wiederherstellen DATEI.zip (eine verschlüsselte Datei vorher mit gpg -d entschlüsseln, README). Die heruntergeladene ZIP ist nicht verschlüsselt und enthält Passwort-Hashes und Kaufpreise. Leg sie nur an einen Ort, dem du traust.',
+  update: 'Die App fragt nie von selbst nach Updates, nur wenn du den Knopf drückst. GitHub erfährt dabei die Adresse deines Rechners und den Programmnamen mit Version, nichts aus deiner Sammlung (mehr unter Quellen).',
+  verschl: 'Mit gpg und der Schlüsseldatei dieser App. Ohne den Schlüssel kann niemand die Kopie lesen, und du auch nicht: Bewahre ihn getrennt von diesem Rechner auf. Ohne Schlüsseldatei geht die Kopie unverschlüsselt in den Ordner: Die ZIP enthält Passwort-Hashes und Kaufpreise, wer an den Ordner kommt, liest sie. Mit einer Schlüsseldatei (MTG_AUSSEN_SCHLUESSEL, Anleitung in der README) verschlüsselt die App sie vorher. Geht Verschlüsseln gerade nicht, wird nichts kopiert, bis es geht.',
   hauptsieht: 'Das Hauptkonto dieser Installation kann deine Sammlung sehen und ändern, auch wenn du ein eigenes Passwort hast. Es verwaltet die Installation und hat ohnehin Zugriff auf ihre Dateien.',
   hauptsiehtanlegen: 'Sag es dem, für den du das Konto anlegst: Du als Hauptkonto kannst seine Sammlung sehen und ändern, auch wenn er ein eigenes Passwort hat. Auf seiner Seite „Dein Konto“ steht das auch.',
   coverage: 'Wie viel von dem, was EDHREC für diesen Commander empfiehlt, du schon frei hast. Oft gespielte Karten zählen mehr. 41 % heißt: Knapp die Hälfte eines typischen Decks liegt schon bei dir.',
@@ -139,12 +158,12 @@ const TIP = {
   curve: 'Wie viele Karten ohne Länder es je Manawert gibt. Viele Karten mit 5 und mehr machen ein Deck träge, viele mit 1 und 2 schnell.',
   sources: 'Länder im Deck, die diese Farbe erzeugen, gegen die Farbsymbole in den Kosten der Zauber. Wenig Länder bei vielen Symbolen heißt: Die Farbe klemmt oft.',
   want: 'Diese Karte steht auf den EDHREC-Listen von mindestens zwei deiner zehn besten Commander. Eine Kopie reicht für ein Deck, für zwei gleichzeitig brauchst du zwei.',
-  bracketcheck: 'Commander Spellbook prüft die Liste auf Game Changer, Combos, Extrazüge und Massen-Landzerstörung. Die App rechnet daraus das niedrigste Bracket, das noch passt.',
+  bracketcheck: 'Commander Spellbook prüft die Liste auf Game Changer, Combos, Extrazüge und Massen-Landzerstörung. Die App rechnet daraus das niedrigste Bracket, das noch passt, und nennt die Gründe. Füg dafür die Liste eines Decks ein, zum Beispiel aus Moxfield, Archidekt oder ManaBox. Das hilft vor dem Spiel.',
   spellbook: 'Spellbooks eigene Einstufung (Exhibition, Core, Powerful, Oddball, Spicy, Ruthless). Das ist nicht die Bracket-Zahl, sondern ein zweiter Blick darauf.',
   themefit: 'Von den weiteren Karten (ohne Ramp, Kartenziehen, Removal und Wipes) prüft die App am Kartentext, ob sie zum Thema passen, zum Beispiel Landfall-Karten und Karten, die Länder ins Spiel bringen. Ein Textvergleich, keine Garantie. Passende Karten stehen oben in der Gruppe „Thema“.',
   gc: 'Game Changer sind Karten, die Wizards als besonders spielentscheidend einstuft, etwa Rhystic Study. Sie bestimmen das Bracket mit.',
   cmc: 'Durchschnittliche Manakosten der Karten ohne Länder. Unter 3 spielt sich flott, über 3,5 eher träge.',
-  staple: 'Staples laufen in sehr vielen Decks (EDHREC-Rang bis 200) oder stehen auf der Liste eines deiner zehn besten Commander.',
+  staple: 'Staples laufen in sehr vielen Decks (EDHREC-Rang bis 200) oder stehen auf der Liste eines deiner zehn besten Commander. Ist EDHREC abgeschaltet, zählen sie nach dem EDHREC-Rang von Scryfall und den schon gemerkten Listen deiner besten Commander; neue Listen lädt die App dann nicht.',
   bulk: 'Bulk sind günstige Karten, die man in Mengen verkauft, zum Beispiel pro 1.000 Stück, statt jede einzeln anzubieten.',
   value: 'Summe aller Karten zum Cardmarket-Trendpreis laut Scryfall. Foils mit Foil-Preis, der Zustand fließt nicht ein.',
   sellable: 'Alles, was nicht in einem Deck steckt und über die Behalten-Regel hinausgeht: einzeln (ab Mindestpreis) und als Bulk.',
@@ -168,18 +187,18 @@ const TIP = {
   sprachen: 'Manche Ankäufer, zum Beispiel KEEPSEVEN, kaufen nur englische und deutsche Karten. Mit diesem Haken zeigen Liste und Exporte nur diese.',
   reserved: 'Karten auf der Reserved List druckt Wizards nicht nach. Ihr Preis fällt deshalb nicht durch Neuauflagen.',
   meldegrenze: 'Plattformen wie Cardmarket melden Verkäufer dem Bundeszentralamt für Steuern, wenn sie im Jahr 30 oder mehr Verkäufe oder 2.000 € oder mehr Umsatz haben (Plattformen-Steuertransparenzgesetz). Gezählt werden dort Verkäufe auf der Plattform, hier die Karten, die die App als verkauft erkannt hat. Keine Steuerberatung.',
-  combos: 'Commander Spellbook kennt über 7.000 Karten, die in Combos vorkommen. Die App prüft, welche Combos du komplett besitzt und bei welchen genau eine Karte fehlt. Spellbook nimmt höchstens 600 Karten je Anfrage, deshalb fragt die App je drei Farben einzeln: Combos mit vier oder fünf Farben fehlen. 2-Karten-Combos heben das Bracket (ab 4).',
+  combos: 'Commander Spellbook kennt über 7.000 Karten, die in Combos vorkommen. Die App prüft, welche Combos du komplett besitzt und bei welchen genau eine Karte fehlt. Spellbook nimmt höchstens 600 Karten je Anfrage, deshalb fragt die App je drei Farben einzeln: Combos mit vier oder fünf Farben fehlen. 2-Karten-Combos heben das Bracket (ab 4). Beim ersten Mal lädt die App die Liste aller Combo-Karten, das dauert gut eine Minute.',
   frage: 'Dein lokales Sprachmodell (Ollama) übersetzt die Frage in eine Suche, die App prüft und zeigt sie und sucht dann selbst. Das Modell erfindet keine Karten: Es schreibt nur die Suche.',
   aehnlich: 'Karten deiner Sammlung, deren Text und Typ dieser Karte am ähnlichsten sind, berechnet von deinem lokalen Ollama (nomic-embed-text). Gut, um Ersatz für eine fehlende Karte zu finden.',
   dossier: 'Recherche zu diesem Commander: Strategie, Themen, typische Fehler, Regelfallen, Upgrade-Pfad, jeweils mit Quellen und Abrufdatum. Claude Code legt es mit dem Skill mtg-recherche an, die App zeigt es nur.',
   salt: 'Wie sehr eine Karte den Tisch ärgert, aus der Umfrage von EDHREC (0 bis 4). Gezählt werden die 100 salzigsten Karten, die Zahl ist ihre Summe im Deck.',
   bracketfertig: 'Bei gebauten Decks das gewählte Bracket. Bei fertigen Decks geschätzt aus den Game Changern (keine: 2, bis drei: 3, mehr: 4), du kannst es ändern.',
-  tisch: 'Hak an, wer heute mitspielt. Die App nimmt das mittlere Bracket der Gegner und schlägt deine Decks vor, die höchstens eine Stufe davon entfernt sind: zuerst gleiches Bracket, dann andere Farben als der Tisch, dann das am längsten nicht gespielte.',
+  tisch: 'Hak an, wer heute mitspielt. Die App nimmt das mittlere Bracket der Gegner und schlägt deine Decks vor, die höchstens eine Stufe davon entfernt sind: zuerst gleiches Bracket, dann andere Farben als der Tisch, dann das am längsten nicht gespielte. Trag dafür die Decks deiner Mitspieler ein: Dann schlägt die App vor, welches deiner Decks zum Tisch passt.',
   setstand: 'Wie viele verschiedene Drucke des Sets du hast. Gezählt wie bei Scryfall, also mit Showcase- und Rahmen-Varianten. Die Set-Größe holt der tägliche Lauf.',
   rulings: 'Offizielle Erläuterungen zu dieser Karte von Wizards und Scryfall. Die App zeigt sie nur an, sie schreibt keine Regeln selbst.',
   reprint: 'Diese Karte erscheint in einem neuen oder angekündigten Set. Neuauflagen drücken oft den Preis: Verkaufen lohnt eher vorher.',
   gewinn: 'Was die Karten, für die der Import einen Kaufpreis kennt (zum Beispiel aus ManaBox), heute wert sind, minus was du für sie bezahlt hast. Karten ohne Kaufpreis (zum Beispiel Tokens oder hochgeladene Decklisten) zählen nicht mit.',
-  verlauf: 'Der Wert deiner Sammlung an jedem Tag, an dem die App lief (Preise oder Import). Er ändert sich durch neue oder verkaufte Karten und durch Preise. Punkte markieren die Tage mit Wert, solange es wenige sind. Gestrichelt heißt: Dazwischen lief die App nicht, die Linie verbindet nur.',
+  verlauf: 'Der Wert deiner Sammlung an jedem Tag, an dem die App lief (Preise oder Import). Er ändert sich durch neue oder verkaufte Karten und durch Preise. Punkte markieren die Tage mit Wert, solange es wenige sind. Gestrichelt heißt: Dazwischen lief die App nicht, die Linie verbindet nur. Der Verlauf beginnt am ersten Tag mit Wert; ab dem nächsten steht hier, wie sich der Wert deiner Sammlung entwickelt.',
   cardmarket: 'Aus der täglichen Preisliste von Cardmarket: der niedrigste Angebotspreis (ab), der Trend und der Schnitt der letzten 30 Tage, ohne Sprache und Zustand. Fürs Verkaufen ist „ab“ die Untergrenze.',
   // Seite „Mehr“ (E41): je Ziel ein Satz, Schlüssel 'mehr' + Name der Ansicht
   mehrSort: 'Welche Karte wohin gehört: Deck, Behalten, Verkaufen oder Bulk.',
@@ -274,9 +293,9 @@ function todoListe(s) {
   const P = s.plan, minTxt = eurMin(s.rules.sell_min);
   const vk = {cards: P.sell.cards + P.bulk.cards, value: P.sell.value + P.bulk.value};
   const todo = [];
-  if (!s.setup.edhrec && aus('edhrec')) todo.push(['info', 'EDHREC ist abgeschaltet', 'Commander-Ranking und Deckbau brauchen die Daten von EDHREC. Auf der Seite „Quellen“ siehst du, was EDHREC erfährt, und kannst es einschalten.', ausLink]);
+  if (!s.setup.edhrec && aus('edhrec')) todo.push(['info', 'EDHREC ist abgeschaltet', 'Commander-Ranking und Deckbau brauchen seine Daten.', ausLink]);
   else if (!s.setup.edhrec) todo.push(['cloud', 'Commander-Daten laden', 'Einmal nötig für Ranking und Deckbau. Dauert ein paar Minuten (eine EDHREC-Seite pro Sekunde), du kannst weiterarbeiten.', `<button class="btn" type="button" data-job="commanders">${icon('cloud')}Jetzt laden</button>`, 'commanders']);
-  if (vk.cards) todo.push(['euro', `${karten(vk.cards)} kannst du verkaufen`, `Zusammen ${eur0(vk.value)}: ${num(P.sell.cards)} einzeln ab ${minTxt}, ${num(P.bulk.cards)} als Bulk. Von jeder Karte bleibt mindestens eine bei dir.`, `<a class="btn" href="#/sell">Verkaufsliste</a>`]);
+  if (vk.cards) todo.push(['euro', `${karten(vk.cards)} kannst du verkaufen`, `Zusammen ${eur0(vk.value)}: ${num(P.sell.cards)} einzeln ab ${minTxt}, ${num(P.bulk.cards)} als Bulk.`, `<a class="btn" href="#/sell">Verkaufsliste</a>`]);
   if (s.wuensche.length) todo.push(['check', `Zielpreis erreicht: ${s.wuensche.slice(0, 3).join(', ')}${s.wuensche.length > 3 ? ` und ${s.wuensche.length - 3} weitere` : ''}`, 'Auf deiner Wunschliste ist der günstigste Preis jetzt bei deinem Ziel oder darunter.', `<a class="btn" href="#/wuensche">Wünsche</a>`]);
   const arena = s.arena.reduce((n, a) => n + a.qty, 0);
   if (arena) todo.push(['alert', `${karten(arena)} als Arena-Druck eingetragen: ${s.arena.slice(0, 3).map(a => `${a.name} (${a.set_code})`).join(', ')}${s.arena.length > 3 ? ` und ${s.arena.length - 3} weitere` : ''}`, TIP.arena, `<a class="btn" href="#/cards?q=${encodeURIComponent('is:arena')}">Anzeigen</a>`]);
@@ -337,7 +356,7 @@ const VERLAUF_PUNKTE = 31;  // ponytail: bis zu so vielen Tagen bekommt jeder Ta
 let verlaufDaten = [], verlaufPts = [];
 function verlaufHtml(h) {
   const head2 = `<h2>Wert im Verlauf ${info('verlauf', 'Wert im Verlauf')}`;
-  if (!h || h.length < 2) return `<section class="sec" aria-label="Wert im Verlauf">${head2}</h2><p class="muted">Der Verlauf beginnt ${h?.length && day(h[0].day) !== 'heute' ? `am ${day(h[0].day)}` : 'heute'}. Ab dem nächsten Tag steht hier, wie sich der Wert deiner Sammlung entwickelt.</p></section>`;
+  if (!h || h.length < 2) return `<section class="sec" aria-label="Wert im Verlauf">${head2}</h2><p class="muted">Der Verlauf beginnt ${h?.length && day(h[0].day) !== 'heute' ? `am ${day(h[0].day)}` : 'heute'}. ${info('verlauf', 'Wert im Verlauf')}</p></section>`;
   const t = h.map(p => Date.parse(p.day + 'T12:00:00')), v = h.map(p => p.value);
   let lo = Math.min(...v), hi = Math.max(...v);
   const pad = Math.max((hi - lo) * 0.12, hi * 0.01, 1);
@@ -390,7 +409,7 @@ const NEWS_WARN = new Set(['combo_warn', 'ban', 'gc', 'posteingang_warn', 'siche
 const moverRow = e => `<div class="row" data-oid="${esc(e.oracle_id)}"${peekAt(e.image, e.name, `${eur(e.old)} auf ${eur(e.price)}`)}>${pic(small(e.image), '', 'thumb')}
   <div class="min0"><div class="name">${esc(e.name)}${e.foil ? ', Foil' : ''}</div><div class="sub2">${eur(e.old)} auf ${eur(e.price)} in ${e.days} Tagen</div></div>
   <div class="chips">${stackChips(e.stacks)}</div><div class="price">${icon(e.pct > 0 ? 'up' : 'down', 'sm')}${Math.round(Math.abs(e.pct) * 100)} %</div></div>`;
-const moversHtml = m => !m.ready ? '<p class="muted">Die App merkt sich bei jeder Preis-Aktualisierung den Preis jeder Karte. Nach ein paar Tagen steht hier, was gestiegen oder gefallen ist.</p>'
+const moversHtml = m => !m.ready ? `<p class="muted">Nach ein paar Tagen steht hier, was gestiegen oder gefallen ist. ${info('preisbewegung', 'Preisbewegung')}</p>`
   : !m.up.length && !m.down.length ? `<p class="muted">In den letzten ${m.span} Tagen hat sich bei keiner Karte der Preis um ${Math.round(m.min_pct * 100)} % oder mehr verändert (Karten ab ${eurMin(m.min_eur)}).</p>`
   : `<div class="split even">${[['Gestiegen', m.up], ['Gefallen', m.down]].map(([t, l]) => `<div><h3>${t}</h3>${l.length ? `<div class="rows">${l.map(moverRow).join('')}</div>` : '<p class="muted">nichts</p>'}</div>`).join('')}</div>`;
 const moversSub = m => m.ready ? (m.span >= m.days ? `Vergleich mit dem Stand von vor ${m.days} Tagen oder früher` : `Vergleich mit dem ältesten Stand, ${m.span} Tage alt`) : '';
@@ -418,7 +437,7 @@ async function viewCards(p) {
   const bySet = Object.fromEntries(sets.items.map(x => [x.code, x]));
   const opt = (list, sel) => list.map(([v, l]) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
   const on = new Set((p.get('color') || '').split(',').filter(Boolean));
-  main.innerHTML = `${head('Karten', 'Alles, was du besitzt. Eine Kachel je Karte, über alle Editionen. Klick öffnet Details und Plan.')}
+  main.innerHTML = `${head(`Karten ${info('karten', 'Karten')}`, 'Alles, was du besitzt.')}
     <section class="sec" aria-label="Kartenliste">
     <form class="filters bar2" id="f" role="search" aria-label="Karten filtern">
       <span class="search wide">${icon('search', 'sm')}<input type="search" name="q" placeholder="${lm.chat ? 'Name, Suche wie t:vampire c:r, oder eine Frage' : 'Name, oder Suche wie t:vampire c:r mv<=3'}" aria-label="Name oder Suche" aria-describedby="suchhilfe" value="${esc(p.get('q') || '')}" spellcheck="false"></span>
@@ -517,7 +536,7 @@ const setRow = x => `<a class="row set" href="#/binder?set=${encodeURIComponent(
   <div class="cnt">${karten(x.copies)}${x.prints !== x.copies && !x.size ? `<div class="sub2">${num(x.prints)} verschiedene</div>` : ''}</div><div class="price">${eur(x.value)}</div></a>`;
 
 async function viewSets(p) {
-  main.innerHTML = `${head('Serien', 'Welche Serien du schon eingescannt hast, mit Karten, Wert und wie viel vom Set dir fehlt. Klick zeigt die Serie als Binder, fehlende Karten grau.')}
+  main.innerHTML = `${head(`Serien ${info('serien', 'Serien')}`, 'Deine Serien mit Wert und wie viel dir fehlt.')}
     <section class="sec" aria-label="Serien">
     <form class="filters bar2" id="f" role="search" aria-label="Serien filtern">
       <span class="search">${icon('search', 'sm')}<input type="search" name="q" placeholder="Serie oder Kürzel" aria-label="Serie suchen (Name oder Kürzel)" value="${esc(p.get('q') || '')}"></span>
@@ -591,7 +610,7 @@ async function viewBericht(p) {
 async function viewSpiele() {
   const r = await api('spiele'), mine = r.decks.filter(d => d.kind), letzt = r.letzte[0]?.deck;
   const brSel = d => `<select data-dbr="${esc(d.name)}" aria-label="Bracket von ${esc(d.name)}">${[1, 2, 3, 4, 5].map(b => `<option value="${b}"${b === d.bracket ? ' selected' : ''}>${b}${d.geschaetzt && b === d.bracket ? ' (geschätzt)' : ''}</option>`).join('')}</select>`;
-  main.innerHTML = `${head('Spiele', 'Nach jeder Runde: Deck wählen, Gewonnen oder Nicht gewonnen. Daraus kommen Siegquote, Lieblingsdecks und Decks, die nur noch im Regal stehen.')}
+  main.innerHTML = `${head(`Spiele ${info('spiele', 'Spiele')}`, 'Nach jeder Runde: Deck wählen, Gewonnen oder Nicht gewonnen.')}
     ${aus('edhrec') && !r.salt_da ? ausZeile('edhrec', 'Die Salt-Werte der Karten (Umfrage von EDHREC) fehlen deshalb.') : ''}
     ${mine.length ? `<section class="sec" aria-label="Spiel eintragen"><form class="spielform" data-spiel="1"><button type="submit" hidden disabled aria-hidden="true"></button>
       <div class="filters"><select name="deck" required aria-label="Deck">${mine.map(d => `<option${d.name === letzt ? ' selected' : ''}>${esc(d.name)}</option>`).join('')}</select>
@@ -613,7 +632,7 @@ async function viewSpiele() {
       ${r.gruppe.length ? `<form data-tisch="1"><div class="gruppe">${r.gruppe.map(g => `<div class="gzeile"><label><input type="checkbox" name="g" value="${g.id}"> <span><b>${esc(g.spieler)}</b>: ${esc(g.deck)}</span> ${g.ci ? pips(g.ci) : '<span class="muted">Farben?</span>'} <span class="muted">Bracket ${g.bracket}${g.pod ? ', ' + esc(g.pod) : ''}</span></label>
         <button class="btn small ghost" type="button" data-gweg="${g.id}" aria-label="${esc(g.deck)} von ${esc(g.spieler)} entfernen">${icon('x', 'sm')}</button></div>`).join('')}</div>
         <button class="btn primary" type="submit">Welches Deck heute?</button></form><div id="tisch" aria-live="polite"></div>`
-        : '<p class="muted">Trag die Decks deiner Mitspieler ein. Dann schlägt die App vor, welches deiner Decks zum Tisch passt.</p>'}
+        : `<p class="muted">Trag die Decks deiner Mitspieler ein. ${info('tisch', 'Tisch')}</p>`}
       <form class="filters gform" data-gruppe="1"><input name="spieler" required placeholder="Spieler" aria-label="Spieler"><input name="deck" required class="grow" placeholder="Deck oder Commander" aria-label="Deck oder Commander">
         <select name="bracket" aria-label="Bracket">${[1, 2, 3, 4, 5].map(b => `<option value="${b}"${b === 3 ? ' selected' : ''}>Bracket ${b}</option>`).join('')}</select>
         <input name="farben" maxlength="5" class="tight" placeholder="Farben" aria-label="Farben als Buchstaben, zum Beispiel wub (leer: vom Commander)" title="Farben als Buchstaben, zum Beispiel wub. Leer: vom Commander, wenn die App die Karte kennt.">
@@ -655,7 +674,7 @@ async function viewDruck(p) {
     : was === 'binder' ? binders.items.filter(b => !b.deck).map(b => ({titel: b.name, sub: 'Binder', zahl: karten(b.cards)}))
     : spiele.decks.filter(d => d.kind).map(d => ({titel: d.name, sub: `Bracket ${d.bracket}`, ci: d.ci, zahl: d.kind === 'fertig' ? 'fertiges Deck' : 'gebaut'}));
   const link = (a, w) => `#/druck?art=${a}&was=${w}`;
-  main.innerHTML = `${head('Drucken', 'Trennkarten für Kisten und Etiketten für Boxen und Binder. Hak an, was du brauchst, dann Drucken (A4, Skalierung 100 %).',
+  main.innerHTML = `${head(`Drucken ${info('drucken', 'Drucken')}`, 'Trennkarten und Etiketten, gedruckt auf A4 mit 100 %.',
     `${proxyAn() ? '<a class="btn ghost" href="#/proxy">Proxy-Blatt</a>' : ''}<button class="btn primary" type="button" id="print">${icon('printer')}Drucken</button>`)}
     <section class="sec noprint" aria-label="Auswahl"><div class="seg">${[['trenn', 'Trennkarten 63 × 95 mm'], ['etikett', 'Etiketten 70 × 37 mm']].map(([a, l]) => `<a class="btn small" href="${link(a, was)}" aria-pressed="${a === art}">${l}</a>`).join('')}</div>
       <div class="seg gap-top">${[['serien', 'Serien'], ['binder', 'Binder'], ['decks', 'Decks']].map(([w, l]) => `<a class="btn small" href="${link(art, w)}" aria-pressed="${w === was}">${l}</a>`).join('')}</div>
@@ -703,7 +722,7 @@ async function viewSort(p) {
   const binder = p.get('binder');
   if (!binder) {
     const r = await api('sort');
-    main.innerHTML = `${head('Sortieren', 'Wähl einen Binder. Du bekommst die Karten in Scan-Reihenfolge und legst jede auf den angezeigten Stapel.')}${aus('edhrec') ? ausZeile('edhrec', 'Staples zählen nach dem EDHREC-Rang von Scryfall und den schon gemerkten Listen deiner besten Commander; neue Listen lädt die App nicht.') : ''}
+    main.innerHTML = `${head(`Sortieren ${info('sortieren', 'Sortieren')}`, 'Wähl einen Binder.')}${aus('edhrec') ? ausZeile('edhrec', 'Neue Listen für die Staples lädt die App nicht.') : ''}
       <section class="sec" aria-label="Binder"><div class="rows">${r.binders.map(b => `
       <a class="row binder" href="#/sort?binder=${encodeURIComponent(b.name)}"><div class="min0"><div class="name">${esc(b.name)}</div><div class="sub2">${karten(b.cards)}</div></div>
       <div class="chips">${STACKS.filter(k => b.stacks[k]).map(k => chip(k, `${num(b.stacks[k])} ${LABEL[k].toLowerCase()}`)).join('')}</div><span class="go">${icon('right')}</span></a>`).join('') || '<div class="empty">Noch keine Binder. Lade zuerst eine Datei hoch.</div>'}</div></section>`;
@@ -800,8 +819,8 @@ async function viewSell() {
   const R = r.rules, keepS = Math.max(R.keep, R.staples), kand = fd.binder.filter(b => !b.deck && b.type !== 'scan');
   const exp = (format, group, label, ic, cls = '') => `<a class="btn ${cls}" data-export="${format}" data-group="${group}" href="#">${icon(ic)}${label}</a>`;
   const sold = r.sold;
-  main.innerHTML = `${head('Verkaufen', `Alles, was in keinem Deck steckt und über deine Behalten-Regel hinausgeht. Von jeder Karte bleibt mindestens ${R.keep === 1 ? 'eine' : R.keep} bei dir.`)}
-    ${aus('edhrec') ? ausZeile('edhrec', 'Staples zählen nach dem EDHREC-Rang von Scryfall und den schon gemerkten Listen deiner besten Commander; neue Listen lädt die App nicht.') : ''}${aus('cardmarket') ? ausZeile('cardmarket', 'Die Preise „ab“ und der Trend stammen aus dem letzten Stand.') : ''}
+  main.innerHTML = `${head(`Verkaufen ${info('verkaufen', 'Verkaufen')}`, `Von jeder Karte bleibt mindestens ${R.keep === 1 ? 'eine' : R.keep} bei dir.`)}
+    ${aus('edhrec') ? ausZeile('edhrec', 'Neue Listen für die Staples lädt die App nicht.') : ''}${aus('cardmarket') ? ausZeile('cardmarket', 'Die Preise „ab“ und der Trend stammen aus dem letzten Stand.') : ''}
     <section class="panel" aria-label="Regeln"><h2>Regeln <small>gelten für die ganze App</small></h2>
       <div class="rules">
         <div class="field"><span>Behalten je Karte</span><div class="stepper" data-rule="keep"><button type="button" data-d="-1" aria-label="weniger">${icon('minus', 'sm')}</button><output class="num">${R.keep}</output><button type="button" data-d="1" aria-label="mehr">${icon('plus', 'sm')}</button></div></div>
@@ -811,7 +830,7 @@ async function viewSell() {
       </div>
       <form class="fertige" data-fertig="1"><div class="field"><label for="fertig-namen">Binder, die fertige Decks sind ${info('fertigedecks', 'Fertige Decks')}</label>
         <textarea id="fertig-namen" name="namen" rows="3" placeholder="Ein Binder-Name je Zeile">${esc(fd.namen.join('\n'))}</textarea></div>
-        <p class="note-line">Nur für Exporte ohne Typ „deck“. ${kand.length ? `Binder, die noch keine fertigen Decks sind: ${kand.slice(0, 12).map(b => esc(b.name)).join(', ')}${kand.length > 12 ? ' und weitere' : ''}.` : fd.binder.length ? 'Alle Binder im Bestand gelten schon als fertige Decks oder werden von der App geführt.' : 'Noch keine Binder im Bestand.'}</p>
+        <p class="note-line">${kand.length ? `Binder, die noch keine fertigen Decks sind: ${kand.slice(0, 12).map(b => esc(b.name)).join(', ')}${kand.length > 12 ? ' und weitere' : ''}.` : fd.binder.length ? 'Alle Binder im Bestand gelten schon als fertige Decks oder werden von der App geführt.' : 'Noch keine Binder im Bestand.'}</p>
         <button class="btn small" type="submit">Speichern</button></form></section>
     <section class="sec" aria-label="Verkaufsliste">
       <div class="tabs" role="tablist">
@@ -837,7 +856,7 @@ async function viewSell() {
         ${sold.jahre.length ? `<div class="facts">${sold.jahre.map(j => `<div><b>${eur0(j.value)}</b><span>${esc(j.jahr)}: ${karten(j.cards)}</span></div>`).join('')}</div><p class="note-line">Meldegrenze der Plattformen ${info('meldegrenze', 'Meldegrenze')}: 30 Verkäufe oder 2.000 € im Jahr.</p>` : ''}
         ${sold.last ? `<p class="lead gap-top">${sold.last.file === 'Verkauf' ? 'Zuletzt gebucht' : 'Beim letzten Import erkannt'}: <b>${karten(sold.last.cards)}, ${eur(sold.last.value)}</b>.${sold.last.file === 'Verkauf' ? ` <button class="link" type="button" id="buchung-weg">zurücknehmen</button>` : ''} Insgesamt bisher ${karten(sold.cards)}, ${eur(sold.value)}.</p>
           <div class="rows">${sold.last.items.slice(0, 8).map(c => `<div class="row" data-oid="${esc(c.oracle_id)}"${peekAt(c.image, c.name, eur(c.price))}>${pic(small(c.image), '', 'thumb')}<div class="min0"><div class="name">${esc(c.name)}</div><div class="sub2">${esc(c.set)}${c.foil !== 'normal' ? ', ' + esc(c.foil) : ''}</div></div><span class="muted">${c.qty}×</span><span class="price">${eur(c.price)}</span></div>`).join('')}</div>`
-          : '<p class="muted">Noch nichts. Sobald ein neuer Export Karten von dieser Liste nicht mehr enthält, stehen sie hier.</p>'}
+          : '<p class="muted">Sobald ein neuer Export Karten von dieser Liste nicht mehr enthält, stehen sie hier.</p>'}
       </section></div>`;
   const say = () => { $('#say').textContent = `Von jeder Karte ${R.keep === 0 ? 'keine' : R.keep === 1 ? 'eine' : R.keep} behalten, von Staples ${keepS}, Standardländer alle. Weitere Kopien ab ${eurMin(r.min)} einzeln, darunter als Bulk.`; };
   const info2 = () => {  // Zähler und Export-Links; die Liste selbst bleibt stehen (Fokus beim Abhaken)
@@ -970,16 +989,16 @@ async function viewDecks(p) {
   const [dl, cm] = await Promise.all([api('decks'), api('commanders?' + new URLSearchParams({mode: rankMode, ...(rankMin != null ? {min_decks: rankMin} : {})}))]);
   const alle = [...dl.fertig, ...dl.items.map(d => ({...d, kind: 'gebaut'}))];
   const items = rankAll ? cm.items : cm.items.slice(0, 30), top = items.slice(0, 3), rest = items.slice(3), buy = cm.mode === 'guenstig';
-  main.innerHTML = `${head('Decks', `Fertige Decks lädst du als Textliste hoch oder scannst sie ein, neue baut die App aus deinen freien Karten ${info('free', 'frei')}. Bestehende Decks werden dabei nie auseinandergenommen.`,
+  main.innerHTML = `${head(`Decks ${info('decksneu', 'Decks')}`, `Neue Decks baut die App aus deinen freien Karten ${info('free', 'frei')}.`,
     `<a class="btn" href="#/scan?modus=erfassen&deck=1">${icon('cards')}Deck einscannen</a>`)}
     <section class="sec" aria-label="Deine Decks"><h2>Deine Decks <small>${alle.length ? `${dl.fertig.length} fertig, ${dl.items.length} gebaut` : ''}</small></h2>
       ${alle.length ? `<div class="decks">${alle.map(deckTile).join('')}</div>` : '<p class="muted">Noch keine Decks. Lade ein fertiges Deck hoch (als Text, zum Beispiel aus ManaBox oder Moxfield) oder bau unten eins aus dem Ranking.</p>'}</section>
     <section class="sec" aria-label="Commander-Ranking"><h2>Welche Commander passen zu deiner Sammlung? ${cm.all ? `<small>${cm.total === cm.all ? `${num(cm.all)} Kandidaten` : `${num(cm.total)} von ${num(cm.all)} Kandidaten`}</small>` : ''}</h2>
-      ${aus('edhrec') ? (cm.all ? ausZeile('edhrec', 'Das Ranking zeigt die gemerkten Daten, neue lädt die App nicht.') : ausNote('edhrec', 'Ohne EDHREC gibt es kein Commander-Ranking und keinen Deckbau. Auf der Seite „Quellen“ siehst du, was EDHREC erfährt, und kannst es einschalten.'))
+      ${aus('edhrec') ? (cm.all ? ausZeile('edhrec', 'Das Ranking zeigt die gemerkten Daten, neue lädt die App nicht.') : ausNote('edhrec', 'Ohne EDHREC gibt es kein Commander-Ranking und keinen Deckbau.'))
       : cm.pending || !cm.tags ? note(['cloud', cm.all ? `Für ${num(cm.pending)} Commander fehlen noch Daten` : 'Commander-Daten laden',
         'Die App fragt EDHREC einmal pro Sekunde nach den empfohlenen Karten jedes Commanders, den du besitzt. Das dauert ein paar Minuten, du kannst währenddessen weiterarbeiten.',
         `<button class="btn primary" type="button" data-job="commanders">${icon('cloud')}Jetzt laden</button>`, 'commanders']) : ''}
-      <p class="lead">Lieber selbst wählen? <a href="#/cards?q=${encodeURIComponent('is:commander')}">Alle möglichen Commander deiner Sammlung</a>, Karte antippen, dann „Deck um diesen Commander bauen“.</p>
+      <p class="lead">Lieber selbst wählen? <a href="#/cards?q=${encodeURIComponent('is:commander')}">Alle möglichen Commander</a> ${info('selbstwaehlen', 'Commander selbst wählen')}</p>
       ${cm.all ? rankControls(cm) : ''}
       ${cm.items.length ? `<div class="feat n${top.length}">${top.map(featCard).join('')}</div>
         ${rest.length ? `<div class="rtable"><div class="rrow headrow"><span></span><span>Weitere Commander</span><span>Abdeckung ${info('coverage', 'Abdeckung')}</span><span class="hide-s r">Karten ${info('have', 'Karten')}</span>
@@ -1000,7 +1019,7 @@ async function viewDecks(p) {
         <button class="btn" type="button" id="pgo">Planen</button></div><div id="presult"></div></section>` : ''}
     <section class="sec" aria-label="Combos in deiner Sammlung" id="combos"><h2>Combos in deiner Sammlung ${info('combos', 'Combos in deiner Sammlung')}</h2><p class="muted">Wird geladen …</p></section>
     <section class="sec" aria-label="Bracket prüfen"><h2>Bracket einer Deckliste prüfen ${info('bracketcheck', 'Bracket prüfen')}</h2>
-      <p class="lead">Füg die Liste eines Decks ein, zum Beispiel aus Moxfield, Archidekt oder ManaBox. Die App sagt, ab welchem Bracket es mindestens passt, und nennt die Gründe. Das hilft vor dem Spiel.</p>
+      <p class="lead">Füg die Liste eines Decks ein, die App nennt das Bracket. ${info('bracketcheck', 'Bracket prüfen')}</p>
       <div class="field"><label for="bracket-text">Deckliste</label><textarea id="bracket-text" spellcheck="false" placeholder="Commander&#10;1 Atraxa, Praetors' Voice&#10;&#10;Deck&#10;1 Sol Ring"></textarea></div>
       <div class="actions gap-top"><span class="left muted">${aus('spellbook') ? `${esc(QNAME.spellbook)} ist abgeschaltet, deshalb geht das nicht. <a href="#/quellen">Zur Seite Quellen</a>` : 'Die Liste geht dafür an Commander Spellbook.'}</span><button class="btn" type="button" id="bracket-go"${aus('spellbook') ? ' disabled' : ''}>${icon('check')}Prüfen</button></div></section>`;
   const all = $('#rank-all');
@@ -1052,7 +1071,7 @@ async function combosUi(alle) {
       return;
     }
     if (!r.at) {
-      box.innerHTML = `${h2}</h2>${note(['infinity', 'Combos suchen', 'Die App fragt Commander Spellbook, welche Combos du schon komplett besitzt und bei welchen eine Karte fehlt. Beim ersten Mal lädt sie die Liste aller Combo-Karten, das dauert gut eine Minute.', `<button class="btn" type="button" data-job="combos">${icon('infinity')}Combos suchen</button>`, 'combos'])}`;
+      box.innerHTML = `${h2}</h2>${note(['infinity', 'Combos suchen', 'Welche Combos du schon komplett besitzt und bei welchen eine Karte fehlt.', `<button class="btn" type="button" data-job="combos">${icon('infinity')}Combos suchen</button>`, 'combos'])}`;
       return jobsUi();
     }
     const zeig = (l, n) => alle ? l : l.slice(0, n);
@@ -1425,14 +1444,14 @@ function aussenStand(a) {
     offen: !!a?.aussen && !a.aussen.verschluesselt};  // offen: Die jüngste Kopie ging unverschlüsselt hinaus
 }
 // Zweiter Ordner (Phase 42): Haken, Pfad und was daraus geworden ist; die Verschlüsselung (gpg) hängt an der Schlüsseldatei der App
-const VERSCHL = {ok: ['check', 'Die Kopie wird verschlüsselt', 'Mit gpg und der Schlüsseldatei dieser App. Ohne den Schlüssel kann niemand sie lesen, und du auch nicht: Bewahre ihn getrennt von diesem Rechner auf.'],
-  aus: ['alert', 'Die Kopie geht unverschlüsselt in den Ordner', 'Die ZIP enthält Passwort-Hashes und Kaufpreise. Wer an den Ordner kommt, liest sie. Mit einer Schlüsseldatei (MTG_AUSSEN_SCHLUESSEL, Anleitung in der README) verschlüsselt die App sie vorher.'],
-  defekt: ['alert', 'Verschlüsseln geht gerade nicht', 'Kopiert wird deshalb nichts, bis es geht.']};
+const VERSCHL = {ok: ['check', 'Die Kopie wird verschlüsselt', 'Bewahre den Schlüssel getrennt von diesem Rechner auf.'],
+  aus: ['alert', 'Die Kopie geht unverschlüsselt in den Ordner', 'Wer an den Ordner kommt, liest Passwort-Hashes und Kaufpreise.'],
+  defekt: ['alert', 'Verschlüsseln geht gerade nicht', 'Kopiert wird deshalb nichts, bis es geht.']};  // mehr in TIP.verschl
 function ordnerHtml(o) {
   const v = VERSCHL[o.verschluesselung] || VERSCHL.aus, e = o.ergebnis;
   const stand = e ? `<p class="note-line" id="o-stand">Zuletzt ${day(e.at)}: ${e.ok ? 'kopiert, ' : '<b>nicht geklappt:</b> '}${esc(e.text)}</p>` : `<p class="note-line" id="o-stand">${o.an ? 'Noch nicht kopiert. Der nächste Lauf der App tut es, spätestens in einer Stunde.' : 'Aus.'}</p>`;
   return `<section class="sec" aria-label="Zweiter Ordner"><h2>Zweiter Ordner ${info('zweiterordner', 'Zweiter Ordner')}</h2>
-    <p class="lead">Die App legt nach der täglichen Sicherung eine Kopie in diesen Ordner, zum Beispiel den einer Cloud, eines NAS oder einer eingehängten Storage Box. Nur du als Hauptkonto stellst das ein.</p>
+    <p class="lead">Nach jeder täglichen Sicherung eine Kopie in diesen Ordner. ${info('verschl', 'Verschlüsselung')}</p>
     <form class="kform" data-ordner="1">
       <label class="inl"><input type="checkbox" name="an"${o.an ? ' checked' : ''}> Sicherung zusätzlich in diesen Ordner kopieren</label>
       <div class="field"><label for="o-pfad">Ordner (ganzer Pfad)</label><input id="o-pfad" name="pfad" value="${esc(o.pfad)}" placeholder="D:/Cloud/Pappenheimer oder /mnt/nas/sicherung" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="1000"></div>
@@ -1450,7 +1469,7 @@ async function ordnerForm(f) {
 }
 const PE_STATUS = {importiert: 'übernommen', 'keine Änderung': 'keine Änderung', abgebrochen: 'liegen geblieben (würde mehr als ein Viertel entfernen)', fehler: 'nicht lesbar', wartet: 'gerade erst gespeichert, in einer Minute noch einmal', später: 'gerade nicht möglich (kein Netz?), nächstes Mal'};
 const peHtml = p => `<section class="sec" aria-label="Posteingang"><h2>Posteingang ${info('posteingang', 'Posteingang')}</h2>
-    <p class="lead">Nur wenn du weiter mit einer Scanner-App (zum Beispiel ManaBox) scannst: Neue CSV-Dateien aus diesem Ordner übernimmt die App einmal am Tag von selbst, mit derselben Vorsicht wie beim Hochladen.</p>
+    <p class="lead">Neue CSV-Dateien einer Scanner-App aus diesem Ordner einmal am Tag übernehmen.</p>
     <p><code>${esc(p.ordner)}</code></p>
     <div class="toolbar"><label class="inl"><input type="checkbox" id="pe-an"${p.an ? ' checked' : ''}> Einmal am Tag übernehmen</label>
       <button class="btn" type="button" id="pe-jetzt">${icon('tray')}Jetzt übernehmen</button></div>
@@ -1470,17 +1489,17 @@ async function viewQuellen() {
   quellenDaten = r.items;
   sess = {...sess, quellen: Object.fromEntries(r.items.filter(q => q.schaltbar).map(q => [q.key, q.an]))};
   const kann = r.haupt && !r.gesperrt;
-  main.innerHTML = `${head('Quellen', 'Woher die App Daten holt, was sie dabei hinschickt und wie oft. Jede Quelle außer Scryfall lässt sich abschalten, für die ganze Installation: auch für Unterkonten und den täglichen Lauf.',
+  main.innerHTML = `${head(`Quellen ${info('quellen', 'Quellen')}`, 'Woher die App Daten holt, was sie hinschickt und wie oft.',
       `<a class="btn ghost" href="#/konten">${icon('left')}Konten und Sicherung</a>`)}
-    <p class="note-line">${esc(TIP.quellen)}</p>
     ${r.gesperrt ? `<div class="todo">${note(['info', 'Festgelegt in der Umgebung', `Die Variable ${r.env} legt fest, welche Quellen laufen. Die Schalter hier sind gesperrt; ändern lässt es sich nur dort (Liste der eingeschalteten Quellen, zum Beispiel spellbook,cardmarket; alle; keine).`])}</div>`
       : !r.haupt ? `<div class="todo">${note(['info', 'Das Hauptkonto stellt das ein', 'Du siehst hier, was die App abruft. Die Schalter stellt nur das Hauptkonto.'])}</div>` : ''}
     ${r.items.map(q => `<section class="sec" aria-label="${esc(q.name)}" id="q-${esc(q.key)}"><h2>${esc(q.name)} <small>${q.schaltbar ? (q.an ? 'an' : 'aus') : q.key === 'github' ? 'nur auf Knopfdruck' : 'immer an'}</small></h2>
       <p class="lead">${esc(q.zweck)}</p>
+      <details class="mehr"><summary>Was sie erfährt, wie oft, Bedingungen</summary>
       <p class="note-line"><b>Was hingeschickt wird:</b> ${esc(q.schickt)}</p>
       <p class="note-line"><b>Wie oft:</b> ${esc(q.wie_oft)}</p>
       ${q.hinweis ? `<p class="note-line">${esc(q.hinweis)}</p>` : ''}
-      <p class="note-line"><a href="${esc(q.link)}" target="_blank" rel="noopener noreferrer">${q.key === 'edhrec' ? 'Nutzungsbedingungen von EDHREC' : q.key === 'scryfall' ? 'Regeln von Scryfall' : q.key === 'github' ? 'Veröffentlichungen auf GitHub' : `Website von ${esc(q.name)}`}<span class="sr-only"> (neues Fenster)</span></a></p>
+      <p class="note-line"><a href="${esc(q.link)}" target="_blank" rel="noopener noreferrer">${q.key === 'edhrec' ? 'Nutzungsbedingungen von EDHREC' : q.key === 'scryfall' ? 'Regeln von Scryfall' : q.key === 'github' ? 'Veröffentlichungen auf GitHub' : `Website von ${esc(q.name)}`}<span class="sr-only"> (neues Fenster)</span></a></p></details>
       ${q.schaltbar ? `<label class="inl quelle-an"><input type="checkbox" data-quelle="${esc(q.key)}"${q.an ? ' checked' : ''}${kann ? '' : ' disabled'}> ${esc(q.name)} verwenden</label>` : ''}
     </section>`).join('')}`;
 }
@@ -1515,7 +1534,7 @@ function updateHtml(u) {
     : l.neu ? [l.sicherheit ? 'alert' : 'up', `Version ${l.version} ist da${l.sicherheit ? ' (Sicherheit)' : ''}`, `${l.titel ? l.titel + '. ' : ''}${UPDATE_WEGE}`, link]
     : ['check', 'Du hast die neueste Version', `Zuletzt ${day(l.at)} nachgesehen: ${l.version} ist die neueste Veröffentlichung.`];
   return `<section class="sec" aria-label="Updates"><h2>Updates</h2>
-    <p class="lead">Du hast Version ${esc(u.eigene)}. Die App fragt nie von selbst nach Updates, nur wenn du den Knopf drückst. GitHub erfährt dabei die Adresse deines Rechners und den Programmnamen mit Version, nichts aus deiner Sammlung (mehr unter <a href="#/quellen">Quellen</a>).</p>
+    <p class="lead">Du hast Version ${esc(u.eigene)}. ${info('update', 'Updates')}</p>
     <div class="toolbar"><button class="btn" type="button" id="up-suchen">${icon('refresh')}Nach Updates suchen</button></div>
     ${u.fehler ? `<p class="say bad" role="alert">${esc(u.fehler)}</p>` : ''}
     <div class="todo">${note(stand)}</div></section>`;
@@ -1533,20 +1552,20 @@ async function updateSuchen() {
 // Handy erreicht, also nicht über 127.0.0.1; sonst steht dort, was zu tun ist.
 const LOKAL = /^(localhost|127(\.\d+){3}|\[?::1\]?)$/;
 function handyHtml(adresse, qr) {
-  const inhalt = !adresse ? `<p class="note-line">Du hast diese Seite über die Adresse dieses Rechners geöffnet (${esc(location.host)}). Die erreicht das Handy nicht. Öffne die App einmal über die Adresse deines Servers, zum Beispiel https://dein-server.dein-netz.ts.net, dann steht hier der QR-Code.</p>`
+  const inhalt = !adresse ? `<p class="note-line">Über ${esc(location.host)} erreicht das Handy die App nicht. ${info('handylokal', 'Handy verbinden')}</p>`
     : qr?.svg ? `<div class="handy-qr"><div class="qr">${qr.svg}</div><div class="min0"><p>Adresse: <code>${esc(adresse)}</code></p>
-        <p class="muted">So geht es: Kamera-App am Handy öffnen und auf den Code halten, die Seite öffnen und anmelden. Danach im Browsermenü „App installieren“ oder „Zum Startbildschirm“ wählen. Die Kamera gibt der Browser nur über https frei.</p></div></div>`
+        </div></div>`
     : `<p class="note-line">Der QR-Code ließ sich nicht zeichnen${qr?.fehler ? ` (${esc(qr.fehler)})` : ''}. Tipp die Adresse am Handy ab: <code>${esc(adresse)}</code></p>`;
   return `<section class="sec" aria-label="Handy verbinden"><h2>Handy verbinden</h2>
-    <p class="lead">Scanne den Code mit dem Handy, öffne die Seite dort und installiere sie als App. Das Handy zeigt dann deine Sammlung auf diesem Server.</p>${inhalt}</section>`;
+    <p class="lead">Code mit dem Handy scannen und die Seite dort als App installieren. ${info('handy', 'Handy verbinden')}</p>${inhalt}</section>`;
 }
 
 async function viewKonten() {
   sess = await api('session'); whoUi();
   const haupt = sess.rolle === 'haupt';
-  const quellenSec = `<section class="sec" aria-label="Quellen"><h2>Quellen ${info('quellen', 'Quellen')}</h2><p class="lead">Woher die App Daten holt und was sie dabei hinschickt. ${haupt ? 'Du kannst jede Quelle außer Scryfall abschalten.' : 'Das Hauptkonto stellt sie ein.'}</p>
+  const quellenSec = `<section class="sec" aria-label="Quellen"><h2>Quellen ${info('quellen', 'Quellen')}</h2><p class="lead">Woher die App Daten holt und was sie dabei hinschickt.</p>
     <a class="btn" href="#/quellen">${icon('cloud')}Zu den Quellen</a></section>`;
-  const proxySec = !haupt ? '' : `<section class="sec" aria-label="Proxy-Blatt"><h2>Proxy-Blatt ${info('proxyblatt', 'Proxy-Blatt')}</h2><p class="lead">Karten zum Ausprobieren drucken, bevor du kaufst. Ausgeschaltet gibt es keinen Link dazu und keine Schnittstelle. Der Schalter gilt für die ganze Installation.</p>
+  const proxySec = !haupt ? '' : `<section class="sec" aria-label="Proxy-Blatt"><h2>Proxy-Blatt ${info('proxyblatt', 'Proxy-Blatt')}</h2><p class="lead">Karten zum Ausprobieren drucken, bevor du kaufst.</p>
     <label class="inl quelle-an"><input type="checkbox" data-proxyblatt="1"${proxyAn() ? ' checked' : ''}> Proxy-Blatt einschalten</label></section>`;
   const adresse = haupt && !LOKAL.test(location.hostname) ? location.origin + '/' : '';
   const [sich, pe, up, qr] = haupt ? await Promise.all([api('sicherung'), api('posteingang'), api('update'),
@@ -1555,18 +1574,18 @@ async function viewKonten() {
   const handySec = haupt ? handyHtml(adresse, qr) : '';
   const aussen = aussenStand(sich);
   const backup = !haupt ? '' : `<section class="sec" aria-label="Sicherung"><h2>Sicherung</h2>
-    <p class="lead">Eine ZIP-Datei mit allen Sammlungen, Konten und den hochgeladenen Dateien. Solange die App läuft, legt sie außerdem jeden Tag selbst eine im Ordner <code>data/sicherungen</code> an, die letzten 14 bleiben. Zurückspielen: App beenden, dann <code>mtg wiederherstellen DATEI.zip</code> (eine verschlüsselte Datei vorher mit <code>gpg -d</code> entschlüsseln, README).</p>
-    <div class="todo">${note([aussen.alt ? 'alert' : 'check', aussen.titel, aussen.wege.length ? `Zuletzt ${aussen.wege.join(', ')}. ${TIP.aussen}` : TIP.aussen,
+    <p class="lead">Eine ZIP mit allen Sammlungen, Konten und Dateien, nicht verschlüsselt. ${info('sicherung', 'Sicherung')} ${info('aussen', 'Sicherung außer Haus')}</p>
+    <div class="todo">${note([aussen.alt ? 'alert' : 'check', aussen.titel, aussen.wege.length ? `Zuletzt ${aussen.wege.join(', ')}.` : 'Leg eine Kopie woanders ab, etwa per Download auf einen USB-Stick.',
       `<a class="btn" href="/api/backup.zip" download>${icon('download')}Sicherung herunterladen</a>`])}</div>
-    <p class="note-line">Die heruntergeladene ZIP ist nicht verschlüsselt und enthält Passwort-Hashes und Kaufpreise. Leg sie nur an einen Ort, dem du traust.${aussen.offen ? ' Auch die jüngste Kopie außer Haus ist unverschlüsselt.' : ''}</p></section>${ordnerHtml(sich.ordner)}`;
-  const csvSec = `<section class="sec" aria-label="Bestand als CSV"><h2>Bestand als CSV</h2><p class="lead">${esc(TIP.csv)}</p>
+    ${aussen.offen ? '<p class="note-line">Auch die jüngste Kopie außer Haus ist unverschlüsselt.</p>' : ''}</section>${ordnerHtml(sich.ordner)}`;
+  const csvSec = `<section class="sec" aria-label="Bestand als CSV"><h2>Bestand als CSV ${info('csv', 'Bestand als CSV')}</h2>
     <a class="btn" href="/api/bestand.csv" download="bestand-${new Date().toISOString().slice(0, 10)}.csv">${icon('csv')}Bestand als ManaBox-CSV</a></section>`;
   const pwFelder = (alt, neuLabel = 'Neues Passwort') => `${alt ? '<div class="field"><label for="p-alt">Bisheriges Passwort</label><input id="p-alt" name="alt" type="password" required autocomplete="current-password"></div>' : ''}
     <div class="field"><label for="p-neu">${neuLabel} (mindestens 8 Zeichen)</label><input id="p-neu" name="passwort" type="password" required minlength="8" autocomplete="new-password"></div>`;
   if (sess.modus === 'einfach') {
-    main.innerHTML = `${head('Konten und Sicherung', 'Noch gibt es eine Sammlung und keine Anmeldung. Das reicht, solange die App nur auf deinem Rechner läuft.')}
+    main.innerHTML = `${head('Konten und Sicherung', 'Noch gibt es eine Sammlung und keine Anmeldung.')}
       <section class="sec" aria-label="Hauptkonto anlegen"><h2>Mehrere Sammlungen oder Anmeldung</h2>
-        <p class="lead">Mit einem Hauptkonto legst du getrennte Sammlungen an, zum Beispiel für deine Kinder, und schützt die App mit einem Passwort. Das Passwort brauchst du, wenn sie auf deinem eigenen Server läuft. Deine jetzige Sammlung gehört dann dem Hauptkonto und bleibt, wie sie ist.</p>
+        <p class="lead">Getrennte Sammlungen und ein Passwort für die App. ${info('hauptkonto', 'Hauptkonto')}</p>
         <form class="kform" data-konto="haupt">
           <div class="field"><label for="k-name">Dein Name</label><input id="k-name" name="name" required maxlength="40" autocomplete="username"></div>
           <div class="field"><label for="k-pw">Passwort (leer lassen: keine Anmeldung, nur auf diesem Rechner)</label><input id="k-pw" name="passwort" type="password" minlength="8" autocomplete="new-password"></div>
@@ -1582,7 +1601,7 @@ async function viewKonten() {
   }
   const {items} = await api('konten');
   const ich = items.find(k => k.rolle === 'haupt');
-  main.innerHTML = `${head('Konten und Sicherung', `Jedes Konto hat seine eigene Sammlung. Du bist das Hauptkonto und siehst alle, Unterkonten mit Passwort sehen nur ihre eigene.`)}
+  main.innerHTML = `${head(`Konten und Sicherung ${info('konten', 'Konten')}`, 'Jedes Konto hat seine eigene Sammlung.')}
     <section class="sec" aria-label="Sammlungen"><h2>Sammlungen <small>${items.length}</small></h2><div class="rows">${items.map(k => `
       <div class="row konto"><div class="min0"><div class="name">${esc(k.anzeige)}${k.name === sess.aktiv ? ' <span class="tag">offen</span>' : ''}</div>
         <div class="sub2">${k.rolle === 'haupt' ? 'Hauptkonto' : 'Unterkonto'}, ${k.pw ? 'mit Passwort' : k.rolle === 'haupt' ? 'ohne Passwort (keine Anmeldung)' : 'ohne Passwort (nur du verwaltest es)'}, ${karten(k.karten)}, ${eur0(k.wert)}</div></div>
@@ -1688,13 +1707,13 @@ async function viewWuensche() {
   const {items} = await api('wuensche');
   wunschDaten = items;
   const erreicht = items.filter(w => w.reached).length;
-  main.innerHTML = `${head('Wünsche', 'Karten, die du haben willst, mit Zielpreis. Wunschlisten aus einer Scanner-App (zum Beispiel ManaBox) erscheinen hier von selbst.', items.length ? `<a class="btn" href="/api/wuensche.txt" download="wuensche.txt">${icon('text')}Textliste</a>${proxyAn() ? `<a class="btn" href="#/proxy?karten=${encodeURIComponent(items.map(w => w.name).join('\n'))}">${icon('printer')}Als Proxys</a>` : ''}` : '')}
+  main.innerHTML = `${head(`Wünsche ${info('wuensche', 'Wünsche')}`, 'Karten, die du haben willst, mit Zielpreis.', items.length ? `<a class="btn" href="/api/wuensche.txt" download="wuensche.txt">${icon('text')}Textliste</a>${proxyAn() ? `<a class="btn" href="#/proxy?karten=${encodeURIComponent(items.map(w => w.name).join('\n'))}">${icon('printer')}Als Proxys</a>` : ''}` : '')}
     <section class="sec" aria-label="Karte wünschen"><form class="filters" data-wunsch="neu">
       <input name="name" required class="grow" placeholder="Kartenname, zum Beispiel Sol Ring" aria-label="Kartenname (englisch)" autocomplete="off">
       <label class="inl">Ziel <input name="max_eur" type="number" min="0" step="0.01" aria-label="Zielpreis in Euro"> €</label>
       <button class="btn primary" type="submit">${icon('plus')}Auf die Wunschliste</button></form></section>
     <section class="sec" aria-label="Wunschliste"><h2>Wunschliste ${info('wunsch', 'Zielpreis')} <small>${karten(items.reduce((n, w) => n + w.qty, 0))}${erreicht ? `, ${erreicht} mit erreichtem Zielpreis` : ''}</small></h2>
-      ${items.length ? `<div class="rows">${items.map(wunschRow).join('')}</div>` : '<p class="muted">Noch leer. Füg oben eine Karte hinzu oder merk sie dir im Kartendetail (Klick auf eine Karte).</p>'}</section>
+      ${items.length ? `<div class="rows">${items.map(wunschRow).join('')}</div>` : '<p class="muted">Noch leer.</p>'}</section>
     <section class="sec" aria-label="Was deinen Decks fehlt" id="bedarf"><h2>Was deinen Decks fehlt ${info('bedarf', 'Was deinen Decks fehlt')}</h2><p class="muted">Wird geladen …</p></section>`;
   const box = $('#bedarf');
   try {
@@ -2491,7 +2510,7 @@ const KAMERA_TIPPS = [['Licht', 'Gleichmäßig und hell, am besten Tageslicht od
   ['Stapel', 'Fertige Karten außerhalb des Bilds ablegen. Liegt eine gezählte Karte später wieder ruhig im Bild, zählt die App sie noch einmal.']];
 const SCAN_MODI = [['pruefen', 'Prüfen'], ['erfassen', 'Erfassen']];
 const scanKopf = modus => head('Scannen', modus === 'erfassen' ? 'Karten nacheinander vor die Kamera halten, dann prüfen und übernehmen.'
-  : 'Halte eine Karte aus deiner Sammlung vor die Kamera. Die App sagt dir, wohin sie gehört: in ein Deck, behalten, verkaufen oder Bulk.',
+  : `Karte vor die Kamera halten: Die App sagt, wohin sie gehört. ${info('pruefen', 'Prüfen')}`,
   `<div class="seg" role="group" aria-label="Was die Kamera tut">${SCAN_MODI.map(([k, l]) => `<button class="btn small" type="button" data-modus="${k}" aria-pressed="${k === modus}">${l}</button>`).join('')}</div>`);
 const camBox = (bereit, status) => `<section class="split scan ${scanModus}" aria-label="Kamera und Ergebnis">
     <div class="sec"><div class="toolbar camleiste"><div class="voll-oben nur-voll"><button class="btn" type="button" id="voll-zu" aria-label="Kamera beenden">${icon('x')}</button><span id="voll-summe">${scanModus === 'erfassen' ? '' : 'Karte prüfen'}</span>
@@ -2506,7 +2525,7 @@ const camBox = (bereit, status) => `<section class="split scan ${scanModus}" ari
       <p class="note-line" id="cam-aufl" hidden></p>
       <div class="toolbar gap-top" id="cam-mess" hidden><button class="btn" type="button" data-messbild disabled>Bild aufnehmen</button>${info('messausloeser', 'Bild aufnehmen')}
         <span class="muted small-print">Messbilder an: Jedes gezählte Kamerabild geht an deinen Server.</span></div>
-      <p class="note-line">${esc(scanModus !== 'erfassen' ? TIP.scan : erf.alle ? TIP.erfassenAlle : TIP.erfassen)}</p>
+      <p class="note-line">Ganze Karte ruhig vor die Kamera. ${info(scanModus !== 'erfassen' ? 'scan' : erf.alle ? 'erfassenAlle' : 'erfassen', 'Erkennung')}</p>
       <details class="suchhilfe"><summary>Tipps für gute Erkennung</summary><dl>${KAMERA_TIPPS.map(([k, t]) => `<dt>${k}</dt><dd>${esc(t)}</dd>`).join('')}</dl></details></div>
     <div class="sec scanres" aria-live="polite"><div id="scan-status" class="muted">${status}</div><div id="scan-hit"></div></div>
     ${scanModus === 'erfassen' ? `<div class="schnell nur-voll" role="group" aria-label="Vorgaben für die nächste Karte">
@@ -2552,8 +2571,8 @@ async function viewScan(p) {
     if (!scanStream) $('#scan-status').textContent = 'Bereit. Kamera starten, dann eine Karte davor halten.';
   };
   if (scanIx && r.fehlt.length <= 60) return lauf();  // ein paar neue Karten: still nachrechnen
-  $('#scan-prep').innerHTML = note(['cloud', 'Erkennungsbilder vorbereiten', `Einmal nötig: Die App merkt sich von jedem deiner ${num(r.fehlt.length)} Drucke ein kleines Bild von Scryfall. Das dauert ein paar Minuten, die Seite muss so lange offen bleiben.`,
-    `<button class="btn primary" type="button" id="scan-job">${icon('cloud')}Jetzt vorbereiten</button>`]);
+  $('#scan-prep').innerHTML = note(['cloud', 'Erkennungsbilder vorbereiten', `Einmal nötig für ${num(r.fehlt.length)} Drucke, ein paar Minuten.`,
+    `<span class="seg">${info('fpvorbereiten', 'Erkennungsbilder')}<button class="btn primary" type="button" id="scan-job">${icon('cloud')}Jetzt vorbereiten</button></span>`]);
   $('#scan-job').onclick = lauf;
 }
 
