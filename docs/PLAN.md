@@ -76,6 +76,13 @@ Ausbau v7 (Scanner schneller: Zählen beim Durchblättern, Druck durch Ausschlus
 Wunsch des Autors (2026-10-18):
 - [ ] Phase 60 – Deck einscannen und jeder Druck wählbar (alle Drucke einer Karte auf der Scan-Liste, Druckwahl mit eigenen Drucken, Übernehmen als fertiges Deck) – gebaut, Tests grün; offen: am Handy mit echten Karten
 
+Ausbau v8 (Einfach am Handy: Sammelalbum, fünf Ziele, Schnell-Scan, kurze Texte; Entscheidungen E40 bis E42, Befund und Probe unter „Ausbau v8“; eine Phase pro Session, Reihenfolge 61 bis 65):
+- [x] Phase 61 – Ruhe: kein Hintergrund im Standard, keine Bewegung beim Öffnen, Beispiel-Leiste in einer Zeile, Messung im Handy-Format
+- [x] Phase 62 – App-Rahmen: fünf Ziele (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten, Seite „Mehr“
+- [x] Phase 63 – Schnell-Scan: ein Tipp bis zur laufenden Kamera, Einstellungen im Blatt, Erkennung von selbst vorbereitet
+- [x] Phase 64 – Sammelalbum als Start: Binder-Seiten mit 3 × 3 Fächern, warmer dunkler Ton
+- [x] Phase 65 – Text kürzen in allen Ansichten (höchstens ein Satz offen)
+
 ## Ziel
 Alles lokal auf dem Desktop, im Browser unter `http://127.0.0.1:8765`:
 1. ManaBox-CSV beliebig oft importieren, ohne Duplikate.
@@ -448,6 +455,9 @@ Reddit war für die Werkzeuge gesperrt; die Häufigkeiten stammen aus Feature-Bo
 | E37 | Reine Zähl- und Vergleichslogik in `ui/zaehler.js`, mit Node getestet; im Zweifel fragen statt zählen | Konsens, Kopien-Zähler und Druckvergleich sind Funktionen ohne DOM in einer eigenen klassischen Datei (`globalThis.Zaehler`, dazu `module.exports`, wenn es `module` gibt), geladen vor `app.js`; kein Build (E2). Ein pytest-Test startet `node` mit Bildfolgen aus dem Test selbst und wird ohne `node` übersprungen (die Runner von GitHub haben es, kein neuer Schritt im Workflow). Schwellen kommen aus der Messung, nie aus dem Gefühl; eine falsch gezählte Karte ist schlimmer als eine nicht gezählte, deshalb fragt die App im Zweifel (die Scan-Liste mit Abnahme aus Phase 29 bleibt) |
 | E38 | Jede Neuerung hat einen Schalter und einen Rückweg | Aus heißt: Verhalten wie vor Ausbau v7. Eine Phase wird erst abgehakt, wenn ihre Messhürde hält; hält sie nicht, bleibt der Schalter aus, und im Ergebnis steht, woran es lag (wie bei Phase 32) |
 | E39 | Modell im Browser: eigene Quelle, kein Training im Projekt, Standard aus | Ein vortrainiertes Modell mit offener Lizenz (kein Training im Projekt). Die Datei holt der Server, nicht der Browser, über einen Eintrag in `sources.QUELLEN` (E25: Schalter, Zweck, Prüfsumme fest im Code, abgeschaltet heißt null Aufrufe), speichert sie in `data/modelle/` und liefert sie unter der eigenen Adresse aus. ONNX Runtime Web liegt als feste Version in `ui/vendor/` (Skript und WASM, Lizenz und Prüfsumme in `LIZENZEN.md`), die CSP bekommt dafür `'wasm-unsafe-eval'` (erlaubt nur WebAssembly, kein `eval` von JavaScript). Die Einbettungen der Kartenbilder rechnet der Browser wie die Fingerabdrücke (`katVorbereiten`), nicht der Server (kein `onnxruntime` im Kern). Ein eigenes Training oder ein eigener Kartendetektor ist eine spätere Entscheidung des Autors |
+| E40 | Sammelalbum statt Übersicht (Wunsch des Autors, 2026-10-28; ändert E34 und E35) | Rückmeldung des Autors: zu unruhig, zu viel auf einmal, wirkt nicht wie eine App. Aus drei Richtungen (ruhig dunkel, hell und klar, Sammelalbum) gewählt: **Sammelalbum**, danach an einer Klickprobe am Handy freigegeben. Die eigenen Karten sind die Bühne: Start ist eine Binder-Seite mit 3 × 3 Fächern, Wischen blättert, der Preis steht klein unter dem Bild (E11), Wert und Kartenzahl klein im Kopf. **Ruhe:** ohne gespeicherte Wahl kein Hintergrund (`mtg-hg` Standard „aus“, eine gespeicherte Wahl bleibt, die Auswahl im Fuß auch); kein gestaffelter Auftritt beim Öffnen einer Ansicht, keine Neigung zur Maus, keine hochlaufenden Zahlen beim Öffnen. Bewegung nur noch als Antwort auf eine Handlung: Knopf, gezählte Karte, Flug in „Karte für Karte“ (bleibt), Übernehmen; aus bei `prefers-reduced-motion` wie bisher. **Ton:** warm dunkel wie ein Einband, Werte aus der Probe: Grund `#14110d`, Seite `#1d1914`, Fach `#0e0c09` mit feiner Kante, Schrift `#f0e7d8`, gedämpft `#ab9f8a`; Hell bleibt wählbar und bekommt dieselbe Ordnung. Ausnahme vom Shape Lock („Kreise nur für Manasymbole“): der runde Scan-Knopf. Farbe bleibt Daten (E10), nichts auf und kein Filter für Kartenbilder (E11, E35) |
+| E41 | Fünf Ziele statt zehn Reiter | Eine Navigation für alle Breiten: **Binder** (Start), **Suchen** (heute „Karten“), **Scannen** (runder Knopf in der Mitte), **Decks**, **Mehr**. Am Handy (bis 768 px) unten, am Rechner oben wie heute. Sortieren, Verkaufen, Wünsche, Spiele, Serien, Hilfe, die heutige Übersicht („Wert und Plan“), Konten und Sicherung, Quellen und Drucken stehen auf der Seite „Mehr“, je Ziel eine Zeile mit einem Satz. Alle Adressen (`#/sort`, `#/sell` …) bleiben, Lesezeichen und die Verknüpfung „Karten erfassen“ im Manifest brechen nicht |
+| E42 | Kurz statt erklärt | Jede Ansicht zeigt offen höchstens einen Satz Erklärung; alles Weitere über `info()` und `TIP`, die zentral bleiben, und über die Hilfe. Einstellungen eines Ablaufs liegen in einem Blatt von unten, nicht über dem Ablauf. Werkzeuge zum Messen (Messbilder, Messreihen) gehören nicht in den normalen Ablauf: Sie stehen unter „Mehr“, „Für Entwickler“, und sind sonst unsichtbar. Gemessen wird im Handy-Format (375 × 812): Wörter, Knöpfe und Bildschirmhöhen bis zum Ziel einer Ansicht |
 
 ### Regeln für neue Netzquellen (aus dem Cloud-Plan, gilt weiter)
 1. Netz nur in `sources.py`; neuer Host → Eintrag in `GAP`, Cache-Dauer, Parsing an genau einer Stelle, Tests mit Fixtures (nie echtes Netz).
@@ -1651,6 +1661,155 @@ Vorgebauter Katalog mit Fingerabdrücken und Namen als Datei einer Veröffentlic
 **Abnahme:** Test `test_jeder_druck_waehlbar_und_deck_einscannen` (Druckwahl mit eigen, Suche auf dem Server mit Scan-Liste und Sammlung, alle Drucke einer Karte, Übernehmen als Deck, zweites Übernehmen, Umbenennen samt Commander, vorbehaltene Namen); `test_fertige_decks_einstellung_wirkt_auf_verfuegbar` nimmt einen Scan-Binder jetzt an.
 
 **Ergebnis (2026-10-18):** Gebaut, `python -m pytest -q` grün. **Offen (real, Autor):** ein Deck am Handy einscannen und übernehmen; auf der Scan-Liste einen Druck tauschen und ansehen, ob die nächsten Kopien folgen; ob die vielen Kacheln bei Karten mit sehr vielen Drucken (Sol Ring, Standardländer) am Handy noch gut zu bedienen sind.
+
+## Ausbau v8: Einfach am Handy (Stand 2026-10-28; E40 bis E42)
+
+**Herkunft:** Rückmeldung des Autors am 2026-10-28: Für den schnellen Griff zum Handy („kurz ein paar Karten scannen“) ist Pappenheimer nicht einfach genug, es steht zu viel Text da, und das Design überzeugt nicht. Bei der Auswahl nannte er drei Gründe (zu unruhig, zu viel auf einmal, wirkt nicht wie eine App) und wählte die Richtung „Sammelalbum“. Eine Klickprobe (eigene Seite außerhalb des Repositorys, Bilder aus der Beispielsammlung, die Kamera nur nachgespielt) hat er am 2026-10-28 freigegeben. Ihr Ablauf ist das Ziel dieses Ausbaus: Start mit Binder-Seiten, runder Scan-Knopf, Kamera sofort im Vollbild, Sprache, Zustand und Foil als Kürzel unter dem Bild, „Fertig (n)“, eine kurze Scan-Liste mit „In Sammlung übernehmen“, die neuen Karten im Binder markiert, alles Übrige unter „Mehr“.
+
+**Befund (gemessen am 2026-10-28 im Handy-Format 375 × 812, Beispielsammlung, Code von Phase 60):**
+- Navigation: 10 Reiter in drei Zeilen oben (`VIEWS`, `#nav` in `render`), „Scannen“ ist einer davon, nicht hervorgehoben.
+- Weg zur Kamera beim Erfassen: „Scannen“, dann „Erfassen“ (Standard der Ansicht ist „Prüfen“: `merk('mtg-scan-modus', 'pruefen', …)` in `viewScan`), dann **drei Bildschirmhöhen** scrollen bis „Kamera starten“ (bei 2.453 px). Davor stehen rund **260 Wörter** und **35 Knöpfe** (`#erf-setup` mit Erkennung, Katalog, Sets, Sprache, Zustand, Foil, Messbilder, Vorbereiten); die Seite hat insgesamt rund 470 Wörter, die Scan-Liste erklärt sich in rund 90 Wörtern.
+- Der Vollbild-Scanner (Phase 34) mit Schnellwahl und Blatt gibt es schon; er beginnt erst nach „Kamera starten“.
+- „Alle Karten, ohne Set“ braucht einmal die Fingerabdrücke aller Katalogbilder (`katVorbereiten`, am Rechner rund eine Viertelstunde); bis dahin gilt die Set-Wahl mit „Erkennung vorbereiten“. Das ist die eigentliche Hürde für „Handy raus, scannen“.
+- Hintergrund „Meine Karten“ (E35) liegt am Handy teils hinter Text und Zahlen; die Beispiel-Leiste steht auf jeder Ansicht mit vier Zeilen und einem Knopf.
+
+**Was gleich bleibt:** alle Funktionen und alle Adressen; die Scan-Liste mit Abnahme (Phase 29); Erkennung, Konsens und Schwellen (Phasen 24 bis 35, 56 bis 60) bleiben unberührt; `TIP`, `info()`, `icon()`, `pip()`; Hell und Dunkel; CSP und Sicherheitsregeln (keine Inline-Skripte, Formulare über `submit`); kein Build (E2).
+
+**Für jede Phase:** liest `CLAUDE.md`, E40 bis E42 und die eigene Phase; misst vorher und nachher im Handy-Format mit `tests/einfach_eval.js` (neu in Phase 61, von Hand in der Browser-Konsole wie die anderen Messungen: je Ansicht Wörter, Knöpfe und Bildschirmhöhen bis zum Ziel, Zahl der Ziele in der Navigation, Wörter bis zur laufenden Kamera); baut, bis `.venv/Scripts/python -m pytest -q` grün ist; prüft die Ansicht im Browser bei 375 px und am Rechner; trägt unter der Phase ein **Ergebnis** mit der Messung ein, zieht `CLAUDE.md` nach und committet. Vor jeder neuen Klasse mit `grep` prüfen, ob app.js oder style.css den Namen schon vergeben haben (E34). **Reihenfolge:** 61 bis 65; 61 ist klein und sofort spürbar, 62 schafft den Rahmen für 63 und 64.
+
+### Phase 61 – Ruhe (E40)
+**Ziel:** Die App wirkt sofort ruhiger, ohne dass sich ein Ablauf ändert.
+- **Hintergrund:** `hgPref` ohne gespeicherte Wahl gibt `aus` statt `karten`; `kartenHg` lädt dann nichts (kein Abruf der Kartenliste). Eine gespeicherte Wahl bleibt, die Auswahl im Fuß bleibt. Der Test aus Phase 47/E35 (`|| 'karten'`, `hgPref() !== 'karten'`) wird auf den neuen Standard umgestellt.
+- **Bewegung beim Öffnen:** `animateIn` und `#main.enter` (gestaffelter Auftritt) entfallen, ebenso die Neigung (`pointermove` mit `--rx`/`--ry` auf `.grid > .card` und `.dtop .img`) und das Hochlaufen der Zahlen beim Öffnen einer Ansicht (`zaehlen` nur noch nach einer Handlung, etwa die Summe unter Verkaufen von Haken zu Haken). Bleiben: `bump` (Zahl springt bei einer Handlung), Federn der Knöpfe und Dialoge, „Karte für Karte“ unter Sortieren.
+- **Beispiel-Leiste** (`beispielLeiste`, `#beispiel-leiste`): eine Zeile „Beispielsammlung · Entfernen“, die Erklärung in `TIP.beispiel`.
+- **Messung:** `tests/einfach_eval.js` anlegen und den Befund oben als Ausgangswerte festhalten (dieselben Zahlen sollen herauskommen).
+- **Tests:** Standard des Hintergrunds; kein `animateIn`-Aufruf in `render`; die Beispiel-Leiste nennt die Aktionen wie bisher (`data-beispiel`).
+
+**Abnahme:** ein neuer Browser sieht keinen Hintergrund und keine Bewegung beim Öffnen einer Ansicht; eine gespeicherte Wahl „Meine Karten“ wirkt weiter · Beispiel-Leiste in einer Zeile · alle Tests grün. **Real (Autor):** am Handy durch die Ansichten tippen: ruhig genug?
+
+**Ergebnis (2026-10-28):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (279), neuer Test `test_ruhe_kein_hintergrund_keine_bewegung_beim_oeffnen`. `hgPref` ohne Wahl `aus`; `animateIn`, `#main.enter` samt gestaffeltem Auftritt, `tile-in` der Kacheln, wachsende Balken der Übersicht, Neigung (`--rx`/`--ry`) und `neueAnsicht` entfallen; `zaehlen` zeigt beim ersten Mal (kein `data-z`) gleich den Endwert, danach läuft die Zahl wie bisher. Beispiel-Leiste: eine Zeile `.beispiel-zeile` mit `info('beispiel')` und dem Link „Entfernen“ (`data-beispiel="entfernen"`). Im Browser geprüft (Probe-Instanz mit der Beispielsammlung, 375 × 812 und am Rechner): neuer Browser `data-hg=aus`, kein Abruf `cards?sort=added`, nach dem Öffnen keine laufende Animation; mit gespeichertem `mtg-hg=karten` neun Karten im Hintergrund; Summe unter Verkaufen steht beim Öffnen sofort.
+Messung mit `tests/einfach_eval.js` (zählt nur sichtbaren Text in `#main`; vorher = Code von Phase 60, beide mit geladenem Katalog, ohne vorbereitete Fingerabdrücke):
+
+| 375 × 812 | vorher | nachher |
+|---|---|---|
+| Ziele in der Navigation | 10 | 10 |
+| Scannen: Tipps bis „Kamera starten“ | 2 | 2 |
+| Scannen: Wörter / Knöpfe davor | 242 / 28 | 204 / 28 |
+| Scannen: Oberkante „Kamera starten“ | 2.387 px (2,9 Höhen) | 2.126 px (2,6 Höhen) |
+| Scannen: Wörter auf der Seite | 421 | 383 |
+| Übersicht: Seitenhöhe | 5,9 Höhen | 5,6 Höhen |
+
+Die Ausgangswerte liegen nah am Befund (260 Wörter, 35 Knöpfe, 2.453 px); der Rest erklärt sich aus dem, was das Skript als sichtbar zählt, und dem Stand der Erkennung. Der Gewinn kommt allein aus der Beispiel-Leiste (rund 40 Wörter, 260 px); der Ablauf bis zur Kamera ist erst Sache von Phase 63. Messung im verdeckten Tab: das Skript wartet höchstens 3 s auf laufende Animationen. **Offen (real, Autor):** am Handy durch die Ansichten tippen: ruhig genug? Das langsam drehende Logo (E35) blieb, es war nicht Teil der Phase.
+
+### Phase 62 – App-Rahmen mit fünf Zielen (E41)
+**Ziel:** Die App fühlt sich am Handy an wie eine App: unten fünf Ziele, alles andere unter „Mehr“.
+- **`VIEWS`** bekommt je Eintrag seinen Platz: `haupt` (Binder, Suchen, Decks, Mehr), `mehr` (Sortieren, Verkaufen, Wünsche, Spiele, Serien, Hilfe, „Wert und Plan“, Konten und Sicherung, Quellen, Drucken) oder versteckt wie heute (`binder`, `proxy`, `rueckblick`, `bericht`, `messbilder`). `#nav` zeigt die vier Ziele und in der Mitte den Scan-Knopf (`#/scan?modus=erfassen`).
+- **Handy** (bis 768 px): die Navigation unten fest, mit `env(safe-area-inset-bottom)`, Inhalt mit Abstand darüber; im Vollbild-Scanner (`body.vollbild`) verdeckt. **Rechner:** oben wie heute, mit den fünf Zielen.
+- **`#/mehr`** (`viewMehr`, neu): je Ziel eine Zeile mit Icon über `icon()`, Name und einem Satz (Sätze in `TIP`); darunter „Für Entwickler“ (E42) mit den Messbildern. Der Fuß wird kürzer, die Links auf Konten, Quellen und Drucken stehen in „Mehr“.
+- **Übersicht:** `viewHome` bleibt der Code, die Ansicht heißt „Wert und Plan“ (`#/wert`, neu, zeigt `viewHome`); `#/` zeigt bis Phase 64 weiter die Übersicht.
+- **Tests:** genau fünf Ziele in der Navigation; jede nicht versteckte Ansicht aus `VIEWS` ist über die Navigation oder `#/mehr` erreichbar (keine verwaiste); alle bisherigen Adressen liefern dieselbe Ansicht; Manifest-Verknüpfung unverändert.
+
+**Abnahme:** fünf Ziele statt zehn Reiter; jede Ansicht in höchstens zwei Tipps erreichbar; die Navigation verdeckt am Handy keinen Inhalt und keinen Knopf (bei 375 px geprüft, auch mit geöffnetem Dialog) · alle Tests grün.
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (280), neuer Test `test_app_rahmen_fuenf_ziele`. `VIEWS` trägt je Eintrag Titel, Ansicht, Platz (`haupt`, `scan`, `mehr`, `entwickler`, ohne = nur über Links) und Icon; `navHtml` zeigt Binder (`#/`, bis Phase 64 die Übersicht), Suchen (`#/cards`), den runden Scan-Knopf (`.nav-scan`, `#/scan?modus=erfassen`), Decks und Mehr; eine Ansicht von „Mehr“ markiert „Mehr“. `viewMehr` (`#/mehr`, Klassen `.mliste`, `.mzeile`) baut die Zeilen aus `VIEWS`, die Sätze stehen in `TIP.mehr…`; „Für Entwickler“ mit den Messbildern. `#/wert` zeigt `viewHome`. Neue Phosphor-Icons `camera`, `dots`, `heart`, `dice`, `chart`, `gear`. Fuß ohne die Links auf Konten und Drucken, die Hilfe sagt „unter Mehr“. Am Handy (bis 768 px) steht `#nav` unten fest mit `env(safe-area-inset-bottom)`; `header.top` verliert dort `backdrop-filter` (sonst hängt die feste Navigation am Kopf), `body` bekommt Abstand unten, Toast und „Übernehmen“ (`.erf-ab`) stehen darüber; im Scanner (`body.vollbild`) ist der Kopf samt Navigation verdeckt. Im Browser geprüft (Probe-Instanz mit der Beispielsammlung, 375 × 812 und 1280 × 800): Seitenende und Fuß enden über der Leiste, das Kartendetail (Dialog) liegt über ihr, keine waagerechte Scrollleiste. `tests/einfach_eval.js` klickt jetzt `#nav a[href^="#/scan"]` und misst „Mehr“ mit.
+
+| 375 × 812 | Phase 61 | nachher |
+|---|---|---|
+| Ziele in der Navigation | 10 | 5 |
+| Scannen: Tipps bis „Kamera starten“ | 2 | 1 |
+| Scannen: Oberkante „Kamera starten“ | 2.126 px | 2.126 px |
+| Mehr: Wörter / Knöpfe / Höhen | – | 109 / 11 / 2,1 |
+
+Die Wörter vor der Kamera zählte das Skript diesmal mit 258 statt 204 bei gleicher Lage des Knopfs; der Ablauf bis zur Kamera ist Sache von Phase 63. **Offen (real, Autor):** am Handy die untere Leiste im installierten App-Modus (Vollbild, Kerbe unten) ansehen.
+
+### Phase 63 – Schnell-Scan (E42)
+**Ziel:** Vom Binder bis zur laufenden Kamera ein Tipp, kein Scrollen, kein Lesen.
+- **Ein Tipp:** Der Scan-Knopf öffnet Erfassen und startet die Kamera sofort, am Handy im Vollbild (`scanStart`, `body.vollbild`), mit den zuletzt benutzten Vorgaben (`mtg-erfassen`). Ob der Browser die Kamera nach dem Wechsel der Ansicht ohne weitere Geste startet, am Gerät prüfen (Chrome und Samsung Internet unter Android, Safari unter iOS); wo nicht, ist der einzige Inhalt ein großer Knopf „Kamera an“.
+- **Erkennung von selbst gewählt:** „Alle Karten, ohne Set“, wenn Katalog und Fingerabdrücke da sind (`erfKann`), sonst die zuletzt gewählten Sets; fehlt beides, ein Satz und ein Knopf. Die Erkennung selbst bleibt, wie sie ist.
+- **Vorbereiten im Hintergrund:** Läuft die App am Rechner im eigenen Fenster (Phase 55) und ist der Katalog da, rechnet sie die fehlenden Fingerabdrücke (`katVorbereiten`) von selbst in Paketen, wenn sonst nichts zu tun ist (`requestIdleCallback`, abbrechbar, Fortschritt still unter „Mehr“); so muss das Handy nichts vorbereiten. Schalter in den Einstellungen des Scanners, Standard an nur im App-Fenster am Rechner. Vorher messen: Rechenzeit, ob der Rechner dabei bedienbar bleibt; Bilder kommen wie bisher vom Bild-CDN (kein Limit, E26).
+- **Einstellungen im Blatt:** `#erf-setup` (Erkennung, Sets, frei im Bild, Schnell zählen, Namen lesen, deutsche Namen, Sprache, Zustand, Foil) wandert in ein Blatt hinter einem Zahnrad, auch außerhalb des Vollbilds (das Blatt aus Phase 34 wiederverwenden, `blatt`). Die Seite selbst zeigt nur eine Zeile mit den Vorgaben, die Scan-Liste und „Übernehmen“.
+- **Prüfen** wird ein Umschalter oben im Scanner statt des Standards der Ansicht; `#/scan?modus=pruefen` bleibt.
+- **Messbilder** raus aus Erfassen (E42): Schalter „Messbilder speichern“ und „Karten stecken in Hüllen“ nur, wenn „Für Entwickler“ an ist (`mtg-entwickler` im Browser, wie `mtg-scan-schnell`).
+- **Scan-Liste:** der erklärende Absatz wird ein Satz plus `info()`; „In Sammlung übernehmen“ groß am Ende, „Weiter scannen“ daneben. „Fertig (n)“ im Vollbild führt zur Liste.
+- **Tests:** die Messbilder-Schalter erscheinen nur mit „Für Entwickler“; die Einstellungen stehen im Blatt; der Scan-Knopf führt nach Erfassen; die Erkennungs-Tests der Phasen 24 bis 60 bleiben unverändert grün.
+
+**Abnahme (Handy-Format, `einfach_eval.js`):** vom Binder zur laufenden Kamera **ein Tipp, null Scrollen** (heute zwei Tipps und drei Bildschirmhöhen) · im Scanner höchstens 25 Wörter sichtbar (heute rund 260 bis zur Kamera) · Scan-Liste bis „Übernehmen“ ohne Erklärabsatz · alle Tests grün. **Real (Autor):** Handy aus der Tasche, zehn Karten erfassen und übernehmen, Zeit notieren; dabei auf alles achten, wofür er lesen oder suchen musste.
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (281), neuer Test `test_schnell_scan`. Der Scan-Knopf der Navigation setzt `scanLos` (ein `click`-Listener auf `.nav-scan`; steht die Ansicht schon da, startet er die Kamera direkt), `viewErfassen` und `viewScan` lesen und löschen es: Ist die Erkennung bereit, startet die Kamera sofort, sind Sets gewählt, aber im Browser noch nicht vorbereitet, läuft erst `erfVorbereiten` von selbst (die Fingerabdrücke liegen meist schon auf dem Server), dann die Kamera; ein Neuzeichnen startet nie. Erfassen ist der Standard von `#/scan`, `mtg-scan-modus` entfällt, Prüfen ist ein Umschalter im Kopf und im Vollbild oben (läuft die Kamera, läuft sie im anderen Modus weiter). Erkennung: ohne eigene Wahl (`erkennung` in `mtg-erfassen`, nur durch einen Klick gesetzt) „Alle Karten“, sobald `kat.fertig > 0`, sonst die Sets; ist nichts eingerichtet, stehen nur der Satz „Erst einrichten, welche Karten die Kamera kennt.“ und der Knopf „Einrichten“ da. `#erf-setup` ist kein `details` mehr, sondern immer ein Blatt von unten (auch am Rechner, `blatt`, `#voll-schleier` überall), auf der Seite steht nur die Zeile `.erf-zeile` mit den Vorgaben und „Einstellungen“; nach dem Vorbereiten und beim Start der Kamera schließt es sich. Messbilder-Schalter, `#cam-mess` und der Abruf `messbilder` nur mit „Für Entwickler“ (`mtg-entwickler`, Schalter unter Mehr samt `TIP.entwickler`; ohne ihn ist `erf.mess` aus, auch wenn es gespeichert war; der Link auf die Messbilder steht unter Mehr nur dann). Scan-Liste: leer ein Satz statt `TIP.scanliste` (bleibt hinter `info()`), am Ende „Weiter scannen“ (`data-weiter`) und „In Sammlung übernehmen (n)“; im Vollbild heißt „Liste“ jetzt „Fertig (n)“ (`#voll-fertig`).
+Messung mit `tests/einfach_eval.js` (375 × 812, Probe-Instanz mit Beispielsammlung, Set CC1 vorbereitet):
+
+| 375 × 812 | Phase 62 | nachher |
+|---|---|---|
+| Scannen: Tipps bis „Kamera starten“ | 1 | 1 (der Tipp ruft die Kamera schon auf) |
+| Scannen: Wörter / Knöpfe davor | 258 / 29 | 18 / 3 |
+| Scannen: Oberkante „Kamera starten“ | 2.126 px (2,6 Höhen) | 425 px (0,5 Höhen, kein Scrollen) |
+| Scannen: Wörter auf der Seite | 437 | 114 |
+
+Im Vollbild (nachgestellt mit `body.vollbild` ohne Kamera) bleiben rund 14 Wörter sichtbar: Summe der Liste, Prüfen, Fertig, Status, „+1“ und die Kürzel. Im Browser geprüft: ein Tipp auf den Scan-Knopf führt vom Binder (nach Neuladen) über das Vorbereiten von CC1 bis zum Aufruf der Kamera, den die Vorschau hier blockt; Blatt am Handy und am Rechner; Entwickler-Schalter an und aus. **Nachgereicht (2026-10-29): Vorbereiten im Hintergrund.** Der Server öffnet das App-Fenster mit `/?fenster=1`, die Seite merkt es sich für dieses Fenster in `sessionStorage` (`FENSTER`; ein Feld in `/api/session` hätte auch ein Handy am selben Rechner als App-Fenster gemeldet). Schalter „Im Hintergrund vorbereiten“ in den Einstellungen des Scanners (`mtg-vorbereiten`, `TIP.hgvorbereiten`), ohne Wahl an nur im App-Fenster. `katImHintergrund` startet nach der Anmeldung `katVorbereiten(true)`, wenn der Katalog da ist und Bilder fehlen (lädt nie den Katalog selbst); `fpJob` wartet vor jedem Bild auf `leerlauf`: nie bei laufender Kamera, sonst gibt ein `requestIdleCallback` `LEERLAUF_MS` (1 s) frei. Fehler bleiben still, „Mehr“ zeigt den Stand in einer Zeile. Gemessen in der Probe-Instanz mit dem echten Katalog (66.820 Bilder) am Rechner, je rund 40 bis 70 s:
+
+| Lauf | Bilder/s | alle | lange Aufgaben | Verzögerung der Seite (95 % / höchstens) |
+|---|---|---|---|---|
+| je Bild ein `requestIdleCallback` (erster Entwurf) | 5,5 | gut 3 h | 0 | 9 / 14 ms |
+| ungebremst (Knopf „Jetzt vorbereiten“) | 255 | gut 4 min | 0 | 9 / 18 ms |
+| Leerlauf gibt 1 s frei (gebaut) | 87 | rund 13 min | 0 | 9 / 17 ms |
+
+Der Rechner bleibt also in allen drei Fällen bedienbar; das Netz zum Bild-CDN war hier schnell, langsameres Netz dauert länger. **Offen (real, Autor):** ob die Kamera nach dem Tipp ohne weitere Geste startet (Chrome und Samsung Internet unter Android, Safari unter iOS); zehn Karten erfassen und übernehmen, Zeit notieren.
+
+### Phase 64 – Sammelalbum als Start (E40)
+**Ziel:** Wer die App öffnet, sieht seine Karten wie in einem Binder.
+- **`#/`** wird der Binder (`viewAlbum`, neu): Binder-Seiten mit 3 × 3 Fächern, Wischen blättert (`scroll-snap`), Punkte für die Seiten, „Seite n von m“, freie Fächer auf der letzten Seite. Reihenfolge wie gescannt (`cards?sort=added`, wie `kartenHg`), oben eine Zeile zum Wechseln des Binders. Bilder `loading="lazy"`, nie Text auf dem Bild, Preis und Anzahl darunter (E11).
+- **Kopf:** „Meine Karten“, Wert und Kartenzahl klein rechts; liegt etwas auf der Scan-Liste, eine Zeile „Scan-Liste: n Karten“; ein Hinweis aus „Als Nächstes“ höchstens als eine Zeile mit Link nach „Wert und Plan“.
+- **Karte antippen:** das Kartendetail wie heute, am Handy als Blatt von unten.
+- **Nach dem Übernehmen** springt der Binder auf die Seite der neuen Karten und markiert sie (Rahmen, nicht auf dem Bild), bis die Ansicht verlassen wird.
+- **Ton:** die Werte aus E40 als Tokens oben in `style.css` (Dunkel), Hell mit derselben Ordnung (Einband, Seite, Fach); die Tokens des Rests ziehen mit, Farben für Daten bleiben.
+- **Leere Sammlung:** wie heute `welcome` mit Beispiel und Hinzufügen.
+- **Tests:** `#/` liefert den Binder; die Seiten haben neun Fächer; eine leere Sammlung zeigt `welcome`; die Übersicht bleibt unter `#/wert` erreichbar.
+
+**Abnahme:** Start zeigt bei 1.000 Karten die erste Seite ohne spürbares Warten (Messung: Zeit bis zum ersten Bild) · keine waagerechte Scrollleiste der Seite bei 375 px · alle Tests grün. **Real (Autor):** gefällt der Start am Handy so wie in der Probe?
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (282), neuer Test `test_sammelalbum_als_start`. `#/` zeigt `viewAlbum`: Seiten mit 3 × 3 Fächern (`.album-seite`, `.album-fach`, alle Klassen mit `album-`), Wischen über `scroll-snap`, die zuletzt gescannten Karten vorn (`cards?sort=added`, wie geplant), „Seite n von m“ und Punkte bis `ALBUM_PUNKTE` (12) Seiten, freie Fächer auf der letzten Seite. Die erste Seite kommt mit einem Abruf von `ALBUM_LADEN` (117) Karten, ohne auf `summary` zu warten; weitere Abrufe beim Blättern (diese und die nächste Seite). Die ersten zwei Seiten laden ihre Bilder sofort (in der verdeckten Vorschau lud `loading="lazy"` gar nicht), der Rest mit `lazy`. Kopf: „Meine Karten“ und die Binder-Wahl (`#/?binder=…`), darunter eine Zeile mit Kartenzahl und Wert, „Scan-Liste: n Karten“ (neues Feld `scanliste` in `/api/summary`) und dem ersten Punkt aus „Als Nächstes“ mit Link nach „Wert und Plan“ (dafür `todoListe(s)`, das `viewHome` jetzt auch nutzt). Nie Text auf dem Bild: Preis und Anzahl in `.album-cap` darunter. Nach „In Sammlung übernehmen“ geht es zum Binder des Scans, die neuen Karten tragen einen Rahmen (`.album-karte.neu`, outline), bis die Ansicht verlassen wird; der Binder blättert zur Seite der ersten. Kartendetail am Handy als Blatt von unten (`dialog.sheet`, `@keyframes blatt-hoch`). Ton: Dunkel mit den Werten aus E40 (Grund `#14110d`, Seite `#1d1914`, Fach `--album-fach` `#0e0c09`, Schrift `#f0e7d8`, gedämpft `#ab9f8a`), die übrigen Flächen, Ränder und Eingaben warm nachgezogen; Hell in derselben Ordnung (Einband `#ece4d6`, Seite `#faf6ee`, Fach `#e4dacb`); alle Schriften ≥ 4,5:1, Eingaberahmen ≥ 3:1 auf ihren Flächen (nachgerechnet); `theme-color` und Manifest auf `#14110d`. Die Seite ist so breit, wie die Höhe des Fensters erlaubt (am Handy über der Navigation, am Rechner im Fenster; Schätzung im CSS).
+Messung in einer Probe-Instanz mit 1.000 verschiedenen Karten (Beispielsammlung, mit neuen Kennungen aufgefüllt, echte Bilder vom CDN), 375 × 812, Laden der Seite:
+
+| | Zeit nach Start der Seite |
+|---|---|
+| Kartenabruf der ersten Seite | 220 bis 273 ms |
+| erstes Bild da | 276 ms (das Bild lag schon im Cache) |
+| Übersicht (Wert, Hinweis) | 372 ms |
+
+Keine waagerechte Scrollleiste bei 375 px (Breite der Seite = 375), die Binderseite samt „Seite 1 von 112“ endet über der Navigation (744 bzw. 753 px), am Rechner (1280 × 800) im Fenster. Im Browser geprüft: Blättern auf Seite 21 und 112 lädt nach, letzte Seite mit 1 Karte und 8 freien Fächern, Binder-Wahl, Markierung nach dem Übernehmen (nachgestellt) und ihr Verschwinden, Kartendetail von unten, `#/wert`, Hell. In der verdeckten Vorschau laufen weder Scroll-Ereignisse noch Animationen; beides wurde von Hand ausgelöst bzw. beendet. **Offen (real, Autor):** gefällt der Start am Handy so wie in der Probe? Wischen mit dem Finger und das Nachladen beim Blättern auf dem echten Gerät.
+
+### Phase 65 – Text kürzen in allen Ansichten (E42)
+**Ziel:** Keine Ansicht beginnt mit einem Absatz.
+- Je Ansicht höchstens ein Satz offen; was erklärt, wandert nach `TIP` (über `info()`) oder in die Hilfe. `note()`-Hinweise: Titel und ein Satz. Keine Funktion fällt weg.
+- Reihenfolge nach dem Befund von `einfach_eval.js`: zuerst die Ansichten mit den meisten Wörtern vor ihrem Ziel.
+- **Tests:** die bestehenden Tests, die Texte prüfen (`TIP`, Hinweise der Einrichtung, Fan Content Policy), bleiben grün oder ziehen mit.
+
+**Abnahme:** Tabelle je Ansicht vorher und nachher (Wörter bis zum Ziel), im Mittel mindestens halbiert · Hilfe und `TIP` enthalten alles, was vorher offen stand · alle Tests grün.
+
+**Ergebnis (2026-10-29):** Gebaut, `.venv/Scripts/python -m pytest -q` grün (283), neuer Test `test_text_kurz_alles_hinter_info`; nachgezogen `test_update_oberflaeche_knopf_nur_fuers_hauptkonto` und `test_qr_oberflaeche_nur_mit_erreichbarer_adresse` (die Sätze stehen jetzt in `TIP.update`, `TIP.handy`, `TIP.handylokal`) und `test_quellen_oberflaeche_hinweise_und_seite` (der EDHREC-Hinweis steht in `todoListe`). Je Ansicht ein Satz im Kopf, der Rest wörtlich in `TIP` hinter `info()`: neu `hauptkonto`, `konten`, `handy`, `handylokal`, `sicherung`, `update`, `verschl`, `decksneu`, `verkaufen`, `preisbewegung`, `pruefen`, `fpvorbereiten`, `spiele`, `sortieren`, `serien`, `drucken`, `karten`, `wuensche`, `selbstwaehlen`; ergänzt `zweiterordner`, `proxyblatt`, `bracketcheck`, `combos`, `verlauf`, `tisch`, `staple`, `fertigedecks`. Hinweise (`note`) mit Titel und einem Satz (`VERSCHL`, Combos, Erkennungsbilder, Sicherung außer Haus, EDHREC aus). Die Seite „Quellen“ klappt je Quelle ein, was sie erfährt, wie oft und die Bedingungen (`details.mehr`); den Hinweis zu EDHREC zeigt beim Einschalten weiter `confirm`. Die Erklärung unter der Kamera ist ein Satz mit `info()` auf `TIP.scan`, `erfassen` oder `erfassenAlle`. Gestrichen ohne Ersatz im `TIP` sind nur Sätze, die schon woanders offen stehen oder in der Hilfe: „Auf der Seite Quellen … einschalten“ (der Knopf „Quellen“ steht daneben, die Hilfe erklärt es unter „Quellen“), „Von jeder Karte bleibt mindestens eine bei dir“ in „Als Nächstes“ (steht im Kopf von Verkaufen) und „Noch nichts.“.
+Messung im Handy-Format (375 × 812, Probe mit der Beispielsammlung, EDHREC aus): sichtbare Wörter in Absätzen und Hinweisen (`p`, `.note`, `dd`), das ist der Erklärtext; die Hilfe ist das Ziel der Texte und zählt nicht mit, „Mehr“ hat keine Absätze. Die Gesamtzahl je Ansicht wird von Kartennamen und Preisen bestimmt und taugt dafür nicht.
+
+| Ansicht | vorher | nachher | Anteil |
+|---|---|---|---|
+| Quellen | 554 | 78 | 0,14 |
+| Konten und Sicherung | 519 | 143 | 0,28 |
+| Decks | 150 | 72 | 0,48 |
+| Verkaufen | 116 | 74 | 0,64 |
+| Prüfen | 95 | 31 | 0,33 |
+| Wert und Plan | 91 | 55 | 0,60 |
+| Erfassen | 80 | 33 | 0,41 |
+| Spiele | 53 | 30 | 0,57 |
+| Wünsche | 47 | 21 | 0,45 |
+| Sortieren | 43 | 18 | 0,42 |
+| Serien | 29 | 13 | 0,45 |
+| Drucken | 22 | 11 | 0,50 |
+| Karten | 20 | 8 | 0,40 |
+| Binder | 9 | 9 | 1,00 |
+| **Summe / Mittel** | **1.828** | **596** | **0,48** |
+
+Bei Verkaufen und „Wert und Plan“ stehen die übrigen Wörter vor allem in Zahlen und Regeln (Behalten-Regel, Wert, Verkaufsposten); der Binder hat nur seine Zeile mit Wert und Hinweis. `tests/einfach_eval.js` misst jetzt auch Binder, „Wert und Plan“, Prüfen, Konten, Quellen und Drucken. **Offen (real, Autor):** am Handy durch alle Ansichten: fehlt irgendwo eine Erklärung, die vorher half?
+
+**Offen bleibt (Ausbau v8):** Scan aus einer Installation ohne Server am Handy (Phase 51), Bewegung beim Blättern im Binder (erst nach Rückmeldung), die englische Oberfläche (Phase 54) mit den kürzeren Texten.
 
 ## Nicht jetzt
 Neuigkeiten von der App per Telegram oder Hermes verschicken (Fragen an den Hermes-Agenten gehen seit E19) · Partner-/Background-Commander beim Deckbau (fertige Decks dürfen zwei haben) · Mana-Kurven-**Optimierung** (Analyse und Karsten-Sollwerte kommen in Phase 15) · Rück-Import aus Moxfield (Textlisten-Import gibt es) · Direkt-Upload zu Cardmarket oder KEEPSEVEN (Cardmarket nimmt keine neuen API-Nutzer an; Listen-Export: Phase 17) · eigenes Bestandsbuch für ManaBox-Binder (E7; für Scan-Binder gilt E18) · Laya als Anfrage-Router · LLM als Deckbauer oder Regel-Auskunft (E15)

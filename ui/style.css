@@ -25,30 +25,31 @@
 :root {
   color-scheme: dark;
   /* Farben: Bedienung */
-  --color-primary:         #efeee8;   /* Hauptaktion, Fokus, aktiver Reiter */
-  --color-primary-hover:   #fbfaf5;
-  --color-on-primary:      #141413;
-  --color-secondary:       #22211e;   /* Zweitaktionen, Marken */
-  --color-secondary-hover: #2c2b27;
+  --color-primary:         #f0e7d8;   /* Hauptaktion, Fokus, aktiver Reiter */
+  --color-primary-hover:   #fbf4e8;
+  --color-on-primary:      #1a160f;
+  --color-secondary:       #27221b;   /* Zweitaktionen, Marken */
+  --color-secondary-hover: #312a21;
   --color-accent:          var(--color-primary);
-  --color-background:      #0e0e0d;
-  --color-surface:         #171715;   /* erhöhte Flächen */
-  --color-surface-alt:     #201f1c;   /* Hover in Listen */
-  --color-surface-hover:   #292825;
-  --color-surface-sunken:  #121211;   /* Eingabefelder */
-  --color-overlay:         rgba(14, 14, 13, .84);
-  --color-backdrop:        rgba(6, 6, 5, .62);
-  --color-border:          rgba(255, 250, 235, .075);
-  --color-border-strong:   rgba(255, 250, 235, .15);
-  --color-border-hover:    rgba(255, 250, 235, .28);
-  --color-border-input:    #6b6a63;   /* 3:1 auf Fläche */
-  --color-border-input-hover: #8a8880;
-  --color-text:            #efeee8;
-  --color-text-secondary:  #c2c0b6;
-  --color-text-muted:      #9a988e;
+  --color-background:      #14110d;   /* Einband (E40) */
+  --color-surface:         #1d1914;   /* erhöhte Flächen, Binderseite (E40) */
+  --color-surface-alt:     #26211a;   /* Hover in Listen */
+  --color-surface-hover:   #2f2920;
+  --color-surface-sunken:  #18140f;   /* Eingabefelder */
+  --color-overlay:         rgba(20, 17, 13, .86);
+  --color-backdrop:        rgba(8, 6, 4, .62);
+  --color-border:          rgba(255, 240, 215, .08);
+  --color-border-strong:   rgba(255, 240, 215, .16);
+  --color-border-hover:    rgba(255, 240, 215, .3);
+  --color-border-input:    #7a6f5f;   /* 3:1 auf Fläche */
+  --color-border-input-hover: #998d78;
+  --color-text:            #f0e7d8;
+  --color-text-secondary:  #cfc3b0;
+  --color-text-muted:      #ab9f8a;
   --color-warning:         #e3a33b; --color-warning-text: #f3d29d; --color-warning-bg: #241f17; --color-warning-border: rgba(227, 163, 59, .4);
   --color-danger:          #e0665a; --color-danger-text: #ffb4aa; --color-danger-bg: #261b19; --color-danger-border: rgba(224, 102, 90, .45);
-  --tip-bg: #2c2b27; --tip-text: #efeee8; --tip-border: rgba(255, 250, 235, .16);
+  --tip-bg: #2f2920; --tip-text: #f0e7d8; --tip-border: rgba(255, 240, 215, .16);
+  --album-fach: #0e0c09;   /* leeres Fach der Binderseite (E40) */
   /* Farben: Daten. Fläche (Balken, Legende) und Schrift (Marken) je Stapel */
   --data-deck: #3987e5; --data-keep: #d95926; --data-sell: #199e70; --data-bulk: #c8901f;
   --ink-deck:  #9cc3f4; --ink-keep:  #f4ad8f; --ink-sell:  #7fd6ae; --ink-bulk:  #e9c274;
@@ -111,26 +112,27 @@
 /* Helle Darstellung: gleiche Hierarchie, Kontraste neu gemessen */
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-primary:         #1c1c1a;
-  --color-primary-hover:   #34332f;
-  --color-on-primary:      #f7f7f4;
-  --color-secondary:       #e9e8e3;
-  --color-secondary-hover: #dfded8;
-  --color-background:      #f3f3f0;
-  --color-surface:         #fbfbf9;
-  --color-surface-alt:     #e9e8e3;
-  --color-surface-hover:   #dfded8;
-  --color-surface-sunken:  #fdfdfb;
-  --color-overlay:         rgba(243, 243, 240, .86);
+  --color-primary:         #1f1a13;
+  --color-primary-hover:   #383024;
+  --color-on-primary:      #faf6ee;
+  --color-secondary:       #e8dfd0;
+  --color-secondary-hover: #ddd3c2;
+  --color-background:      #ece4d6;   /* Einband */
+  --color-surface:         #faf6ee;   /* Seite */
+  --color-surface-alt:     #e8dfd0;
+  --color-surface-hover:   #ddd3c2;
+  --color-surface-sunken:  #fdfaf4;
+  --color-overlay:         rgba(236, 228, 214, .88);
+  --album-fach:            #e4dacb;   /* Fach */
   --color-backdrop:        rgba(28, 27, 24, .34);
   --color-border:          rgba(40, 36, 20, .1);
   --color-border-strong:   rgba(40, 36, 20, .18);
   --color-border-hover:    rgba(40, 36, 20, .34);
-  --color-border-input:    #858379;
-  --color-border-input-hover: #64625a;
-  --color-text:            #1c1c1a;
-  --color-text-secondary:  #46453f;
-  --color-text-muted:      #64625a;
+  --color-border-input:    #857a68;
+  --color-border-input-hover: #665b4a;
+  --color-text:            #1f1a13;
+  --color-text-secondary:  #4a4134;
+  --color-text-muted:      #665b4a;
   --color-warning:         #a86b00; --color-warning-text: #6e4600; --color-warning-bg: #fbf1dc; --color-warning-border: rgba(168, 107, 0, .35);
   --color-danger:          #c2412f; --color-danger-text: #9a2d1f; --color-danger-bg: #fbe9e6; --color-danger-border: rgba(194, 65, 47, .35);
   --tip-bg: #2c2b27; --tip-text: #f3f2ec; --tip-border: transparent;
@@ -212,6 +214,16 @@ nav#nav a { text-decoration: none; color: var(--color-text-secondary); font-weig
   transition: background-color var(--transition-fast), color var(--transition-fast), transform .3s var(--ease-spring); }
 nav#nav a:hover { color: var(--color-text); background: var(--color-surface-alt); transform: translateY(-1px); }
 nav#nav a[aria-current] { color: var(--color-text); background: var(--color-secondary); box-shadow: inset 0 0 0 1px var(--color-border-strong); }
+nav#nav a { display: inline-flex; align-items: center; gap: var(--space-2); }
+/* Scan-Knopf (E40, E41): der einzige runde Knopf außer den Manasymbolen */
+.nav-scan b { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-on-primary); }
+/* Seite „Mehr“: je Ziel eine Zeile */
+.mliste { display: grid; gap: 2px; }
+.mzeile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); text-decoration: none; color: var(--color-text);
+  transition: background-color var(--transition-fast); }
+.mzeile:hover { background: var(--color-surface-alt); }
+.mzeile .min0 { display: grid; gap: 2px; }
+.mzeile .muted { font-size: var(--text-sm); }
 /* Sammlung wählen und Abmelden (nur mit Konten, Phase 13) */
 .who { display: flex; align-items: center; gap: var(--space-2); }
 .who:empty { display: none; }
@@ -353,7 +365,6 @@ h3 { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin: var
 .legend > div { display: grid; gap: var(--space-1); align-content: start; }
 .anteil { height: .75rem; border-radius: 2px; background: var(--color-surface-alt); margin-bottom: var(--space-2); }
 .anteil span { display: block; height: 100%; width: var(--w); border-radius: 2px; transform-origin: left; }
-#main.enter .anteil span { animation: grow .9s var(--ease-out) .3s both; }
 @keyframes grow { from { transform: scaleX(0); } }
 /* Die Hilfe-Symbole in Kennzahlen und Legende erscheinen erst, wenn die Maus darüber steht oder der Fokus darauf liegt (am Handy bleiben sie sichtbar) */
 @media (hover: hover) {
@@ -370,7 +381,7 @@ h3 { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin: var
 .bars { display: grid; grid-template-columns: 8rem minmax(0, 1fr) 4.5rem; align-items: center; row-gap: var(--space-4); column-gap: var(--space-3); }
 .bars .lbl { display: flex; align-items: center; gap: var(--space-2); }
 .track { border-left: 1px solid var(--data-baseline); height: 14px; display: flex; align-items: center; }
-.track span { height: 8px; width: var(--w); background: var(--data-bar); border-radius: 0 3px 3px 0; min-width: 1px; transform-origin: left; animation: grow .8s var(--ease-out) backwards; }
+.track span { height: 8px; width: var(--w); background: var(--data-bar); border-radius: 0 3px 3px 0; min-width: 1px; }
 .bars .val { text-align: right; color: var(--color-text-secondary); }
 .bars.wide { grid-template-columns: 8rem minmax(0, 1fr) 11.5rem; }
 @media (max-width: 40rem) { .bars.wide { grid-template-columns: 6rem minmax(0, 1fr) 7.5rem; } .bars.wide .val { font-size: var(--text-sm); } }
@@ -423,13 +434,10 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .card .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }  /* lange Decknamen kürzen statt die Kachel zu verbreitern */
 .card img, .card .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--color-surface-alt); box-shadow: var(--shadow-card);
   transition: transform .5s var(--ease-spring), box-shadow var(--transition-normal); }  /* zurück in die Ruhe mit Feder */
-/* Hover: Karte hebt sich und neigt sich zur Maus (--rx und --ry setzt app.js), schnell beim Folgen */
-.card:hover img, .card:hover .noimg { transform: translateY(-6px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); box-shadow: var(--shadow-lg);
+/* Hover: Karte hebt sich (keine Neigung zur Maus und kein Auftritt beim Öffnen, E40) */
+.card:hover img, .card:hover .noimg { transform: translateY(-6px); box-shadow: var(--shadow-lg);
   transition: transform .16s var(--ease-out), box-shadow var(--transition-normal); }
 .card:active img { transform: translateY(-1px) scale(.99); }
-/* Auftritt: die Kacheln einer Seite fliegen gestaffelt ein, die ersten 16 nacheinander */
-@keyframes tile-in { from { opacity: 0; transform: translateY(18px) scale(.94) rotate(-1.5deg); } }
-.grid > .card { perspective: 700px; animation: tile-in .5s var(--ease-out) both; animation-delay: calc(min(sibling-index(), 16) * 28ms); }
 .card .cap { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); font-size: var(--text-sm); margin-top: var(--space-1); }
 .card .cap .p { font-weight: var(--weight-semibold); }
 .card .cap .q { color: var(--color-text-muted); }
@@ -480,6 +488,7 @@ a.chip:hover { background: var(--color-surface-hover); color: var(--color-text);
 .welcome .beispiel-angebot .muted { font-size: var(--text-sm); }
 #beispiel-leiste { padding-top: var(--space-4); }
 #beispiel-leiste[hidden] { display: none; }
+.beispiel-zeile { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); counter-reset: s; }
 .steps li { display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--space-3); counter-increment: s; }
 .steps li::before { content: counter(s); width: 1.625rem; height: 1.625rem; border-radius: var(--radius-md); border: var(--border-width) solid var(--color-border-strong); display: grid; place-items: center;
@@ -670,6 +679,7 @@ dialog.sheet { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: mi
 dialog.sheet[open] { animation: sheet-in var(--dur-slow) var(--ease-out); }
 @keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
 @keyframes sheet-in { from { opacity: .4; transform: translateX(48px); } }
+@keyframes blatt-hoch { from { opacity: .4; transform: translateY(48px); } }
 dialog::backdrop { background: var(--color-backdrop); backdrop-filter: blur(3px); }
 dialog .x { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 1; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md); border: 0; background: transparent;
   color: var(--color-text-secondary); cursor: pointer; transition: background-color var(--transition-fast), color var(--transition-fast); }
@@ -681,9 +691,7 @@ dialog .x:hover { background: var(--color-surface-alt); color: var(--color-text)
 .hint { font-size: var(--text-sm); }
 .detail { padding: var(--space-6) var(--space-6) var(--space-10); display: grid; gap: var(--space-6); }
 .dtop { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
-.dtop .img { perspective: 700px; }
-.dtop .img img, .dtop .img .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--color-surface-alt); box-shadow: var(--shadow-lg); transition: transform .5s var(--ease-spring); }
-.dtop .img:hover img { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .16s var(--ease-out); }
+.dtop .img img, .dtop .img .noimg { width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--color-surface-alt); box-shadow: var(--shadow-lg); }
 .detail .links { display: flex; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); flex-wrap: wrap; font-size: var(--text-sm); }
 .detail .links a { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-text-secondary); text-underline-offset: 3px; }
 .detail .links a:hover { color: var(--color-text); }
@@ -754,15 +762,8 @@ footer select { min-height: 2rem; padding-block: var(--space-1); font-size: var(
 .help dt { font-weight: var(--weight-semibold); display: flex; align-items: center; gap: var(--space-2); }
 .help dd { margin: 0; color: var(--color-text-secondary); max-width: 68ch; }
 
-/* --- Bewegung: Ansicht blendet gestaffelt ein (nur beim Wechsel der Ansicht) ---------------------------------- */
-#main.enter > * { animation: enter var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }
+/* --- Bewegung nur als Antwort auf eine Handlung (E40): kein Auftritt beim Öffnen einer Ansicht ------------------ */
 @keyframes enter { from { opacity: 0; transform: translateY(12px); } }
-#main.enter .fan a { animation: deal .7s var(--ease-out) both; animation-delay: calc(180ms + var(--k, 0) * 90ms); }
-@keyframes deal { from { opacity: 0; translate: -50% calc(-50% + 40px); rotate: 0deg; } }
-.fan a:nth-child(2) { --k: 1; } .fan a:nth-child(3) { --k: 2; }
-/* Listen, Hinweise und Kacheln treten gestaffelt auf, wenn eine Ansicht neu geöffnet wird (nur dann: Neuzeichnen bleibt ruhig) */
-#main.enter :is(.rows, .rail, .todo, .decks, .news, .facts, .hstats, .legend) > * { animation: tile-in .5s var(--ease-out) backwards; animation-delay: calc(120ms + min(sibling-index(), 10) * 40ms); }
-.grid.small > .card { animation-delay: calc(min(sibling-index(), 40) * 14ms); }  /* ein Deck mit 100 Karten wird ausgeteilt */
 .row img, .row .noimg, .thumb { transition: transform .4s var(--ease-spring); }
 a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-4deg) scale(1.08); }
 #scan-hit .hit { animation: deal-in .45s var(--ease-spring) backwards; }  /* jede erkannte Karte springt ins Bild */
@@ -854,7 +855,17 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
   .legend, .rules { grid-template-columns: minmax(0, 1fr); }
   .btn, .btn.small, nav#nav a, .tabs button, .pick, .stepper button { min-height: 2.75rem; }  /* Tippziele ≥ 44px */
   .pick, .stepper button { width: 2.75rem; height: 2.75rem; }
-  nav#nav a { display: inline-flex; align-items: center; }
+  /* Fünf Ziele unten (E41); header.top ohne backdrop-filter, sonst hängt die feste Navigation am Kopf statt am Bildschirm */
+  header.top { backdrop-filter: none; }
+  nav#nav { position: fixed; inset: auto 0 0; z-index: var(--z-header); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: end; gap: 0; overflow: visible;
+    padding: var(--space-1) var(--space-2) calc(var(--space-1) + env(safe-area-inset-bottom)); background: var(--color-background); border-top: var(--border-width) solid var(--color-border); }
+  nav#nav a { flex-direction: column; justify-content: center; gap: 2px; padding: var(--space-1) 0; font-size: var(--text-xs); }
+  nav#nav a .i { width: 1.375rem; height: 1.375rem; }
+  nav#nav a:hover { transform: none; } nav#nav a[aria-current] { background: none; box-shadow: none; color: var(--color-primary); }
+  .nav-scan b { width: 3.5rem; height: 3.5rem; margin-top: -1.75rem; box-shadow: var(--shadow-md); } .nav-scan span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  body { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+  #toast { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+  body:not(.vollbild) .erf-ab { bottom: calc(4rem + env(safe-area-inset-bottom)); }  /* „Übernehmen“ bleibt über der Navigation (die Regel für .erf-ab steht weiter unten) */
   input, select { min-height: 2.75rem; }
   .row { grid-template-columns: 2.25rem minmax(0, 1fr) auto; } .row .chips { display: none; } .row.binder { grid-template-columns: minmax(0, 1fr) auto; }
   .srow { grid-template-columns: 1.25rem 2.25rem minmax(0, 1fr) auto; } .srow > .num.muted { display: none; }
@@ -864,7 +875,8 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
   .dtop { grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); gap: var(--space-4); }
   .detail { padding: var(--space-5) var(--space-4) var(--space-8); }
   dialog.modal { width: 100vw; max-width: 100vw; max-height: 100dvh; border-radius: 0; }
-  dialog.sheet { width: 100vw; border-radius: 0; border: 0; }
+  dialog.sheet { margin: auto 0 0; width: 100vw; height: auto; max-height: 92dvh; border: 0; border-radius: var(--radius-xl) var(--radius-xl) 0 0; }  /* Blatt von unten (Phase 64) */
+  dialog.sheet[open] { animation-name: blatt-hoch; }
   .fc:not(:first-child) { grid-template-columns: minmax(0, 1fr); } .fc:not(:first-child) .art img { aspect-ratio: 626/457; }
   .hstats { gap: var(--space-4) var(--space-8); }
   .note { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
@@ -873,7 +885,6 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
 @media (max-width: 480px) {
   .rrow { grid-template-columns: 2.25rem minmax(0, 1fr) 3rem 4.75rem; } .cov .track { display: none; }
   .btn.add .long { display: none; }
-  nav#nav { flex-wrap: wrap; overflow-x: visible; }  /* alle Ansichten sichtbar statt versteckt seitlich scrollen */
   .decks { grid-template-columns: minmax(0, 1fr); }
   .decks.list .deck { grid-template-columns: 5.5rem minmax(0, 1fr) auto; }
   .bars { grid-template-columns: 6.5rem minmax(0, 1fr) 4rem; }
@@ -887,7 +898,6 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
     --ink-deck: #1b569e; --ink-keep: #9c3c14; --ink-sell: #0c6446; --ink-bulk: #725000; }
   body { background: #fff; color: #000; }
   body::before { display: none; }
-  #main.enter > * { animation: none; }
   .dot, .chip { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .row, .tbl tr, .binder9 .card { break-inside: avoid; }
 }
@@ -901,6 +911,36 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
 .row.set { grid-template-columns: 2.25rem minmax(0, 1fr) auto auto; }
 .setstand { display: flex; align-items: center; gap: var(--space-2); max-width: 16rem; }
 .setstand .progress { flex: 1; margin: 0; }
+
+/* --- Binder als Start (Phase 64, E40): Seiten mit 3 × 3 Fächern, Wischen blättert (scroll-snap). Am Rechner stehen zwei Seiten nebeneinander
+   wie ein aufgeschlagener Binder. Nie Text auf dem Bild: Preis und Anzahl darunter, neue Karten mit Rahmen (outline, nicht auf dem Bild). */
+.album { display: grid; gap: var(--space-4); min-width: 0; }
+.album-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.album-kopf h1 { margin: 0; font-size: var(--text-2xl); }
+.album-kopf select { max-width: 50%; }
+.album-leiste { margin: calc(-1 * var(--space-2)) 0 0; font-size: var(--text-sm); }
+.album-seiten { display: grid; grid-auto-flow: column; grid-auto-columns: min(100%, 30rem, calc((100dvh - 16rem) / 1.56)); gap: var(--space-4); overflow-x: auto; scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; scrollbar-width: none; border-radius: var(--radius-lg); }
+.album-seiten::-webkit-scrollbar { display: none; }
+.album-seite { scroll-snap-align: start; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3) var(--space-2); align-content: start;
+  padding: var(--space-3); background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-lg); }
+.album-fach { display: grid; gap: var(--space-1); min-width: 0; }
+.album-fach:not(.voll)::before { content: ""; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--album-fach); box-shadow: inset 0 0 0 1px var(--color-border); }
+.album-fach:not(.voll)::after { content: ""; height: 1.1rem; }  /* so hoch wie die Zeile unter einer Karte: die Reihen stehen gleich */
+.album-karte { display: block; border-radius: var(--radius-card); }
+.album-karte img, .album-karte .noimg { display: block; width: 100%; aspect-ratio: 488/680; border-radius: var(--radius-card); background: var(--album-fach); box-shadow: var(--shadow-card); }
+.album-karte.neu { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.album-cap { display: flex; justify-content: space-between; gap: var(--space-1); height: 1.1rem; font-size: var(--text-xs); color: var(--color-text-secondary); overflow: hidden; white-space: nowrap; }
+.album-fuss { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-sm); color: var(--color-text-muted); }
+.album-punkte { display: flex; gap: var(--space-2); }
+.album-punkte i { width: .4rem; height: .4rem; border-radius: var(--radius-full); background: var(--color-border-strong); }
+.album-punkte i.an { background: var(--color-text); }
+/* Am Handy steht die ganze Seite über der Navigation: Breite aus der freien Höhe (Kopf, Zeilen, Seitenfuß und Navigation rund 21rem, Seite rund 1,56-mal so
+   hoch wie breit). ponytail: Schätzung, bei viel höherem Kopf (lange Hinweiszeile) ragt der Seitenfuß darunter */
+@media (max-width: 768px) {
+  .album-seiten { grid-auto-columns: min(100%, calc((100dvh - 21rem - env(safe-area-inset-bottom)) / 1.56)); }
+  #main:has(.album) { padding-top: var(--space-4); }
+}
 
 /* --- Sammler-Bibel (Phase 20): Binderseite 3×3, fehlende Karten grau, Notiz je Kopie, Bericht --- */
 .binder9 { display: grid; grid-template-columns: repeat(3, minmax(0, 11rem)); gap: var(--space-4) var(--space-3); }
@@ -993,8 +1033,16 @@ a.row:hover img, .row[data-oid]:hover img { transform: translateY(-2px) rotate(-
 .kandb[aria-pressed="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }  /* gewählte Karte beim Prüfen */
 
 /* Erfassen (Phase 25): Vorbereitung zum Zuklappen (die Zusammenfassung bleibt sichtbar), Set-Wahl, Vorgaben, Liste der Sitzung */
-.erf summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); cursor: pointer; font-weight: var(--weight-medium); }
-.erf[open] summary { margin-bottom: var(--space-5); }
+/* Schnell-Scan (Phase 63, E42): oben nur die Vorgaben in einer Zeile und der große Knopf; die Einstellungen sind ein Blatt von unten, auch am
+   Rechner (die Scan-Liste nur im Vollbild). Ebenen wie im Vollbild: Schleier 24, Blatt 25 (über der Navigation, unter Toast und Dialog). */
+.erf-zeile { justify-content: space-between; margin-bottom: 0; }
+#cam-go, #erf-einrichten { min-height: 3rem; padding-inline: var(--space-6); font-size: var(--text-md); }
+#erf-setup { position: fixed; inset: auto 0 0; z-index: 25; max-width: 60rem; max-height: 84dvh; overflow-y: auto; overscroll-behavior: contain; margin: 0 auto;
+  padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom)); background: var(--color-surface); border: 0; border-top: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-xl); visibility: hidden; transform: translateY(100%); transition: transform var(--transition-normal), visibility 0s linear var(--dur); }
+#erf-setup.offen { visibility: visible; transform: none; transition: transform var(--transition-normal); }
+#erf-setup > h2 { display: flex; align-items: center; gap: var(--space-2); }
+#voll-schleier { display: grid; place-items: start center; position: fixed; inset: 0; z-index: 24; padding-top: calc(var(--space-3) + env(safe-area-inset-top)); background: var(--color-backdrop); }
 .erf-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-6) var(--space-8); align-items: start; }
 .erf-vorgaben { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .erf-vorgaben .wide { grid-column: 1 / -1; }
@@ -1070,15 +1118,12 @@ button.row:hover { background: var(--color-surface-alt); }
   body.vollbild .pruefen .scanres { bottom: 0; padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom)); }
   body.vollbild .pruefen .scanres .hit { grid-template-columns: 3.5rem minmax(0, 1fr); }
   body.vollbild .pruefen .scanres .hit .urteil { display: block; margin: 0; font-size: var(--text-2xl); }
-  /* Blätter von unten: Scan-Liste und Einstellungen */
-  body.vollbild :is(#erf-liste, #erf-setup) { display: block; position: fixed; inset: auto 0 0; z-index: 25; max-height: 84dvh; overflow-y: auto; overscroll-behavior: contain; margin: 0;
+  /* Blatt von unten: Scan-Liste (die Einstellungen sind immer ein Blatt, siehe Schnell-Scan) */
+  body.vollbild #erf-liste { display: block; position: fixed; inset: auto 0 0; z-index: 25; max-height: 84dvh; overflow-y: auto; overscroll-behavior: contain; margin: 0;
     padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom)); background: var(--color-surface); border: 0; border-top: var(--border-width) solid var(--color-border-strong);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-xl); visibility: hidden; transform: translateY(100%); transition: transform var(--transition-normal), visibility 0s linear var(--dur); }
-  body.vollbild :is(#erf-liste, #erf-setup).offen { visibility: visible; transform: none; transition: transform var(--transition-normal); }
+  body.vollbild #erf-liste.offen { visibility: visible; transform: none; transition: transform var(--transition-normal); }
   body.vollbild .erf-ab { bottom: calc(-1 * var(--space-8) - env(safe-area-inset-bottom)); background: var(--color-surface); }  /* bis an den Rand: „unten“ misst ab dem Innenabstand des Blatts */
-  body.vollbild #erf-setup > summary { display: none; }
-  body.vollbild #erf-setup h2.nur-voll { display: flex; }
-  body.vollbild #voll-schleier { display: grid; place-items: start center; position: fixed; inset: 0; z-index: 24; padding-top: calc(var(--space-3) + env(safe-area-inset-top)); background: var(--color-backdrop); }
   body.vollbild .row.erf { grid-template-columns: 2.75rem minmax(0, 1fr) auto; }
   body.vollbild .row.erf .sub2 { white-space: normal; }  /* „Druck prüfen“ steht am Ende der Zeile und darf nicht abgeschnitten sein */
   body.vollbild :is(#erf-liste, #erf-setup) :is(.link, .more, a:not(.btn)) { display: inline-flex; align-items: center; min-height: 2.75rem; }

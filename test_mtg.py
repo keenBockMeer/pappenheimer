@@ -2079,11 +2079,11 @@ def test_wertverlauf_kurve_punkte_und_luecken():
 
 
 def test_bewegung_steht_bei_weniger_bewegung_still():
-    """E34: Flug der Karte, Neigung der Kacheln und hochlaufende Zahl fragen „weniger Bewegung“ im Skript ab, alles andere stoppt die eine Regel im CSS."""
+    """E34: Flug der Karte und hochlaufende Zahl fragen „weniger Bewegung“ im Skript ab, alles andere stoppt die eine Regel im CSS."""
     js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
     spiel = js[js.index("function sortSpiel("):js.index("// --- Verkaufen:")]
     assert "img && !calm.matches" in spiel
-    assert "!calm.matches ? e.target.closest('.grid > .card, .dtop .img')" in js and "if (calm.matches) { el.textContent = fmt(ziel); return; }" in js  # Zahl steht gleich auf dem Endwert
+    assert "if (calm.matches || erst) { el.textContent = fmt(ziel); return; }" in js  # Zahl steht gleich auf dem Endwert
     assert "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important;" in css
 
 
@@ -2094,10 +2094,135 @@ def test_hintergrund_ruht_bei_weniger_bewegung_im_scanner_und_im_druck():
     assert "if (calm.matches) fZeichnen(0);" in js and "if (calm.matches || hgPref() !== 'an')" in js
     assert "body.vollbild::after, body.vollbild #funken { display: none; }" in css and "#funken, #karten-hg, body::after { display: none !important; }" in css and "body.vollbild #karten-hg { display: none; }" in css
     assert css.count("--aura-stark:") == 2 and "--aura-stark: 15%" in css  # nie stärker als 16 % (Regel im Kopf von style.css)
-    # Karten im Hintergrund: eigener Behälter, Standardwahl, und die Regeln für die Bilder kennen nur transform und opacity (Scryfall: kein Filter auf Kartenbildern)
-    assert 'id="karten-hg"' in html and '<option value="karten">' in html and "hgPref() !== 'karten'" in js and "|| 'karten'" in js and "beispielLeiste(); kartenHg(); }" in js
+    # Karten im Hintergrund: eigener Behälter, wählbar (Standard ist seit Phase 61 „aus“), und die Regeln für die Bilder kennen nur transform und opacity (Scryfall: kein Filter auf Kartenbildern)
+    assert 'id="karten-hg"' in html and '<option value="karten">' in html and "hgPref() !== 'karten'" in js and "beispielLeiste(); kartenHg(); }" in js
     karten_css = css[css.index("\n#karten-hg {"):css.index("@keyframes schweben")] + css[css.index("@keyframes schweben"):][:400]
     assert "filter" not in karten_css and "blur(" not in karten_css and "opacity: var(--o)" in karten_css
+
+
+def test_ruhe_kein_hintergrund_keine_bewegung_beim_oeffnen():
+    """Phase 61 (E40): ohne gespeicherte Wahl kein Hintergrund (kartenHg lädt dann nichts), eine gespeicherte Wahl wirkt weiter; kein gestaffelter
+    Auftritt, keine Neigung, keine hochlaufende Zahl beim Öffnen; die Beispiel-Leiste ist eine Zeile mit derselben Aktion."""
+    js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
+    assert "localStorage.getItem('mtg-hg') || 'aus'; } catch { return 'aus'; }" in js and "|| 'karten'" not in js
+    assert "if (kFertig || kBusy || hgPref() !== 'karten') return;" in js and "hgSel.value = hgPref();" in js
+    render = js[js.index("async function render("):js.index("addEventListener('hashchange', () => render());")]
+    assert "animateIn" not in js and "neueAnsicht" not in js and "if (neu) scrollTo(0, 0);" in render
+    assert "#main.enter" not in css and "--rx" not in css and "--rx" not in js and "tile-in" not in css
+    assert "erst = !('z' in el.dataset)" in js  # erstes Zeigen = Endwert, danach läuft die Zahl (Summe unter Verkaufen)
+    assert "bump(" in js and ".bump {" in css and "@keyframes enter" in css  # bleibt: Springen der Zahl, Filter und „Karte für Karte“
+    leiste = js[js.index("async function beispielLeiste("):js.index("async function beispielAktion(")]
+    assert 'data-beispiel="entfernen"' in leiste and "info('beispiel'" in leiste and "note(" not in leiste and leiste.count("<p ") == 1
+    assert (WURZEL / "tests" / "einfach_eval.js").read_text(encoding="utf-8").count("async function einfachEval(") == 1
+
+
+def test_app_rahmen_fuenf_ziele():
+    """Phase 62 (E41): genau fünf Ziele in der Navigation (Binder, Suchen, Scannen, Decks, Mehr), am Handy unten fest und im Scanner verdeckt;
+    jede Ansicht, die nicht nur über Links erreichbar ist, steht in der Navigation oder auf „Mehr“; alle bisherigen Adressen bleiben;
+    der Fuß verweist nicht mehr auf Konten und Drucken; die Verknüpfung im Manifest ist unverändert."""
+    js, css, index = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css", "index.html"))
+    block = js[js.index("const VIEWS = {"):js.index("const navLink")]
+    platz = {k.strip("'"): p for k, p in re.findall(r"(?:^|[{,]\s*)(\w+|'')\s*:\s*\['[^']+', \w+(?:, '(\w+)')?", block, re.M)}
+    alt = {"", "cards", "sets", "sort", "scan", "sell", "decks", "wuensche", "spiele", "help", "konten", "quellen", "binder", "druck", "proxy", "rueckblick", "bericht", "messbilder"}
+    assert alt | {"mehr", "wert"} == set(platz)
+    assert [k for k, p in platz.items() if p in ("haupt", "scan")] == ["", "cards", "scan", "decks", "mehr"]
+    assert "['', 'cards', 'scan', 'decks', 'mehr'].map(" in js and 'href="#/scan?modus=erfassen"' in js[js.index("const navLink"):js.index("const navHtml")]
+    assert {k for k, p in platz.items() if p in ("mehr", "entwickler")} == {"sort", "sell", "wuensche", "spiele", "sets", "wert", "druck", "konten", "quellen", "help", "messbilder"}
+    assert {k for k, p in platz.items() if not p} == {"binder", "proxy", "rueckblick", "bericht"}  # nur über Links aus anderen Ansichten
+    assert "wert: ['Wert und Plan', viewHome," in block and "'': ['Binder', viewAlbum," in block  # seit Phase 64 ist #/ der Binder
+    mehr = js[js.index("async function viewMehr("):]
+    assert "v[2] === platz" in mehr and "liste('mehr')" in mehr and "liste('entwickler')" in mehr
+    for k, p in platz.items():  # jede Zeile auf „Mehr“ hat ihren Satz in TIP
+        if p in ("mehr", "entwickler"):
+            assert f"  mehr{k[0].upper() + k[1:]}: '" in js, k
+    assert "$('#nav').innerHTML = navHtml(path);" in js
+    for ziel in set(re.findall(r'href="#/(\w*)', js)):  # jeder Link der Oberfläche führt auf eine Ansicht
+        assert ziel in platz, ziel
+    handy = css[css.index("@media (max-width: 768px) {"):]
+    assert "nav#nav { position: fixed; inset: auto 0 0;" in handy and "env(safe-area-inset-bottom)" in handy and "body { padding-bottom:" in handy
+    assert "body.vollbild > header" in css  # die Navigation steckt im Kopf und ist im Scanner verdeckt
+    fuss = re.search(r"<footer.*?</footer>", index, re.S)[0]
+    assert "#/konten" not in fuss and "#/druck" not in fuss
+    m = json.loads((WURZEL / "ui" / "manifest.webmanifest").read_text(encoding="utf-8"))
+    assert m["start_url"] == "/#/" and [s["url"] for s in m["shortcuts"]] == ["/#/scan?modus=erfassen"]
+
+
+def test_schnell_scan():
+    """Phase 63 (E42): Der Scan-Knopf führt nach Erfassen und startet die Kamera gleich mit (nur er, nie ein Neuzeichnen); Erfassen ist der
+    Standard, Prüfen ein Umschalter; die Erkennung wählt sich ohne eigene Wahl selbst; die Einstellungen sind ein Blatt; die Messbilder-Schalter
+    stehen nur mit „Für Entwickler“ da; die Scan-Liste hat keinen Erklärabsatz und endet mit „Weiter scannen“ und „In Sammlung übernehmen“."""
+    js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
+    assert 'href="#/scan?modus=erfassen"' in js[js.index("const navLink"):js.index("const navHtml")]
+    klick = js[js.index("let scanLos = false;"):js.index("const scanG")]
+    assert "closest('.nav-scan')" in klick and "scanLos = true" in klick
+    scan = js[js.index("async function viewScan("):js.index("async function scanStart(")]
+    assert "scanModus = p.get('modus') === 'pruefen' ? 'pruefen' : 'erfassen';" in scan and "mtg-scan-modus" not in js
+    assert "const los = scanLos; scanLos = false;" in scan and "if (los && scanIx) scanStart();" in scan
+    erfassen = js[js.index("async function viewErfassen("):js.index("function erfBinderUi(")]
+    assert "const los = scanLos; scanLos = false;" in erfassen and "if (bereit) { if (los) scanStart(); }" in erfassen
+    assert "erfVorbereiten(false).then(" in erfassen  # Sets ohne fertige Erkennung: von selbst vorbereiten
+    assert "alle: erkennung ? erkennung === 'alle' : kat.fertig > 0" in erfassen and "erf.erkennung = erf.alle ? 'alle' : 'sets'" in js
+    # Einstellungen: ein Blatt (kein details mehr), auf der Seite nur die Zeile mit den Vorgaben
+    assert '<section class="panel erf" id="erf-setup"' in erfassen and "<details" not in erfassen and "$('#erf-setup').open" not in js
+    assert 'data-blatt="erf-setup"' in erfassen and "#erf-setup.offen {" in css and "\n#voll-schleier {" in css
+    assert erfassen.index("erf-zeile") < erfassen.index("${camBox(") < erfassen.index('id="erf-setup"')
+    # Messbilder nur für Entwickler
+    assert "const entwickler = () => merk('mtg-entwickler', '0'" in js and "mess: dev && !!alt.mess" in erfassen
+    teil = erfassen[erfassen.index("${dev ?"):]
+    assert teil.index('id="erf-mess"') < teil.index("` : ''}") and teil.index('id="erf-huelle"') < teil.index("` : ''}")
+    assert "if (dev) api('messbilder')" in erfassen and "id=\"entwickler\"" in js and "merke('mtg-entwickler'" in js and "  entwickler: '" in js
+    # Scan-Liste
+    liste = js[js.index("function erfListe("):js.index("const erfRow")]
+    assert "TIP.scanliste)}</p>" not in liste and "info('scanliste'" in liste
+    assert liste.index("data-weiter") < liste.index("In Sammlung übernehmen (") and "Fertig (${num(n)})" in liste
+    assert "if (t.closest('[data-weiter]'))" in js
+    # Vorbereiten im Hintergrund: Standard an nur im App-Fenster (der Server öffnet es mit ?fenster=1), nur im Leerlauf, nie bei laufender Kamera
+    assert "merk('mtg-vorbereiten', FENSTER ? '1' : '0'" in js and "sessionStorage.setItem('mtg-fenster', '1')" in js
+    assert "scanStream ? setTimeout(f, 2000) : requestIdleCallback(() => { leerBis = performance.now() + LEERLAUF_MS; ok(); }" in js and "still ? leerlauf : null" in js and "if (ruhig) await ruhig();" in js
+    assert 'id="erf-hg"' in erfassen and "  hgvorbereiten: '" in js and "render(); katImHintergrund();" in js
+    assert "katJob?.gesamt ?" in js[js.index("async function viewMehr("):]
+
+
+def test_sammelalbum_als_start(daten):
+    """Phase 64 (E40): #/ ist der Binder (Seiten mit neun Fächern, Wischen, zuletzt gescannte vorn), die erste Seite wartet nicht auf die
+    Übersicht; eine leere Sammlung zeigt welcome; die Übersicht bleibt unter #/wert; nach dem Übernehmen springt der Binder zu den neuen Karten
+    und markiert sie; das Kartendetail kommt am Handy von unten; der Ton steht als Tokens oben in style.css; die Übersicht nennt die Scan-Liste."""
+    js, css = ((WURZEL / "ui" / n).read_text(encoding="utf-8") for n in ("app.js", "style.css"))
+    album = js[js.index("async function viewAlbum("):js.index("// Platz (E41)")]
+    assert "const ALBUM_FACH = 9," in js and "'<div class=\"album-fach\"></div>'.repeat(ALBUM_FACH)" in album
+    assert "cards?sort=added&per_page=${ALBUM_LADEN}" in album and "if (!erst.total && !binder) return welcome(await sumP);" in album
+    assert album.index("const erst = await abruf(1);") < album.index("const s = await sumP;")  # erste Seite vor der Übersicht
+    assert "todoListe(s)[0]" in album and 'href="#/wert"' in album and "s.scanliste" in album
+    assert "neu?.has(c.oracle_id)" in album and "albumNeu = oids; location.hash = '#/?binder='" in js
+    assert "scroll-snap-type: x mandatory" in css and ".album-karte.neu { outline:" in css and "loading=\"lazy\"" in js[js.index("const pic ="):][:200]
+    assert "const todo = todoListe(s);" in js[js.index("async function viewHome("):]
+    handy = css[css.index("@media (max-width: 768px) {"):]
+    assert "dialog.sheet { margin: auto 0 0;" in handy and "@keyframes blatt-hoch" in css
+    root = css[css.index(":root {"):css.index(":root[data-theme=\"light\"]")]
+    hell = css[css.index(":root[data-theme=\"light\"]"):css.index("/* --- Grundlagen")]
+    for t in ("--color-background:      #14110d;", "--color-surface:         #1d1914;", "--album-fach: #0e0c09;", "--color-text:            #f0e7d8;", "--color-text-muted:      #ab9f8a;"):
+        assert t in root, t
+    assert "--album-fach:" in hell and "--color-background:      #ece4d6;" in hell
+    m = json.loads((WURZEL / "ui" / "manifest.webmanifest").read_text(encoding="utf-8"))
+    assert m["theme_color"] == m["background_color"] == "#14110d" and 'content="#14110d"' in (WURZEL / "ui" / "index.html").read_text(encoding="utf-8")
+    with closing(mtg.connect()) as conn:
+        assert server.api_summary(conn)["scanliste"] == 0
+
+
+def test_text_kurz_alles_hinter_info():
+    """Phase 65 (E42): Was vorher offen erklärte, steht jetzt in TIP und ist über info() erreichbar; die Seite „Quellen“ klappt je Quelle ein, was
+    sie erfährt; die Köpfe der Ansichten haben einen Satz. Keine Gedankenstriche in den neuen Texten."""
+    js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
+    tip = dict(re.findall(r"^  (\w+): '(.*)',$", js, re.M))
+    for k in ("hauptkonto", "konten", "handy", "handylokal", "sicherung", "update", "verschl", "decksneu", "verkaufen", "preisbewegung", "pruefen",
+              "fpvorbereiten", "spiele", "sortieren", "serien", "drucken", "karten", "wuensche", "selbstwaehlen"):
+        assert k in tip and f"info('{k}'" in js, k
+        assert "–" not in tip[k] and "—" not in tip[k], k
+    assert "mtg wiederherstellen DATEI.zip" in tip["sicherung"] and "MTG_AUSSEN_SCHLUESSEL" in tip["verschl"] and "Hak an, was du brauchst" in tip["drucken"]
+    quellen = js[js.index("async function viewQuellen("):js.index("async function quelleSetzen(")]
+    assert quellen.index('<details class="mehr">') < quellen.index("q.schickt") < quellen.index("</details>")
+    for titel, sub in re.findall(r"head\(`?(Quellen|Verkaufen|Decks|Spiele|Sortieren|Serien|Drucken|Karten|Wünsche)[^,]*, '([^']*)'", js):
+        assert sub.count(". ") == 0, (titel, sub)  # ein Satz
 
 
 def test_klassen_des_sortier_modus_kollidieren_nicht():
@@ -2786,7 +2911,7 @@ def test_ui_fenster_ohne_konsole_und_endet_mit_dem_fenster(daten, monkeypatch, c
     lauf.join(20)
     assert not lauf.is_alive() and gestartet[-1] == 0, "der Server endet nicht mit dem Fenster"
     assert fenster == [["edge.exe", f"--user-data-dir={daten / 'fenster'}", "--no-first-run", "--no-default-browser-check"]]
-    assert (daten / "argv.txt").read_text().startswith("--app=http://127.0.0.1:")
+    assert (daten / "argv.txt").read_text().startswith("--app=http://127.0.0.1:") and (daten / "argv.txt").read_text().endswith("/?fenster=1")
     monkeypatch.setattr(mtg, "fenster_browser", lambda: None)  # kein Edge, kein Chrome: der Browser wie bisher
     monkeypatch.setattr(server, "serve", lambda *a: gestartet.append(a))
     mtg.main(["ui", "--fenster", "--port", "0"])
@@ -6731,11 +6856,11 @@ def test_quellen_oberflaeche_hinweise_und_seite():
     """Abnahme Phase 44 (Quelltext der Oberfläche): Die Seite „Quellen“ gibt es, die Schalter laufen über den change-Listener, Hinweise mit Link
     stehen in Übersicht, Decks, Verkaufen, Sortieren und Spiele; keine Inline-Skripte, keine Gedankenstriche in den neuen Texten."""
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
-    assert "quellen: ['Quellen', viewQuellen, true]" in js and "if (t.dataset.quelle) return quelleSetzen(t);" in js
+    assert "quellen: ['Quellen', viewQuellen, 'mehr', 'cloud']" in js and "if (t.dataset.quelle) return quelleSetzen(t);" in js
     seite = js[js.index("let quellenDaten"):js.index("async function viewKonten()")]
     assert 'data-quelle="${esc(q.key)}"' in seite and "<script" not in seite and not re.search(r"\bon[a-z]+=", seite) and "post('quellen'" in seite
     assert "confirm(`${q.hinweis}" in seite and "r.gesperrt" in seite and "disabled" in seite  # beim Einschalten von EDHREC die Bedingungen, gesperrt mit MTG_QUELLEN
-    for ansicht in ("async function viewHome()", "async function viewDecks(p)", "async function viewSell()", "async function viewSort(p)", "async function viewSpiele()"):
+    for ansicht in ("function todoListe(s)", "async function viewDecks(p)", "async function viewSell()", "async function viewSort(p)", "async function viewSpiele()"):
         rumpf = js[js.index(ansicht):]
         rumpf = rumpf[:rumpf.index("\n}\n")]
         assert "aus('" in rumpf, ansicht
@@ -6876,7 +7001,8 @@ def test_update_oberflaeche_knopf_nur_fuers_hauptkonto():
     Gedankenstriche, keine Inline-Skripte; die Seite „Quellen“ nennt GitHub „nur auf Knopfdruck“."""
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
     teil = js[js.index("// Updates (Phase 50"):js.index("async function viewKonten()")]
-    assert 'id="up-suchen"' in teil and "post('update'" in teil and "Nach Updates suchen" in teil and "nie von selbst" in teil and "Adresse deines Rechners" in teil
+    tip_update = js[js.index("  update: '"):].splitlines()[0]  # Phase 65: der Satz zu GitHub steht hinter info('update')
+    assert 'id="up-suchen"' in teil and "post('update'" in teil and "Nach Updates suchen" in teil and "info('update'" in teil and "nie von selbst" in tip_update and "Adresse deines Rechners" in tip_update
     assert "docker compose pull" in teil and "pappenheimer-windows.zip" in teil and "Sicherheit" in teil and "l.sicherheit ? 'alert'" in teil and "Änderungen ansehen" in teil
     assert "–" not in teil and "—" not in teil and "<script" not in teil and not re.search(r"\bon[a-z]+=", teil)
     assert "if (e.target.closest('#up-suchen')) return updateSuchen();" in js and "api('update')" in js
@@ -6939,7 +7065,9 @@ def test_qr_oberflaeche_nur_mit_erreichbarer_adresse():
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
     teil = js[js.index("// Handy verbinden: QR-Code"):js.index("async function viewKonten()")]
     assert "const LOKAL = /^(localhost|127(\\.\\d+){3}|\\[?::1\\]?)$/;" in teil and "class=\"qr\">${qr.svg}" in teil
-    assert "App installieren" in teil and "Zum Startbildschirm" in teil and "über https" in teil and "Öffne die App einmal über die Adresse deines Servers" in teil
+    tip = dict(re.findall(r"^  (\w+): '(.*)',$", js, re.M))  # Phase 65: die Anleitung steht hinter info('handy') bzw. info('handylokal')
+    assert "info('handy'" in teil and "info('handylokal'" in teil
+    assert "App installieren" in tip["handy"] and "Zum Startbildschirm" in tip["handy"] and "über https" in tip["handy"] and "Öffne die App einmal über die Adresse deines Servers" in tip["handylokal"]
     assert "–" not in teil and "—" not in teil and "<script" not in teil and not re.search(r"\bon[a-z]+=", teil)
     konto = js[js.index("async function viewKonten()"):js.index("function openPw(")]
     assert "post('qr', {text: adresse})" in konto and "location.origin" in konto and "haupt && !LOKAL.test(location.hostname)" in konto
@@ -7822,7 +7950,7 @@ def test_beispiel_im_image_in_der_zip_und_in_der_oberflaeche():
     js = (WURZEL / "ui" / "app.js").read_text(encoding="utf-8")
     html = (WURZEL / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'id="beispiel-leiste"' in html and 'data-beispiel="laden"' in js and 'data-beispiel="entfernen"' in js and "post('beispiel', {aktion" in js
-    assert "Beispielsammlung ansehen" in js and "Das ist die Beispielsammlung" in js and "r.beispiel" in js and "s.beispiel?.angebot" in js
+    assert "Beispielsammlung ansehen" in js and 'class="beispiel-zeile"' in js and "r.beispiel" in js and "s.beispiel?.angebot" in js
     tip = js[js.index("  beispiel: '"):js.index("\n", js.index("  beispiel: '"))]
     leiste = js[js.index("// --- Beispielsammlung"):js.index("// --- Import: Datei oder eingefügte Liste")]
     for text in (tip, leiste):
